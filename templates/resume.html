@@ -3,8 +3,9 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>Resume · {{ job.title }} @ {{ job.company }}</title>
+    <title>Ajinkya Kate - {{ job.company }} - {{ job.title }} - Resume</title>
     <link rel="icon" href="data:image/svg+xml,<svg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 100 100'><text y='.9em' font-size='90'>%F0%9F%93%8B</text></svg>">
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/html2pdf.js/0.10.2/html2pdf.bundle.min.js"></script>
     <style>
         /* Screen styles */
         :root {
@@ -202,7 +203,7 @@
         </div>
         <div class="actions">
             {% if resume_html %}
-            <button onclick="window.print()" class="btn btn-primary">Download PDF</button>
+            <button onclick="downloadResumePDF(this)" id="dl-btn" class="btn btn-primary">📄 Download PDF</button>
             <a href="/jobs/{{ job.id }}" class="btn btn-secondary">Back</a>
             {% else %}
             <a href="/jobs/{{ job.id }}" class="btn btn-secondary">Back</a>
@@ -210,18 +211,54 @@
         </div>
     </div>
 
-    <div class="page">
+    <div class="page" id="resume-page">
         {% if resume_html %}
-            <div class="resume">{{ resume_html | safe }}</div>
+            <div class="resume" id="resume-content">{{ resume_html | safe }}</div>
         {% else %}
             <div class="empty">
                 <h2>No tailored resume yet for this job</h2>
-                <p>Paste the JD in chat, and a tailored markdown resume will be generated and stored on this job. Then refresh this page to see + print it.</p>
+                <p>Paste the JD in chat, and a tailored markdown resume will be generated and stored on this job. Then refresh this page to download it.</p>
                 <p style="margin-top: 16px; font-size: 12px;">
                     Or set <code>resume_md</code> directly via SQL on the jobs row.
                 </p>
             </div>
         {% endif %}
     </div>
+
+    {% if resume_html %}
+    <script>
+        function downloadResumePDF(btn) {
+            const element = document.getElementById('resume-content');
+            const filename = {{ pdf_filename | tojson }};
+
+            const originalText = btn.innerText;
+            btn.disabled = true;
+            btn.innerText = 'Generating PDF…';
+
+            const opt = {
+                margin:       [10, 14, 10, 14],     // mm: top, right, bottom, left
+                filename:     filename,
+                image:        { type: 'jpeg', quality: 0.98 },
+                html2canvas:  { scale: 2, useCORS: true, logging: false, letterRendering: true },
+                jsPDF:        { unit: 'mm', format: 'a4', orientation: 'portrait', compress: true },
+                pagebreak:    { mode: ['avoid-all', 'css', 'legacy'] }
+            };
+
+            html2pdf().set(opt).from(element).save()
+                .then(() => {
+                    btn.innerText = '✓ Saved';
+                    setTimeout(() => {
+                        btn.innerText = originalText;
+                        btn.disabled = false;
+                    }, 1500);
+                })
+                .catch(err => {
+                    console.error('PDF generation failed:', err);
+                    btn.innerText = 'Error — try again';
+                    btn.disabled = false;
+                });
+        }
+    </script>
+    {% endif %}
 </body>
 </html>

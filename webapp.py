@@ -1,4 +1,5 @@
 import os
+import re
 import secrets
 import sqlite3
 from datetime import datetime
@@ -248,6 +249,13 @@ def job_detail(job_id: int, request: Request):
     )
 
 
+def _slugify_for_filename(value: str) -> str:
+    """Collapse non-alphanumeric runs to underscores; trim leading/trailing underscores."""
+    if not value:
+        return ""
+    return re.sub(r"[^A-Za-z0-9]+", "_", value).strip("_")
+
+
 @app.get("/jobs/{job_id}/resume", response_class=HTMLResponse)
 def job_resume(job_id: int, request: Request):
     tracker.init_db()
@@ -270,12 +278,17 @@ def job_resume(job_id: int, request: Request):
     else:
         resume_html = None
 
+    company_slug = _slugify_for_filename(job_dict.get("company") or "company")
+    title_slug = _slugify_for_filename(job_dict.get("title") or "role")
+    pdf_filename = f"Ajinkya_Kate_{company_slug}_{title_slug}.pdf"
+
     return TEMPLATES.TemplateResponse(
         "resume.html",
         {
             "request": request,
             "job": job_dict,
             "resume_html": resume_html,
+            "pdf_filename": pdf_filename,
         },
     )
 
