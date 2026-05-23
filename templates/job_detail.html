@@ -5,80 +5,144 @@
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title>Job #{{ job.id }} — {{ job.title }}</title>
     <script src="https://cdn.tailwindcss.com"></script>
+    <style>
+        /* a touch of personality, kept light */
+        .draft-card pre { font-family: ui-sans-serif, system-ui, -apple-system, "Segoe UI", Roboto, sans-serif; }
+        .copy-btn:active { transform: scale(0.96); }
+    </style>
 </head>
 <body class="bg-gray-50 text-gray-900 min-h-screen">
     <div class="max-w-4xl mx-auto p-4 md:p-8">
 
-        <nav class="mb-6">
-            <a href="/" class="text-sm text-blue-600 hover:underline">&larr; back to all jobs</a>
+        <nav class="mb-6 flex items-center justify-between">
+            <a href="/" class="text-sm text-blue-600 hover:underline">&larr; back to dashboard</a>
+            <span class="text-xs text-gray-400">job #{{ job.id }}</span>
         </nav>
 
-        <header class="mb-6 border-b border-gray-200 pb-4">
+        <header class="mb-6">
             <div class="flex items-start justify-between gap-3 flex-wrap">
-                <div>
-                    <h1 class="text-2xl md:text-3xl font-bold">{{ job.title }}</h1>
+                <div class="min-w-0 flex-1">
+                    <h1 class="text-2xl md:text-3xl font-bold leading-tight">{{ job.title }}</h1>
                     <p class="text-gray-700 mt-1">@ {{ job.company }}</p>
                 </div>
-                <span class="inline-block px-3 py-1 rounded font-medium
+                <span class="inline-block px-3 py-1 rounded font-medium text-sm whitespace-nowrap
                     {% if job.worth_pursuing == 'no' %}bg-gray-200 text-gray-700
                     {% elif job.status == 'awaiting_hr_review' %}bg-yellow-200 text-yellow-900
                     {% elif job.status == 'applied' %}bg-blue-100 text-blue-800
                     {% elif job.status == 'interview' %}bg-green-100 text-green-800
+                    {% elif job.status == 'networking' %}bg-purple-100 text-purple-800
                     {% else %}bg-gray-100 text-gray-700{% endif %}">{{ job.status }}</span>
             </div>
 
             {% if job.link %}
-            <a href="{{ job.link }}" target="_blank" rel="noopener" class="block mt-2 text-sm text-blue-600 hover:underline truncate">{{ job.link }}</a>
+            <a href="{{ job.link }}" target="_blank" rel="noopener"
+               class="inline-flex items-center gap-1 mt-3 text-sm text-blue-600 hover:underline">
+                open job posting &nearr;
+            </a>
             {% endif %}
         </header>
 
         {% if job.next_action_at and job.worth_pursuing != 'no' %}
         <section class="mb-6 bg-yellow-50 border-l-4 border-yellow-500 p-4 rounded-r">
             <div class="text-xs uppercase tracking-wide text-yellow-800 font-semibold">Next action — {{ job.next_action_at }}</div>
-            <div class="mt-1">{{ job.next_action_note }}</div>
+            <div class="mt-1 text-sm leading-relaxed">{{ job.next_action_note }}</div>
         </section>
         {% endif %}
 
-        <section class="grid grid-cols-2 md:grid-cols-4 gap-3 mb-6 text-sm">
+        <section class="grid grid-cols-2 md:grid-cols-4 gap-2 mb-6 text-sm">
             <div class="bg-white border rounded p-3">
-                <div class="text-xs text-gray-500">Worth pursuing</div>
+                <div class="text-xs text-gray-500">Pursue</div>
                 <div class="font-medium">{{ job.worth_pursuing or 'unsure' }}</div>
             </div>
             <div class="bg-white border rounded p-3">
                 <div class="text-xs text-gray-500">Added</div>
-                <div class="font-medium text-xs">{{ job.added_at }}</div>
+                <div class="font-medium text-xs">{{ job.added_at[:10] if job.added_at else '—' }}</div>
             </div>
             <div class="bg-white border rounded p-3">
                 <div class="text-xs text-gray-500">Last activity</div>
-                <div class="font-medium text-xs">{{ job.last_activity_at or '—' }}</div>
+                <div class="font-medium text-xs">{{ job.last_activity_at[:10] if job.last_activity_at else '—' }}</div>
             </div>
             <div class="bg-white border rounded p-3">
                 <div class="text-xs text-gray-500">Events</div>
-                <div class="font-medium">{{ events|length }}</div>
+                <div class="font-medium">{{ events|length + drafts|length }}</div>
             </div>
         </section>
+
+        {% if drafts %}
+        <section class="mb-8">
+            <h2 class="text-sm font-semibold uppercase tracking-wide text-gray-600 mb-3 flex items-center gap-2">
+                <span>Ready-to-send messages</span>
+                <span class="px-2 py-0.5 rounded-full bg-blue-600 text-white text-xs font-bold">{{ drafts|length }}</span>
+            </h2>
+            <p class="text-xs text-gray-500 mb-3">Click <strong>Copy</strong>, paste into LinkedIn / Gmail, edit lightly, send. Then click <strong>Mark sent</strong> coming soon — for now log via <code>tracker.py event {{ job.id }} message_sent "..."</code>.</p>
+            <div class="space-y-3">
+            {% for d in drafts %}
+                <div class="draft-card bg-white border border-gray-300 rounded-lg overflow-hidden shadow-sm hover:shadow-md transition">
+                    <div class="flex items-center justify-between gap-3 px-4 py-3 bg-gradient-to-r from-blue-50 to-gray-50 border-b border-gray-200">
+                        <div class="min-w-0 flex-1">
+                            <h3 class="font-semibold text-sm text-gray-900 truncate">{{ d.label }}</h3>
+                            {% if d.contact_name %}
+                            <p class="text-xs text-gray-600 mt-0.5 flex items-center gap-1">
+                                <span>to <strong>{{ d.contact_name }}</strong></span>
+                                {% if d.contact_linkedin %}
+                                <a href="{{ d.contact_linkedin }}" target="_blank" rel="noopener"
+                                   class="text-blue-600 hover:underline ml-1">open LinkedIn &nearr;</a>
+                                {% endif %}
+                            </p>
+                            {% endif %}
+                        </div>
+                        <button onclick="copyDraft('draft-{{ d.id }}', this)"
+                                class="copy-btn shrink-0 px-3 py-1.5 text-xs font-semibold bg-blue-600 text-white rounded-md hover:bg-blue-700 transition shadow-sm">
+                            Copy
+                        </button>
+                    </div>
+                    <pre id="draft-{{ d.id }}" class="text-sm whitespace-pre-wrap p-4 leading-relaxed text-gray-800">{{ d.message }}</pre>
+                </div>
+            {% endfor %}
+            </div>
+        </section>
+        {% endif %}
 
         {% if job.notes %}
         <section class="mb-6">
             <h2 class="text-sm font-semibold uppercase tracking-wide text-gray-600 mb-2">Notes</h2>
-            <div class="bg-white border rounded p-4 whitespace-pre-line text-sm">{{ job.notes }}</div>
+            <div class="bg-white border rounded p-4 whitespace-pre-line text-sm leading-relaxed">{{ job.notes }}</div>
         </section>
         {% endif %}
 
         <section class="mb-6">
             <h2 class="text-sm font-semibold uppercase tracking-wide text-gray-600 mb-2">Contacts ({{ contacts|length }})</h2>
             {% if contacts %}
-            <div class="space-y-3">
+            <div class="grid md:grid-cols-2 gap-3">
                 {% for c in contacts %}
-                <div class="bg-white border rounded p-4">
-                    <div class="font-semibold">{{ c.name }}</div>
-                    {% if c.role %}<div class="text-sm text-gray-700">{{ c.role }}</div>{% endif %}
-                    <div class="mt-2 text-sm space-y-1">
-                        {% if c.email %}<div><span class="text-gray-500">email:</span> {{ c.email }}</div>{% endif %}
-                        {% if c.phone %}<div><span class="text-gray-500">phone:</span> {{ c.phone }}</div>{% endif %}
-                        {% if c.linkedin_url %}<div><span class="text-gray-500">linkedin:</span> {{ c.linkedin_url }}</div>{% endif %}
+                <div class="bg-white border rounded-lg p-4 hover:border-gray-400 transition">
+                    <div class="flex items-start justify-between gap-2">
+                        <div class="min-w-0 flex-1">
+                            <div class="font-semibold">{{ c.name }}</div>
+                            {% if c.role %}<div class="text-sm text-gray-700">{{ c.role }}</div>{% endif %}
+                        </div>
+                        {% if c.linkedin_url %}
+                        <a href="{{ c.linkedin_url }}" target="_blank" rel="noopener"
+                           class="shrink-0 inline-flex items-center gap-1 px-2 py-1 text-xs font-medium bg-blue-50 text-blue-700 rounded hover:bg-blue-100 transition border border-blue-200">
+                            LinkedIn &nearr;
+                        </a>
+                        {% endif %}
                     </div>
-                    {% if c.notes %}<div class="mt-2 text-sm text-gray-700 whitespace-pre-line">{{ c.notes }}</div>{% endif %}
+                    <div class="mt-2 text-sm space-y-1">
+                        {% if c.email %}
+                        <div class="flex items-center gap-1">
+                            <span class="text-gray-500 text-xs">email:</span>
+                            <a href="mailto:{{ c.email }}" class="text-blue-600 hover:underline truncate">{{ c.email }}</a>
+                        </div>
+                        {% endif %}
+                        {% if c.phone %}
+                        <div class="flex items-center gap-1">
+                            <span class="text-gray-500 text-xs">phone:</span>
+                            <a href="tel:{{ c.phone }}" class="text-blue-600 hover:underline">{{ c.phone }}</a>
+                        </div>
+                        {% endif %}
+                    </div>
+                    {% if c.notes %}<div class="mt-2 text-xs text-gray-600 whitespace-pre-line">{{ c.notes }}</div>{% endif %}
                 </div>
                 {% endfor %}
             </div>
@@ -95,9 +159,14 @@
                 <div class="px-4 py-3 {% if not loop.last %}border-b border-gray-100{% endif %}">
                     <div class="flex items-baseline justify-between gap-2 flex-wrap">
                         <span class="text-xs font-medium text-gray-500">{{ e.occurred_at }}</span>
-                        <span class="text-xs px-2 py-0.5 rounded bg-gray-100 text-gray-700">{{ e.event_type }}</span>
+                        <span class="text-xs px-2 py-0.5 rounded
+                            {% if e.event_type == 'application_sent' %}bg-blue-100 text-blue-800
+                            {% elif e.event_type == 'message_sent' %}bg-green-100 text-green-800
+                            {% elif e.event_type == 'message_received' or e.event_type == 'email_received' %}bg-purple-100 text-purple-800
+                            {% elif e.event_type == 'status_change' %}bg-yellow-100 text-yellow-800
+                            {% else %}bg-gray-100 text-gray-700{% endif %}">{{ e.event_type }}</span>
                     </div>
-                    {% if e.body %}<div class="text-sm mt-1">{{ e.body }}</div>{% endif %}
+                    {% if e.body %}<div class="text-sm mt-1 whitespace-pre-line">{{ e.body }}</div>{% endif %}
                 </div>
                 {% endfor %}
             </div>
@@ -111,5 +180,28 @@
         </footer>
 
     </div>
+
+    <script>
+        function copyDraft(id, btn) {
+            const el = document.getElementById(id);
+            if (!el) return;
+            const text = el.innerText;
+            const original = btn.innerText;
+            navigator.clipboard.writeText(text).then(() => {
+                btn.innerText = '✓ Copied';
+                btn.classList.remove('bg-blue-600', 'hover:bg-blue-700');
+                btn.classList.add('bg-green-600');
+                setTimeout(() => {
+                    btn.innerText = original;
+                    btn.classList.remove('bg-green-600');
+                    btn.classList.add('bg-blue-600', 'hover:bg-blue-700');
+                }, 1500);
+            }).catch((err) => {
+                btn.innerText = 'Copy failed';
+                console.error('Clipboard error:', err);
+                setTimeout(() => { btn.innerText = original; }, 1500);
+            });
+        }
+    </script>
 </body>
 </html>

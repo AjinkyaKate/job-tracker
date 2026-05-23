@@ -29,6 +29,35 @@ def _rows_to_dicts(rows):
     return [dict(r) for r in rows]
 
 
+def _is_draft_event(event):
+    if event.get("event_type") != "note":
+        return False
+    body = event.get("body") or ""
+    first_line = body.split("\n", 1)[0]
+    return "SUGGESTED" in first_line or "OPTIONAL" in first_line
+
+
+def _parse_draft(body):
+    """Split a 'SUGGESTED ... :' or 'OPTIONAL ... :' note into (label, message)."""
+    if not body:
+        return "Draft", ""
+    parts = body.split("\n\n", 1)
+    if len(parts) < 2:
+        return body[:80], body
+
+    label = parts[0].rstrip(":").rstrip().rstrip(" -")
+    for prefix in ("SUGGESTED ", "OPTIONAL "):
+        if label.startswith(prefix):
+            label = label[len(prefix):]
+            break
+
+    msg_lines = parts[1].strip().split("\n")
+    while msg_lines and msg_lines[-1].strip().startswith("(") and ")" in msg_lines[-1]:
+        msg_lines.pop()
+    message = "\n".join(msg_lines).strip()
+    return label, message
+
+
 @app.get("/", response_class=HTMLResponse)
 def homepage(request: Request):
     tracker.init_db()
@@ -75,16 +104,19 @@ def homepage(request: Request):
             "SELECT * FROM contacts ORDER BY job_id, id"
         ).fetchall()
 
-        status_counts = conn.execute(
-            """
-            SELECT status, COUNT(*) AS n FROM jobs
-            WHERE worth_pursuing IS NULL OR worth_pursuing != 'no'
-            GROUP BY status ORDER BY n DESC
-            """
-        ).fetchall()
-
         backlog_count = conn.execute(
             "SELECT COUNT(*) AS n FROM jobs WHERE worth_pursuing = 'no'"
+        ).fetchone()["n"]
+
+        # count of pending draft messages across all active jobs (worth_pursuing != 'no')
+        drafts_pending = conn.execute(
+            """
+            SELECT COUNT(*) AS n FROM events e
+            JOIN jobs j ON j.id = e.job_id
+            WHERE e.event_type = 'note'
+              AND (e.body LIKE 'SUGGESTED%' OR e.body LIKE 'OPTIONAL%')
+              AND (j.worth_pursuing IS NULL OR j.worth_pursuing != 'no')
+            """
         ).fetchone()["n"]
 
     contacts_by_job = {}
@@ -110,9 +142,9 @@ def homepage(request: Request):
             "due": _rows_to_dicts(due),
             "upcoming": _rows_to_dicts(upcoming),
             "jobs": jobs_with_contacts,
-            "status_counts": _rows_to_dicts(status_counts),
             "backlog_count": backlog_count,
             "total_active": len(jobs_with_contacts) - backlog_count,
+            "drafts_pending": drafts_pending,
         },
     )
 
@@ -135,12 +167,31 @@ def job_detail(job_id: int, request: Request):
             (job_id,),
         ).fetchall()
 
+    contacts_dicts = _rows_to_dicts(contacts)
+    contact_by_id = {c["id"]: c for c in contacts_dicts}
+
+    drafts = []
+    other_events = []
+    for raw in events:
+        e = dict(raw)
+        if _is_draft_event(e):
+            label, message = _parse_draft(e.get("body") or "")
+            e["label"] = label
+            e["message"] = message
+            cid = e.get("contact_id")
+            e["contact_name"] = contact_by_id[cid]["name"] if cid in contact_by_id else None
+            e["contact_linkedin"] = contact_by_id[cid].get("linkedin_url") if cid in contact_by_id else None
+            drafts.append(e)
+        else:
+            other_events.append(e)
+
     return TEMPLATES.TemplateResponse(
         "job_detail.html",
         {
             "request": request,
             "job": dict(job),
-            "contacts": _rows_to_dicts(contacts),
-            "events": _rows_to_dicts(events),
+            "contacts": contacts_dicts,
+            "events": other_events,
+            "drafts": drafts,
         },
     )
