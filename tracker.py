@@ -1,8 +1,9 @@
+import os
 import sqlite3
 import sys
 from datetime import datetime
 
-DB_FILE = "tracker.db"
+DB_FILE = os.environ.get("DB_FILE", "tracker.db")
 
 SCHEMA = """
 CREATE TABLE IF NOT EXISTS jobs (

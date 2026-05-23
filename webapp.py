@@ -1,20 +1,71 @@
+import os
+import secrets
 import sqlite3
 from datetime import datetime
 from pathlib import Path
+from typing import Optional
 
-from fastapi import FastAPI, Request
+try:
+    from dotenv import load_dotenv
+    load_dotenv()
+except ImportError:
+    pass
+
+from fastapi import Depends, FastAPI, HTTPException, Request, status
 from fastapi.responses import HTMLResponse
+from fastapi.security import HTTPBasic, HTTPBasicCredentials
 from fastapi.templating import Jinja2Templates
 
 import tracker
 
-DB_FILE = "tracker.db"
+DB_FILE = os.environ.get("DB_FILE", "tracker.db")
+ADMIN_USERNAME = os.environ.get("ADMIN_USERNAME")
+ADMIN_PASSWORD = os.environ.get("ADMIN_PASSWORD")
+PORT_ENV = os.environ.get("PORT")
+
+# Production guard: Railway and most PaaS hosts set $PORT. If we detect that and
+# auth env vars are missing, fail loudly at import time so we never accidentally
+# expose personal data to the open internet.
+if PORT_ENV and (not ADMIN_USERNAME or not ADMIN_PASSWORD):
+    raise RuntimeError(
+        "Detected production deploy ($PORT is set) but ADMIN_USERNAME or "
+        "ADMIN_PASSWORD env var is missing. Set both in your platform's "
+        "environment variables before deploying — this is the only auth in "
+        "front of personal job-hunt data."
+    )
+
 BASE_DIR = Path(__file__).resolve().parent
 TEMPLATES = Jinja2Templates(directory=str(BASE_DIR / "templates"))
 
+# auto_error=False lets us see the absence of credentials in our handler
+# instead of being auto-rejected with 401 before we can check local-dev mode
+security = HTTPBasic(auto_error=False)
+
+
+def require_auth(credentials: Optional[HTTPBasicCredentials] = Depends(security)):
+    if not ADMIN_USERNAME or not ADMIN_PASSWORD:
+        return  # local dev: no auth configured, allow all
+    if credentials is None:
+        raise HTTPException(
+            status_code=status.HTTP_401_UNAUTHORIZED,
+            detail="Authentication required",
+            headers={"WWW-Authenticate": "Basic"},
+        )
+    correct_username = secrets.compare_digest(credentials.username, ADMIN_USERNAME)
+    correct_password = secrets.compare_digest(credentials.password, ADMIN_PASSWORD)
+    if not (correct_username and correct_password):
+        raise HTTPException(
+            status_code=status.HTTP_401_UNAUTHORIZED,
+            detail="Wrong credentials",
+            headers={"WWW-Authenticate": "Basic"},
+        )
+
+
+# Global auth dependency — covers every route incl. /docs and /openapi.json
 app = FastAPI(
     title="Job Tracker",
     description="Personal job-application command center.",
+    dependencies=[Depends(require_auth)],
 )
 
 
@@ -108,7 +159,6 @@ def homepage(request: Request):
             "SELECT COUNT(*) AS n FROM jobs WHERE worth_pursuing = 'no'"
         ).fetchone()["n"]
 
-        # count of pending draft messages across all active jobs (worth_pursuing != 'no')
         drafts_pending = conn.execute(
             """
             SELECT COUNT(*) AS n FROM events e
@@ -195,3 +245,5 @@ def job_detail(job_id: int, request: Request):
             "drafts": drafts,
         },
     )
+
+
