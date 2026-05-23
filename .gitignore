@@ -1,0 +1,31 @@
+# Python
+__pycache__/
+*.pyc
+*.pyo
+*.pyd
+
+# Virtual environments
+.venv/
+venv/
+env/
+
+# Environment variables / secrets — NEVER commit these
+.env
+.env.local
+.env.*.local
+
+# Databases (Phase 2+)
+*.db
+*.sqlite
+*.sqlite3
+
+# Mac
+.DS_Store
+
+# Editor leftovers
+.idea/
+.vscode/
+*.swp
+
+# Resumes are private + binary
+resumes/
