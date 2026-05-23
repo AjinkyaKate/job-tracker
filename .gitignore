@@ -16,6 +16,7 @@ env/
 
 # Data files — personal job info, never commit
 jobs.json
+jobs.json.*
 
 # Databases (Phase 2+)
 *.db

@@ -13,7 +13,7 @@ When you reopen this folder after a gap and forget a concept, the lesson here is
 | 03 | [`03_what_is_git.md`](03_what_is_git.md) — version control, commits, branches, GitHub ✅ | Ship 0 |
 | 04 | [`04_what_is_venv.md`](04_what_is_venv.md) — virtual environments, pip, requirements.txt ✅ | Ship 0 |
 | 05 | [`05_python_basics.md`](05_python_basics.md) — a guided tour of tracker.py: variables, lists, dicts, functions, if/for, file I/O, JSON, CLI args ✅ | Ship 1 |
-| 06 | `06_what_is_a_database.md` — tables, rows, SQL, SQLite | Ship 2 |
+| 06 | [`06_what_is_a_database.md`](06_what_is_a_database.md) — tables, rows, SQL, SQLite, parameterized queries ✅ | Ship 2 |
 | 07 | `07_what_is_an_api.md` — HTTP, requests, JSON, status codes | Ship 3 prep |
 | 08 | `08_what_is_an_llm_api.md` — prompts, tokens, structured output, Anthropic SDK | Ship 5 |
 | 09 | `09_what_is_a_backend.md` — server, request/response cycle, FastAPI | Ship 11 |

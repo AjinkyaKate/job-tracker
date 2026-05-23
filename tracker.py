@@ -1,53 +1,73 @@
-import json
-import os
+import sqlite3
 import sys
 from datetime import datetime
 
-JOBS_FILE = "jobs.json"
+DB_FILE = "tracker.db"
+
+SCHEMA = """
+CREATE TABLE IF NOT EXISTS jobs (
+    id INTEGER PRIMARY KEY AUTOINCREMENT,
+    title TEXT NOT NULL,
+    company TEXT,
+    link TEXT,
+    status TEXT NOT NULL DEFAULT 'saved',
+    notes TEXT,
+    added_at TEXT NOT NULL
+);
+"""
 
 
-def load_jobs():
-    if not os.path.exists(JOBS_FILE):
-        return []
-    with open(JOBS_FILE) as f:
-        return json.load(f)
+def get_connection():
+    conn = sqlite3.connect(DB_FILE)
+    conn.row_factory = sqlite3.Row
+    return conn
 
 
-def save_jobs(jobs):
-    with open(JOBS_FILE, "w") as f:
-        json.dump(jobs, f, indent=2)
+def init_db():
+    with get_connection() as conn:
+        conn.executescript(SCHEMA)
 
 
 def add_job():
-    jobs = load_jobs()
-    new_id = len(jobs) + 1
+    init_db()
 
-    print(f"\nAdd job (id will be {new_id}). Press Enter to skip a field.\n")
-    job = {
-        "id": new_id,
-        "title": input("  Job title: ").strip(),
-        "company": input("  Company: ").strip(),
-        "link": input("  Link: ").strip(),
-        "status": input("  Status [saved]: ").strip() or "saved",
-        "notes": input("  Notes: ").strip(),
-        "added_at": datetime.now().isoformat(timespec="seconds"),
-    }
+    print("\nAdd job. Press Enter to skip a field.\n")
+    title = input("  Job title: ").strip()
+    company = input("  Company: ").strip()
+    link = input("  Link: ").strip()
+    status = input("  Status [saved]: ").strip() or "saved"
+    notes = input("  Notes: ").strip()
+    added_at = datetime.now().isoformat(timespec="seconds")
 
-    jobs.append(job)
-    save_jobs(jobs)
-    print(f"\nSaved as job #{new_id}: {job['title']} @ {job['company']}\n")
+    if not title:
+        print("\nA title is required. Aborting.\n")
+        sys.exit(1)
+
+    with get_connection() as conn:
+        cursor = conn.execute(
+            "INSERT INTO jobs (title, company, link, status, notes, added_at) "
+            "VALUES (?, ?, ?, ?, ?, ?)",
+            (title, company, link, status, notes, added_at),
+        )
+        new_id = cursor.lastrowid
+
+    print(f"\nSaved as job #{new_id}: {title} @ {company}\n")
 
 
 def list_jobs():
-    jobs = load_jobs()
-    if not jobs:
+    init_db()
+
+    with get_connection() as conn:
+        rows = conn.execute("SELECT * FROM jobs ORDER BY id").fetchall()
+
+    if not rows:
         print("\nNo jobs yet. Add one with: python3 tracker.py add\n")
         return
 
-    print(f"\n{len(jobs)} job(s):\n")
-    for job in jobs:
-        print(f"  [{job['id']:>3}] {job['status']:<12}  {job['title']}  @  {job['company']}")
-        if job.get("link"):
+    print(f"\n{len(rows)} job(s):\n")
+    for job in rows:
+        print(f"  [{job['id']:>3}] {job['status']:<24}  {job['title']}  @  {job['company']}")
+        if job["link"]:
             print(f"        {job['link']}")
     print()
 
