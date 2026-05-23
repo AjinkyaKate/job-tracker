@@ -14,6 +14,9 @@ env/
 .env.local
 .env.*.local
 
+# Data files — personal job info, never commit
+jobs.json
+
 # Databases (Phase 2+)
 *.db
 *.sqlite
