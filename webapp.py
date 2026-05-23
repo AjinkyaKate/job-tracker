@@ -233,6 +233,18 @@ def homepage(request: Request):
             # Unknown status falls into Saved
             by_status["saved"].append(j)
 
+    # Gmail integration status for top-bar Sync button
+    gmail_state = {
+        "configured": gmail_integration.is_configured(),
+        "authorized": False,
+        "last_sync": None,
+    }
+    if gmail_state["configured"]:
+        with get_connection() as conn:
+            creds = gmail_integration.load_credentials(conn)
+            gmail_state["authorized"] = creds is not None
+            gmail_state["last_sync"] = gmail_integration.get_last_sync(conn)
+
     return TEMPLATES.TemplateResponse(
         "index.html",
         {
@@ -249,6 +261,7 @@ def homepage(request: Request):
             "backlog_count": backlog_count,
             "total_active": total_active,
             "drafts_pending": drafts_pending,
+            "gmail": gmail_state,
         },
     )
 
@@ -464,19 +477,48 @@ def gmail_oauth_callback(code: str = "", state: str = "", error: str = ""):
 
 @app.post("/gmail/sync")
 def gmail_sync_now():
-    """Manually trigger a Gmail → tracker sync of LinkedIn emails.
+    """Manually trigger a Gmail → tracker sync of LinkedIn notification emails.
 
-    Phase 3 ship 3/3 will implement the parser + matcher. For now, returns
-    501 with a helpful message.
+    Steps (handled inside gmail_integration.sync_to_tracker):
+    1. Load Gmail credentials from oauth_tokens table
+    2. Read last_gmail_sync from sync_state (default: 7 days ago)
+    3. Gmail API messages.list with q='from:linkedin.com after:{ts}'
+    4. For each new message: parse subject, fuzzy-match person to contact,
+       INSERT event into events table, mark message processed
+    5. Update last_gmail_sync
     """
     if not gmail_integration.is_configured():
         return _gmail_not_configured_response()
-    return JSONResponse(
-        status_code=501,
-        content={
-            "error": "not_implemented_yet",
-            "message": "Gmail sync engine ships in Phase 3 ship 3/3 (next next turn).",
-        },
-    )
+    try:
+        tracker.init_db()
+        with get_connection() as conn:
+            result = gmail_integration.sync_to_tracker(conn)
+        if not result.get("ok"):
+            return JSONResponse(status_code=400, content=result)
+        return result
+    except Exception as exc:
+        return JSONResponse(
+            status_code=500,
+            content={"error": "sync_failed", "message": str(exc)},
+        )
+
+
+@app.get("/gmail/status")
+def gmail_status():
+    """Reports Gmail integration state — used by the dashboard's Sync widget."""
+    configured = gmail_integration.is_configured()
+    authorized = False
+    last_sync = None
+    if configured:
+        tracker.init_db()
+        with get_connection() as conn:
+            creds = gmail_integration.load_credentials(conn)
+            authorized = creds is not None
+            last_sync = gmail_integration.get_last_sync(conn)
+    return {
+        "configured": configured,
+        "authorized": authorized,
+        "last_sync": last_sync,
+    }
 
 

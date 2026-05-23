@@ -110,6 +110,22 @@ Slot in AFTER Ship 6 is on localhost (so AI features land in the UI right away).
 - Reading Gmail messages outside LinkedIn senders — scope creep
 - Replying to emails from the app — adds complexity
 
+### ⏭ Phase 4 — Notifications (NEW from Session 10)
+
+**Why:** Once Phase 3 is auto-detecting LinkedIn events from Gmail, the user shouldn't have to refresh the dashboard to know something happened. Notifications surface new events in real-time.
+
+**Ship breakdown:**
+- **In-app toast** when dashboard is open and Gmail sync logs a new event. Already have the toast component from Phase B kanban; just wire it to render new events fetched on a polling interval (every 60s) or on Gmail-sync-complete.
+- **Browser Web Notifications API** — for background tabs / when dashboard isn't focused. Requires user permission (one-time). Fires on connection_accepted / message_received / interview_invited etc. Quiet hours configurable.
+- **Daily / weekly email digest** (optional) — Cron-triggered: every morning, send a summary email of "yesterday's activity" to the user's own Gmail. Helps surface trends + going-cold leads.
+
+**Depends on:** Phase 3 (Gmail sync) being live first — without auto-detection, there's nothing to notify about.
+
+**Tech:**
+- Polling: client-side `setInterval(() => fetch('/events/since?ts=...'), 60_000)`
+- Web Notifications: `Notification.requestPermission()` + `new Notification(title, {body, icon})`
+- Email digest: Python `smtplib` or transactional service (Resend/Postmark free tier)
+
 ### 🔭 Phase 2 — Post-deploy iterations (NEW asks from Session 7)
 
 After MVP is deployed and AI ingestion is live, layer these:

@@ -68,7 +68,7 @@
   .tint-strong { background: color-mix(in oklab, var(--st) 22%, transparent); color: var(--st); }
 </style>
 </head>
-<body class="bg-base-light dark:bg-base text-ink-light dark:text-ink antialiased min-h-screen flex flex-col overflow-hidden">
+<body class="bg-base-light dark:bg-base text-ink-light dark:text-ink antialiased min-h-screen md:h-screen md:flex md:flex-col md:overflow-hidden">
 
 <!-- ============ TOP BAR ============ -->
 <header class="shrink-0 border-b border-line-light dark:border-line bg-base-light/85 dark:bg-base/85 backdrop-blur">
@@ -95,6 +95,25 @@
       </div>
     </div>
     <div class="flex items-center gap-2">
+      {# Gmail Sync widget — state depends on configuration + authorization #}
+      {% if gmail.configured and gmail.authorized %}
+      <button id="gmail-sync" class="hidden md:inline-flex items-center gap-1.5 h-7 px-2.5 rounded-md border border-accent-500/40 bg-accent-500/10 text-accent-300 text-[12px] font-medium hover:bg-accent-500/15 transition" title="Pull new LinkedIn events from Gmail">
+        <svg class="w-3.5 h-3.5" viewBox="0 0 16 16" fill="none" stroke="currentColor" stroke-width="2"><path d="M14 8a6 6 0 11-6-6c1.5 0 2.9.6 4 1.5M14 2v4h-4"/></svg>
+        <span id="gmail-sync-label">Sync Gmail</span>
+        {% if gmail.last_sync %}<span class="font-mono text-[10px] text-accent-300/70" id="gmail-last-sync">· {{ gmail.last_sync[11:16] }}</span>{% endif %}
+      </button>
+      {% elif gmail.configured %}
+      <a href="/auth/gmail/start" class="hidden md:inline-flex items-center gap-1.5 h-7 px-2.5 rounded-md border border-line-light dark:border-line bg-raised-light dark:bg-raised text-[12px] font-medium hover:border-accent-500/40 hover:text-accent-300 transition" title="Connect Gmail to auto-detect LinkedIn events">
+        <svg class="w-3.5 h-3.5" viewBox="0 0 16 16" fill="none" stroke="currentColor" stroke-width="2"><rect x="2" y="3" width="12" height="10" rx="1.5"/><path d="M2 5l6 4 6-4"/></svg>
+        Connect Gmail
+      </a>
+      {% else %}
+      <span class="hidden md:inline-flex items-center gap-1.5 h-7 px-2.5 rounded-md border border-dashed border-line-light dark:border-line text-ink3 text-[11px]" title="See GMAIL_SETUP.md to configure">
+        <svg class="w-3 h-3" viewBox="0 0 16 16" fill="none" stroke="currentColor" stroke-width="1.8"><rect x="2" y="3" width="12" height="10" rx="1.5"/><path d="M2 5l6 4 6-4"/></svg>
+        Gmail (setup)
+      </span>
+      {% endif %}
+
       <button id="theme-toggle" class="h-7 w-7 grid place-items-center rounded-md text-ink2 hover:text-ink hover:bg-sunken-light dark:hover:bg-sunken">
         <svg class="w-3.5 h-3.5 dark:hidden" viewBox="0 0 16 16" fill="currentColor"><path d="M6 1A6 6 0 008 13a6 6 0 005.9-5A4.5 4.5 0 116 1z"/></svg>
         <svg class="w-3.5 h-3.5 hidden dark:block" viewBox="0 0 16 16" fill="currentColor"><path d="M8 4a4 4 0 100 8 4 4 0 000-8zM8 0v2M8 14v2M16 8h-2M2 8H0"/></svg>
@@ -174,7 +193,7 @@
 </section>
 
 <!-- ============ KANBAN BOARD ============ -->
-<section id="board" class="flex-1 min-h-0 nice-scroll overflow-x-auto overflow-y-hidden pb-6">
+<section id="board" class="md:flex-1 md:min-h-0 nice-scroll overflow-x-auto md:overflow-y-hidden pb-6">
   <div class="h-full inline-flex gap-3 px-4 md:px-6 pt-2 min-w-max">
     {% for s in statuses %}
     <div class="col flex flex-col w-[300px] shrink-0" data-status="{{ s.key }}">
@@ -183,7 +202,7 @@
         <span class="text-[12.5px] font-semibold">{{ s.label }}</span>
         <span class="px-1.5 h-5 inline-flex items-center rounded bg-sunken-light dark:bg-sunken text-[11px] font-mono text-ink2 tabular col-count">{{ by_status[s.key]|length }}</span>
       </header>
-      <div class="col-body flex-1 min-h-0 overflow-y-auto nice-scroll rounded-xl bg-sunken-light/40 dark:bg-sunken/40 border border-transparent p-2 space-y-2" data-drop="{{ s.key }}">
+      <div class="col-body flex-1 md:min-h-0 md:overflow-y-auto nice-scroll rounded-xl bg-sunken-light/40 dark:bg-sunken/40 border border-transparent p-2 space-y-2" data-drop="{{ s.key }}">
         {% for j in by_status[s.key] %}
         {% set fit_color = 'interview' if j.fit >= 80 else ('applied' if j.fit >= 65 else ('replied' if j.fit >= 45 else 'rejected')) %}
         <a href="/jobs/{{ j.id }}"
@@ -251,7 +270,7 @@
 </section>
 
 <!-- ============ LIST VIEW ============ -->
-<section id="list-view" class="hidden flex-1 min-h-0 px-4 md:px-6 pb-6 pt-1">
+<section id="list-view" class="hidden md:flex-1 md:min-h-0 px-4 md:px-6 pb-6 pt-1">
   <div class="h-full flex flex-col rounded-xl border border-line-light dark:border-line bg-raised-light dark:bg-raised overflow-hidden">
     <div class="shrink-0 grid items-center gap-3 px-4 h-9 border-b border-line-light dark:border-line bg-sunken-light/60 dark:bg-sunken/60 text-[10.5px] font-mono uppercase tracking-[0.14em] text-ink3"
          style="grid-template-columns: 28px minmax(280px,2.4fr) 110px 64px minmax(180px,1.2fr) 80px 48px;">
@@ -550,8 +569,44 @@
     }
     btnBoard.addEventListener('click', () => show('board'));
     btnList.addEventListener('click', () => show('list'));
+    // Default to list view on first-load mobile (saved preference overrides)
     const stored = localStorage.getItem('jt-view');
-    if (stored === 'list') show('list');
+    if (stored === 'list') {
+      show('list');
+    } else if (!stored && window.matchMedia('(max-width: 767px)').matches) {
+      show('list');
+    }
+  })();
+
+  // ─── Gmail sync ───
+  (function() {
+    const btn = document.getElementById('gmail-sync');
+    if (!btn) return;  // not configured + authorized yet
+    btn.addEventListener('click', async () => {
+      const label = document.getElementById('gmail-sync-label');
+      const orig = label.textContent;
+      label.textContent = 'Syncing…';
+      btn.disabled = true;
+      btn.style.opacity = '0.7';
+      try {
+        const res = await fetch('/gmail/sync', { method: 'POST' });
+        const data = await res.json();
+        if (data.ok) {
+          showToast(`Gmail sync: ${data.logged} new event${data.logged !== 1 ? 's' : ''} · ${data.fetched} mail${data.fetched !== 1 ? 's' : ''} checked`);
+          // Reload to show the new events
+          setTimeout(() => location.reload(), 1400);
+        } else {
+          showToast(`Sync failed: ${data.message || 'unknown'}`, 'rejected');
+        }
+      } catch (err) {
+        console.error(err);
+        showToast('Sync failed · check network', 'rejected');
+      } finally {
+        label.textContent = orig;
+        btn.disabled = false;
+        btn.style.opacity = '';
+      }
+    });
   })();
 
   // ─── FAB + modal ───

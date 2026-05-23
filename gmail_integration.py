@@ -16,7 +16,7 @@ Status: SCAFFOLDING (Phase 3 ship 1/3).
 import os
 import re
 import sqlite3
-from datetime import datetime, timezone
+from datetime import datetime, timedelta, timezone
 from typing import Optional
 
 # Google libs are optional at import time so the webapp doesn't crash if they
@@ -231,37 +231,247 @@ def parse_linkedin_email(msg: dict) -> Optional[dict]:
     return None
 
 
-def fetch_linkedin_emails(creds: "Credentials", since_iso: Optional[str] = None) -> list:
-    """Fetch LinkedIn emails from Gmail since the given ISO timestamp.
+def fetch_linkedin_emails(creds: "Credentials", since_iso: Optional[str] = None,
+                          max_results: int = 50) -> list:
+    """Fetch LinkedIn notification emails since the given ISO timestamp.
 
-    Phase 3 ship 3/3 will implement this using:
-        service = build("gmail", "v1", credentials=creds)
-        results = service.users().messages().list(
-            userId="me",
-            q=f"from:linkedin.com after:{since_iso}",
-            maxResults=50,
-        ).execute()
+    Returns a list of Gmail message dicts (headers only — From, Subject, Date).
+    Each dict has at least: {id, payload: {headers: [...]}}.
     """
-    raise NotImplementedError("Phase 3 ship 3/3 will implement this.")
+    service = build("gmail", "v1", credentials=creds)
+
+    # Build query: from:linkedin.com after:<unix_timestamp>
+    query = "from:linkedin.com"
+    if since_iso:
+        try:
+            dt = datetime.fromisoformat(since_iso)
+            if dt.tzinfo is None:
+                dt = dt.replace(tzinfo=timezone.utc)
+            ts = int(dt.timestamp())
+            query += f" after:{ts}"
+        except ValueError:
+            pass  # ignore bad timestamp, fetch everything
+
+    result = service.users().messages().list(
+        userId="me",
+        q=query,
+        maxResults=max_results,
+    ).execute()
+
+    fetched = []
+    for m in result.get("messages", []):
+        full = service.users().messages().get(
+            userId="me",
+            id=m["id"],
+            format="metadata",
+            metadataHeaders=["From", "Subject", "Date"],
+        ).execute()
+        fetched.append(full)
+    return fetched
+
+
+def _normalize_name(name: str) -> str:
+    """Lowercase + collapse whitespace + strip punctuation."""
+    if not name:
+        return ""
+    name = re.sub(r"[^\w\s]", " ", name)
+    return " ".join(name.lower().split())
 
 
 def match_contact_in_tracker(conn: sqlite3.Connection, matched_name: str) -> Optional[dict]:
-    """Find a contact in the tracker whose name fuzzy-matches the parsed name.
+    """Tiered fuzzy match: exact -> case-insensitive -> last-name -> first-name.
 
-    Phase 3 ship 3/3 will implement this with:
-    - Exact match first
-    - Then last-name match
-    - Then word-overlap fuzzy match (rapidfuzz lib OR simple in-Python)
-    Returns the contact row + parent job, or None.
+    Returns dict with keys: id, job_id, name (or None if no match).
     """
-    raise NotImplementedError("Phase 3 ship 3/3 will implement this.")
+    if not matched_name or not matched_name.strip():
+        return None
+
+    needle = _normalize_name(matched_name)
+    if not needle:
+        return None
+
+    rows = conn.execute(
+        "SELECT id, job_id, name FROM contacts ORDER BY id"
+    ).fetchall()
+
+    # Tier 1: exact case-insensitive
+    for r in rows:
+        if _normalize_name(r["name"]) == needle:
+            return dict(r)
+
+    # Tier 2: last-name match (last token of needle vs last token of any contact)
+    needle_tokens = needle.split()
+    if needle_tokens:
+        last_needle = needle_tokens[-1]
+        for r in rows:
+            contact_tokens = _normalize_name(r["name"]).split()
+            if contact_tokens and contact_tokens[-1] == last_needle:
+                return dict(r)
+
+    # Tier 3: first-name match (only if needle is single token, or as fallback)
+    if needle_tokens:
+        first_needle = needle_tokens[0]
+        for r in rows:
+            contact_tokens = _normalize_name(r["name"]).split()
+            if contact_tokens and contact_tokens[0] == first_needle:
+                return dict(r)
+
+    # Tier 4: any-token overlap (avoid false positives by requiring >=4 chars)
+    if needle_tokens:
+        long_needles = {t for t in needle_tokens if len(t) >= 4}
+        for r in rows:
+            contact_tokens = set(_normalize_name(r["name"]).split())
+            if long_needles & contact_tokens:
+                return dict(r)
+
+    return None
+
+
+def _get_sync_state(conn: sqlite3.Connection, key: str) -> Optional[str]:
+    row = conn.execute(
+        "SELECT value FROM sync_state WHERE key = ?", (key,)
+    ).fetchone()
+    return row["value"] if row else None
+
+
+def _set_sync_state(conn: sqlite3.Connection, key: str, value: str) -> None:
+    now = datetime.now(timezone.utc).isoformat(timespec="seconds")
+    existing = conn.execute(
+        "SELECT key FROM sync_state WHERE key = ?", (key,)
+    ).fetchone()
+    if existing:
+        conn.execute(
+            "UPDATE sync_state SET value = ?, updated_at = ? WHERE key = ?",
+            (value, now, key),
+        )
+    else:
+        conn.execute(
+            "INSERT INTO sync_state (key, value, updated_at) VALUES (?, ?, ?)",
+            (key, value, now),
+        )
+
+
+def _already_processed(conn: sqlite3.Connection, gmail_message_id: str) -> bool:
+    row = conn.execute(
+        "SELECT 1 FROM processed_messages WHERE gmail_message_id = ?",
+        (gmail_message_id,),
+    ).fetchone()
+    return row is not None
+
+
+def _mark_processed(conn: sqlite3.Connection, gmail_message_id: str, event_id: Optional[int]) -> None:
+    now = datetime.now(timezone.utc).isoformat(timespec="seconds")
+    conn.execute(
+        "INSERT OR REPLACE INTO processed_messages (gmail_message_id, event_id, processed_at) "
+        "VALUES (?, ?, ?)",
+        (gmail_message_id, event_id, now),
+    )
 
 
 def sync_to_tracker(conn: sqlite3.Connection) -> dict:
-    """Main entry: fetch new LinkedIn emails, parse, match contacts, log events.
+    """Main sync entrypoint: pull new LinkedIn emails -> parse -> match -> log events.
 
-    Returns a summary: {fetched, parsed, matched, logged, unmatched_names}.
-
-    Phase 3 ship 3/3 will tie all the above functions together.
+    Returns: {ok, fetched, parsed, logged, unmatched, last_sync, duration_s}.
     """
-    raise NotImplementedError("Phase 3 ship 3/3 will implement this.")
+    started = datetime.now(timezone.utc)
+
+    creds = load_credentials(conn)
+    if not creds:
+        return {
+            "ok": False,
+            "error": "not_authorized",
+            "message": "Gmail not authorized yet. Visit /auth/gmail/start to connect.",
+        }
+
+    # Determine since timestamp
+    last_sync = _get_sync_state(conn, "last_gmail_sync")
+    if not last_sync:
+        # First sync: look back 7 days
+        last_sync = (datetime.now(timezone.utc) - timedelta(days=7)).isoformat(timespec="seconds")
+
+    try:
+        messages = fetch_linkedin_emails(creds, since_iso=last_sync)
+    except Exception as exc:
+        return {
+            "ok": False,
+            "error": "fetch_failed",
+            "message": f"Gmail API call failed: {exc}",
+        }
+
+    fetched = len(messages)
+    parsed_count = 0
+    logged = []
+    unmatched = []
+
+    now_iso = datetime.now(timezone.utc).isoformat(timespec="seconds")
+
+    for msg in messages:
+        gmail_id = msg.get("id")
+        if not gmail_id or _already_processed(conn, gmail_id):
+            continue
+
+        parsed = parse_linkedin_email(msg)
+        if not parsed:
+            # Not a recognized LinkedIn pattern — mark processed anyway so we don't re-check
+            _mark_processed(conn, gmail_id, None)
+            continue
+
+        parsed_count += 1
+        contact = match_contact_in_tracker(conn, parsed["matched_name"])
+
+        if contact:
+            # Log a real event tied to that contact + its job
+            cursor = conn.execute(
+                "INSERT INTO events (job_id, contact_id, event_type, body, occurred_at, recorded_at) "
+                "VALUES (?, ?, ?, ?, ?, ?)",
+                (
+                    contact["job_id"],
+                    contact["id"],
+                    parsed["event_type"],
+                    f"[Gmail] {parsed['raw_subject']}",
+                    now_iso,
+                    now_iso,
+                ),
+            )
+            new_event_id = cursor.lastrowid
+            # Touch the job's last_activity_at
+            conn.execute(
+                "UPDATE jobs SET last_activity_at = ? WHERE id = ?",
+                (now_iso, contact["job_id"]),
+            )
+            _mark_processed(conn, gmail_id, new_event_id)
+            logged.append({
+                "gmail_id": gmail_id,
+                "contact": contact["name"],
+                "job_id": contact["job_id"],
+                "event_type": parsed["event_type"],
+                "subject": parsed["raw_subject"],
+            })
+        else:
+            unmatched.append({
+                "name": parsed["matched_name"],
+                "event_type": parsed["event_type"],
+                "subject": parsed["raw_subject"],
+            })
+            # Don't mark as processed — user may add the contact later and we want to retry
+
+    _set_sync_state(conn, "last_gmail_sync", now_iso)
+    conn.commit()
+
+    duration_s = (datetime.now(timezone.utc) - started).total_seconds()
+
+    return {
+        "ok": True,
+        "fetched": fetched,
+        "parsed": parsed_count,
+        "logged": len(logged),
+        "logged_details": logged,
+        "unmatched": unmatched,
+        "last_sync": now_iso,
+        "duration_s": round(duration_s, 2),
+    }
+
+
+def get_last_sync(conn: sqlite3.Connection) -> Optional[str]:
+    """Returns the ISO timestamp of the most recent successful Gmail sync, or None."""
+    return _get_sync_state(conn, "last_gmail_sync")

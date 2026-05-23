@@ -81,7 +81,7 @@ def init_db():
         _ensure_column(conn, "jobs", "source", "TEXT")
         # Ship 6 Phase B — per-job tailored resume markdown
         _ensure_column(conn, "jobs", "resume_md", "TEXT")
-        # Phase 3 — Gmail integration: OAuth tokens table
+        # Phase 3 — Gmail integration tables
         conn.executescript("""
             CREATE TABLE IF NOT EXISTS oauth_tokens (
                 id INTEGER PRIMARY KEY AUTOINCREMENT,
@@ -93,6 +93,19 @@ def init_db():
                 user_email TEXT,
                 created_at TEXT NOT NULL,
                 updated_at TEXT NOT NULL
+            );
+
+            CREATE TABLE IF NOT EXISTS sync_state (
+                key TEXT PRIMARY KEY,
+                value TEXT,
+                updated_at TEXT NOT NULL
+            );
+
+            CREATE TABLE IF NOT EXISTS processed_messages (
+                gmail_message_id TEXT PRIMARY KEY,
+                event_id INTEGER,
+                processed_at TEXT NOT NULL,
+                FOREIGN KEY (event_id) REFERENCES events(id)
             );
         """)
 
