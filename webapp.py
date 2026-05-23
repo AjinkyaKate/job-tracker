@@ -11,6 +11,7 @@ try:
 except ImportError:
     pass
 
+import markdown as md_lib
 from fastapi import Depends, FastAPI, HTTPException, Request, status
 from fastapi.responses import HTMLResponse
 from fastapi.security import HTTPBasic, HTTPBasicCredentials
@@ -243,6 +244,38 @@ def job_detail(job_id: int, request: Request):
             "contacts": contacts_dicts,
             "events": other_events,
             "drafts": drafts,
+        },
+    )
+
+
+@app.get("/jobs/{job_id}/resume", response_class=HTMLResponse)
+def job_resume(job_id: int, request: Request):
+    tracker.init_db()
+    with get_connection() as conn:
+        job = conn.execute("SELECT * FROM jobs WHERE id = ?", (job_id,)).fetchone()
+        if not job:
+            return HTMLResponse(
+                f"<h1>Job #{job_id} not found</h1><a href='/'>back</a>",
+                status_code=404,
+            )
+
+    job_dict = dict(job)
+    resume_md = job_dict.get("resume_md") or ""
+
+    if resume_md.strip():
+        resume_html = md_lib.markdown(
+            resume_md,
+            extensions=["extra", "sane_lists"],
+        )
+    else:
+        resume_html = None
+
+    return TEMPLATES.TemplateResponse(
+        "resume.html",
+        {
+            "request": request,
+            "job": job_dict,
+            "resume_html": resume_html,
         },
     )
 

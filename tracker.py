@@ -79,6 +79,8 @@ def init_db():
         _ensure_column(conn, "jobs", "location", "TEXT")
         _ensure_column(conn, "jobs", "comp_range", "TEXT")
         _ensure_column(conn, "jobs", "source", "TEXT")
+        # Ship 6 Phase B — per-job tailored resume markdown
+        _ensure_column(conn, "jobs", "resume_md", "TEXT")
 
 
 def _require_job(conn, job_id):
