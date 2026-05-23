@@ -15,13 +15,14 @@ When you reopen this folder after a gap and forget a concept, the lesson here is
 | 05 | [`05_python_basics.md`](05_python_basics.md) — a guided tour of tracker.py: variables, lists, dicts, functions, if/for, file I/O, JSON, CLI args ✅ | Ship 1 |
 | 06 | [`06_what_is_a_database.md`](06_what_is_a_database.md) — tables, rows, SQL, SQLite, parameterized queries ✅ | Ship 2 |
 | 07 | [`07_relationships_foreign_keys.md`](07_relationships_foreign_keys.md) — one-to-many, FK constraints, JOINs, SQLite FK pragma ✅ | Ship 3 |
-| 08 | `08_what_is_an_api.md` — HTTP, requests, JSON, status codes | Ship 4 prep |
-| 09 | `09_what_is_an_llm_api.md` — prompts, tokens, structured output, Anthropic SDK | Ship 5 |
-| 10 | `10_what_is_a_backend.md` — server, request/response cycle, FastAPI | Ship 11 |
-| 11 | `11_what_is_a_frontend.md` — HTML, browser, HTMX, why not React (yet) | Ship 12 |
-| 12 | `12_what_is_deployment.md` — hosting, environments, secrets, env vars | Ship 15 |
-| 13 | `13_writing_good_code.md` — naming, function size, comments, structure | cross-cutting |
-| 14 | `14_how_systems_connect.md` — end-to-end flow of a single user request | after Ship 11 |
+| 08 | [`08_state_and_events.md`](08_state_and_events.md) — status as state machine, event log, two timestamps, today view queries ✅ | Ship 4 |
+| 09 | `09_what_is_an_api.md` — HTTP, requests, JSON, status codes | Ship 5 prep |
+| 10 | `10_what_is_an_llm_api.md` — prompts, tokens, structured output, Anthropic SDK | Ship 5 |
+| 11 | `11_what_is_a_backend.md` — server, request/response cycle, FastAPI | Ship 6 |
+| 12 | `12_what_is_a_frontend.md` — HTML, browser, HTMX, why not React (yet) | Ship 6 |
+| 13 | `13_what_is_deployment.md` — hosting, environments, secrets, env vars | Ship 7 |
+| 14 | `14_writing_good_code.md` — naming, function size, comments, structure | cross-cutting |
+| 15 | `15_how_systems_connect.md` — end-to-end flow of a single user request | after Ship 6 |
 
 ## How lessons relate to tech-interview prep
 
