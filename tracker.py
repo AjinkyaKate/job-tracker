@@ -68,6 +68,16 @@ def init_db():
         _ensure_column(conn, "jobs", "next_action_note", "TEXT")
         _ensure_column(conn, "jobs", "worth_pursuing", "TEXT DEFAULT 'unsure'")
         _ensure_column(conn, "jobs", "last_activity_at", "TEXT")
+        # Ship 5 prep — rich JD listing fields (extracted manually or by AI later)
+        _ensure_column(conn, "jobs", "jd_raw_text", "TEXT")
+        _ensure_column(conn, "jobs", "jd_summary", "TEXT")
+        _ensure_column(conn, "jobs", "level", "TEXT")
+        _ensure_column(conn, "jobs", "yoe_required", "TEXT")
+        _ensure_column(conn, "jobs", "must_have_skills", "TEXT")
+        _ensure_column(conn, "jobs", "nice_to_have_skills", "TEXT")
+        _ensure_column(conn, "jobs", "location", "TEXT")
+        _ensure_column(conn, "jobs", "comp_range", "TEXT")
+        _ensure_column(conn, "jobs", "source", "TEXT")
 
 
 def _require_job(conn, job_id):
