@@ -81,6 +81,20 @@ def init_db():
         _ensure_column(conn, "jobs", "source", "TEXT")
         # Ship 6 Phase B — per-job tailored resume markdown
         _ensure_column(conn, "jobs", "resume_md", "TEXT")
+        # Phase 3 — Gmail integration: OAuth tokens table
+        conn.executescript("""
+            CREATE TABLE IF NOT EXISTS oauth_tokens (
+                id INTEGER PRIMARY KEY AUTOINCREMENT,
+                provider TEXT NOT NULL UNIQUE,
+                access_token TEXT,
+                refresh_token TEXT,
+                expires_at TEXT,
+                scopes TEXT,
+                user_email TEXT,
+                created_at TEXT NOT NULL,
+                updated_at TEXT NOT NULL
+            );
+        """)
 
 
 def _require_job(conn, job_id):

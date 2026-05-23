@@ -14,10 +14,11 @@ except ImportError:
 
 import markdown as md_lib
 from fastapi import Depends, FastAPI, HTTPException, Request, status
-from fastapi.responses import HTMLResponse
+from fastapi.responses import HTMLResponse, JSONResponse, RedirectResponse
 from fastapi.security import HTTPBasic, HTTPBasicCredentials
 from fastapi.templating import Jinja2Templates
 
+import gmail_integration
 import tracker
 
 DB_FILE = os.environ.get("DB_FILE", "tracker.db")
@@ -289,6 +290,85 @@ def job_resume(job_id: int, request: Request):
             "job": job_dict,
             "resume_html": resume_html,
             "pdf_filename": pdf_filename,
+        },
+    )
+
+
+# ─────────────────────────────────────────────────────────────────────────────
+# Phase 3 — Gmail OAuth routes (stubs; see GMAIL_SETUP.md)
+# ─────────────────────────────────────────────────────────────────────────────
+
+def _gmail_not_configured_response():
+    return JSONResponse(
+        status_code=503,
+        content={
+            "error": "gmail_not_configured",
+            "message": (
+                "Gmail integration is not yet configured. Set GOOGLE_CLIENT_ID "
+                "and GOOGLE_CLIENT_SECRET in .env and restart. See GMAIL_SETUP.md."
+            ),
+        },
+    )
+
+
+@app.get("/auth/gmail/start")
+def gmail_oauth_start():
+    """Step 1 of OAuth: redirect the user to Google's consent screen."""
+    if not gmail_integration.is_configured():
+        return _gmail_not_configured_response()
+    auth_url = gmail_integration.build_authorize_url()
+    return RedirectResponse(url=auth_url, status_code=302)
+
+
+@app.get("/auth/gmail/callback")
+def gmail_oauth_callback(code: str = "", state: str = "", error: str = ""):
+    """Step 2 of OAuth: Google redirects back with a code. We exchange + store.
+
+    Phase 3 ship 2/3 will complete the token-storage path. Right now we just
+    confirm the round-trip works and surface the result.
+    """
+    if error:
+        return JSONResponse(
+            status_code=400,
+            content={"error": "oauth_denied", "message": f"Google returned: {error}"},
+        )
+    if not code:
+        return JSONResponse(
+            status_code=400,
+            content={"error": "no_code", "message": "Missing authorization code"},
+        )
+    if not gmail_integration.is_configured():
+        return _gmail_not_configured_response()
+    try:
+        creds = gmail_integration.exchange_code_for_token(code)
+        with get_connection() as conn:
+            gmail_integration.store_credentials(conn, creds)
+        return HTMLResponse(
+            "<h1>Gmail connected ✓</h1>"
+            "<p>Tokens stored locally. <a href='/'>back to dashboard</a></p>",
+            status_code=200,
+        )
+    except Exception as exc:
+        return JSONResponse(
+            status_code=500,
+            content={"error": "exchange_failed", "message": str(exc)},
+        )
+
+
+@app.post("/gmail/sync")
+def gmail_sync_now():
+    """Manually trigger a Gmail → tracker sync of LinkedIn emails.
+
+    Phase 3 ship 3/3 will implement the parser + matcher. For now, returns
+    501 with a helpful message.
+    """
+    if not gmail_integration.is_configured():
+        return _gmail_not_configured_response()
+    return JSONResponse(
+        status_code=501,
+        content={
+            "error": "not_implemented_yet",
+            "message": "Gmail sync engine ships in Phase 3 ship 3/3 (next next turn).",
         },
     )
 

@@ -82,6 +82,34 @@ Slot in AFTER Ship 6 is on localhost (so AI features land in the UI right away).
   - Endpoint `POST /extract` in the web app
   - Lessons 09 (HTTP/APIs) + 10 (LLM APIs) land here
 
+### ⏭ Phase 3 — Gmail integration for LinkedIn event auto-detection (NEW from Session 9)
+
+**Why:** LinkedIn doesn't expose an API for messages/connections/applications. But LinkedIn *emails* the user about every event — connection accepted, message received, InMail received, application viewed, profile viewed. We read those Gmail messages via Google's Gmail API, parse them, and auto-log events into the tracker.
+
+**Why this is the safest path (vs scraping):** Doesn't violate LinkedIn TOS, doesn't risk Ajinkya's LinkedIn account (which is critical during job hunt). Uses official Google OAuth.
+
+**Ship breakdown (3 turns total):**
+
+- **Phase 3 ship 1/3 — Scaffolding + setup doc** (this turn): roadmap entry, `GMAIL_SETUP.md` with Google Cloud Console step-by-step, `oauth_tokens` schema table, stub `gmail_integration.py` module, stub OAuth routes in webapp.py, Google API libs added to requirements.txt
+- **Phase 3 ship 2/3 — Real OAuth flow + credential storage** (next turn, after user completes Google Cloud setup): `/auth/gmail/start` redirects to Google consent → `/auth/gmail/callback` stores access + refresh tokens. Test: user grants access, we have a working creds row in oauth_tokens.
+- **Phase 3 ship 3/3 — Email parser + sync engine** (turn after): parse common LinkedIn email patterns (subject regex + sender filter), fuzzy-match person names to existing contacts in tracker.db, log events. Manual "Sync Now" button + automatic on-page-load sync.
+
+**Events we'll auto-detect:**
+| LinkedIn email pattern | Maps to event_type |
+|---|---|
+| `"X accepted your invitation"` | `connection_accepted` (status_change Saved → Reached-out if applicable) |
+| `"New message from X"` | `message_received` |
+| `"X sent you a message"` | `message_received` |
+| `"InMail from X"` | `inmail_received` |
+| `"Your application was sent to Y"` | `application_sent` |
+| `"X is interested in your application"` | `interview_invited` or `recruiter_interest` |
+| `"X viewed your application"` | `application_viewed` |
+
+**Out of scope (deferred):**
+- Gmail push notifications via Cloud Pub/Sub (more setup) — use polling/manual sync for v1
+- Reading Gmail messages outside LinkedIn senders — scope creep
+- Replying to emails from the app — adds complexity
+
 ### 🔭 Phase 2 — Post-deploy iterations (NEW asks from Session 7)
 
 After MVP is deployed and AI ingestion is live, layer these:
