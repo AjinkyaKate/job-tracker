@@ -1,0 +1,890 @@
+<!doctype html>
+<html lang="en" class="dark">
+<head>
+<meta charset="utf-8" />
+<meta name="viewport" content="width=device-width, initial-scale=1" />
+<title>Job Tracker — Design System</title>
+<script src="https://cdn.tailwindcss.com?plugins=forms"></script>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&family=JetBrains+Mono:wght@400;500;600&display=swap" rel="stylesheet">
+<script>
+  tailwind.config = {
+    darkMode: 'class',
+    theme: {
+      extend: {
+        fontFamily: {
+          sans: ['Inter', 'ui-sans-serif', 'system-ui', 'sans-serif'],
+          mono: ['"JetBrains Mono"', 'ui-monospace', 'monospace'],
+        },
+        colors: {
+          // surfaces
+          base:   { light: '#fafaf9', DEFAULT: '#0b0b0e' },
+          raised: { light: '#ffffff', DEFAULT: '#131318' },
+          sunken: { light: '#f1f0ee', DEFAULT: '#08080b' },
+          line:   { light: '#e6e4e0', DEFAULT: '#26262e' },
+          line2:  { light: '#d8d6d1', DEFAULT: '#32323c' },
+          // text
+          ink:    { light: '#0f0f12', DEFAULT: '#f4f3ef' },
+          ink2:   { light: '#55554f', DEFAULT: '#a7a6a1' },
+          ink3:   { light: '#85847d', DEFAULT: '#6c6c72' },
+          // brand
+          accent: { 50:'#f5f0ff',100:'#e9deff',200:'#d4bdff',300:'#b896ff',400:'#9a6bff',500:'#7e44ff',600:'#6a2ef0',700:'#5520c4',800:'#42189b',900:'#311271' },
+          // status
+          saved:    '#9aa0a6',
+          applied:  '#4b8df8',
+          replied:  '#f5a524',
+          interview:'#22c55e',
+          offer:    '#10b981',
+          rejected: '#ef4444',
+          backlog:  '#6b7280',
+        },
+        boxShadow: {
+          'pop': '0 1px 0 rgba(255,255,255,0.04) inset, 0 8px 24px -8px rgba(0,0,0,0.5), 0 2px 6px -1px rgba(0,0,0,0.35)',
+          'pop-light': '0 1px 0 rgba(255,255,255,0.8) inset, 0 8px 24px -8px rgba(15,15,18,0.10), 0 2px 6px -1px rgba(15,15,18,0.06)',
+        },
+        borderRadius: { 'xs': '4px' },
+      }
+    }
+  };
+</script>
+<style>
+  html { font-feature-settings: 'ss01','cv11','cv02'; }
+  body { font-family: 'Inter', system-ui, sans-serif; }
+  .tabular { font-variant-numeric: tabular-nums; }
+  .grid-dots {
+    background-image: radial-gradient(currentColor 1px, transparent 1px);
+    background-size: 16px 16px;
+    background-position: -1px -1px;
+  }
+  /* striped placeholder used in lieu of real assets */
+  .stripe-ph {
+    background-image: repeating-linear-gradient(135deg, currentColor 0 1px, transparent 1px 8px);
+  }
+  /* checkbox / radio focus rings consistent with accent */
+  :root { --accent: #7e44ff; }
+  .skeleton {
+    background: linear-gradient(90deg, transparent 0, rgba(255,255,255,0.06) 40%, transparent 80%);
+    background-size: 200% 100%;
+    animation: sheen 1.6s linear infinite;
+  }
+  .skeleton-light {
+    background: linear-gradient(90deg, transparent 0, rgba(15,15,18,0.06) 40%, transparent 80%);
+    background-size: 200% 100%;
+    animation: sheen 1.6s linear infinite;
+  }
+  @keyframes sheen { from { background-position: 200% 0 } to { background-position: -200% 0 } }
+</style>
+</head>
+<body class="bg-base text-ink dark:bg-base dark:text-ink antialiased">
+
+<!-- ============ TOP BAR ============ -->
+<header class="sticky top-0 z-40 border-b border-line-light dark:border-line bg-base-light/80 dark:bg-base/80 backdrop-blur">
+  <div class="max-w-[1280px] mx-auto px-8 h-14 flex items-center justify-between">
+    <div class="flex items-center gap-3">
+      <div class="w-7 h-7 rounded-md bg-accent-500 flex items-center justify-center">
+        <svg viewBox="0 0 20 20" class="w-4 h-4 text-white" fill="none" stroke="currentColor" stroke-width="2.2"><path d="M4 11l4 4 8-9"/></svg>
+      </div>
+      <div class="text-[15px] font-semibold tracking-tight">Job Tracker</div>
+      <div class="text-ink3 dark:text-ink3 text-[13px]">/ Design System</div>
+    </div>
+    <div class="flex items-center gap-2">
+      <span class="text-[11px] tabular font-mono text-ink3 dark:text-ink3">v0.1.0</span>
+      <button id="theme-toggle" class="h-8 px-3 rounded-md border border-line-light dark:border-line bg-raised-light dark:bg-raised text-[12px] font-medium hover:bg-sunken-light dark:hover:bg-sunken transition">
+        <span class="dark:hidden">☾ Dark</span>
+        <span class="hidden dark:inline">☀ Light</span>
+      </button>
+    </div>
+  </div>
+</header>
+
+<main class="max-w-[1280px] mx-auto px-8 py-12 space-y-20">
+
+  <!-- Hero -->
+  <section>
+    <div class="text-ink3 dark:text-ink3 text-[11px] font-mono uppercase tracking-[0.16em]">001 / Foundations</div>
+    <h1 class="mt-3 text-[44px] leading-[1.05] font-semibold tracking-[-0.02em]">A command-center for the job hunt.</h1>
+    <p class="mt-4 max-w-[60ch] text-ink2 dark:text-ink2 text-[15px] leading-[1.6]">
+      A modern, keyboard-first interface inspired by tools like Linear and Vercel. Dark by default,
+      dense by design, with status color reserved for moments that actually matter.
+    </p>
+    <div class="mt-8 grid grid-cols-4 gap-3">
+      <div class="rounded-xl border border-line-light dark:border-line bg-raised-light dark:bg-raised p-4">
+        <div class="text-[11px] font-mono text-ink3">PRIMARY</div>
+        <div class="mt-2 font-semibold text-[15px]">Inter</div>
+        <div class="text-ink2 text-[12px]">UI · headings · labels</div>
+      </div>
+      <div class="rounded-xl border border-line-light dark:border-line bg-raised-light dark:bg-raised p-4">
+        <div class="text-[11px] font-mono text-ink3">MONO</div>
+        <div class="mt-2 font-semibold text-[15px] font-mono">JetBrains Mono</div>
+        <div class="text-ink2 text-[12px]">metadata · numbers</div>
+      </div>
+      <div class="rounded-xl border border-line-light dark:border-line bg-raised-light dark:bg-raised p-4">
+        <div class="text-[11px] font-mono text-ink3">ACCENT</div>
+        <div class="mt-2 flex items-center gap-2">
+          <div class="w-5 h-5 rounded-md bg-accent-500"></div>
+          <span class="font-mono text-[12px]">oklch(0.62 0.19 290)</span>
+        </div>
+        <div class="text-ink2 text-[12px] mt-1">primary actions only</div>
+      </div>
+      <div class="rounded-xl border border-line-light dark:border-line bg-raised-light dark:bg-raised p-4">
+        <div class="text-[11px] font-mono text-ink3">GRID</div>
+        <div class="mt-2 font-semibold text-[15px]">4px base unit</div>
+        <div class="text-ink2 text-[12px]">density-first</div>
+      </div>
+    </div>
+  </section>
+
+  <!-- ============ COLOR ============ -->
+  <section id="color">
+    <div class="flex items-baseline justify-between mb-6">
+      <div>
+        <div class="text-ink3 text-[11px] font-mono uppercase tracking-[0.16em]">002 / Color</div>
+        <h2 class="mt-1 text-[26px] font-semibold tracking-tight">Tokens</h2>
+      </div>
+      <span class="text-ink3 text-[12px]">light + dark · semantic + status</span>
+    </div>
+
+    <!-- Surface scales: dark and light side-by-side -->
+    <div class="grid grid-cols-2 gap-6">
+      <!-- DARK -->
+      <div class="rounded-2xl border border-line-light dark:border-line bg-[#0b0b0e] text-[#f4f3ef] overflow-hidden">
+        <div class="px-5 py-3 text-[11px] font-mono uppercase tracking-[0.16em] text-[#6c6c72] border-b border-[#26262e]">Dark mode</div>
+        <div class="p-5 grid grid-cols-3 gap-3">
+          <div><div class="h-16 rounded-lg bg-[#08080b] border border-[#26262e]"></div><div class="mt-2 text-[12px]">sunken</div><div class="text-[11px] font-mono text-[#6c6c72]">#08080b</div></div>
+          <div><div class="h-16 rounded-lg bg-[#0b0b0e] border border-[#26262e]"></div><div class="mt-2 text-[12px]">base</div><div class="text-[11px] font-mono text-[#6c6c72]">#0b0b0e</div></div>
+          <div><div class="h-16 rounded-lg bg-[#131318] border border-[#26262e]"></div><div class="mt-2 text-[12px]">raised</div><div class="text-[11px] font-mono text-[#6c6c72]">#131318</div></div>
+          <div><div class="h-16 rounded-lg bg-[#26262e]"></div><div class="mt-2 text-[12px]">line</div><div class="text-[11px] font-mono text-[#6c6c72]">#26262e</div></div>
+          <div><div class="h-16 rounded-lg bg-[#32323c]"></div><div class="mt-2 text-[12px]">line strong</div><div class="text-[11px] font-mono text-[#6c6c72]">#32323c</div></div>
+          <div><div class="h-16 rounded-lg bg-[#f4f3ef]"></div><div class="mt-2 text-[12px]">ink</div><div class="text-[11px] font-mono text-[#6c6c72]">#f4f3ef</div></div>
+        </div>
+      </div>
+      <!-- LIGHT -->
+      <div class="rounded-2xl border border-line-light bg-[#fafaf9] text-[#0f0f12] overflow-hidden">
+        <div class="px-5 py-3 text-[11px] font-mono uppercase tracking-[0.16em] text-[#85847d] border-b border-[#e6e4e0]">Light mode</div>
+        <div class="p-5 grid grid-cols-3 gap-3">
+          <div><div class="h-16 rounded-lg bg-[#f1f0ee] border border-[#e6e4e0]"></div><div class="mt-2 text-[12px]">sunken</div><div class="text-[11px] font-mono text-[#85847d]">#f1f0ee</div></div>
+          <div><div class="h-16 rounded-lg bg-[#fafaf9] border border-[#e6e4e0]"></div><div class="mt-2 text-[12px]">base</div><div class="text-[11px] font-mono text-[#85847d]">#fafaf9</div></div>
+          <div><div class="h-16 rounded-lg bg-[#ffffff] border border-[#e6e4e0]"></div><div class="mt-2 text-[12px]">raised</div><div class="text-[11px] font-mono text-[#85847d]">#ffffff</div></div>
+          <div><div class="h-16 rounded-lg bg-[#e6e4e0]"></div><div class="mt-2 text-[12px]">line</div><div class="text-[11px] font-mono text-[#85847d]">#e6e4e0</div></div>
+          <div><div class="h-16 rounded-lg bg-[#d8d6d1]"></div><div class="mt-2 text-[12px]">line strong</div><div class="text-[11px] font-mono text-[#85847d]">#d8d6d1</div></div>
+          <div><div class="h-16 rounded-lg bg-[#0f0f12]"></div><div class="mt-2 text-[12px] text-[#85847d]">ink</div><div class="text-[11px] font-mono text-[#85847d]">#0f0f12</div></div>
+        </div>
+      </div>
+    </div>
+
+    <!-- Accent scale -->
+    <div class="mt-6 rounded-2xl border border-line-light dark:border-line bg-raised-light dark:bg-raised p-5">
+      <div class="flex items-baseline justify-between">
+        <div class="text-[13px] font-semibold">Accent · violet</div>
+        <span class="font-mono text-[11px] text-ink3">used &lt;5% of pixels · primary CTA + selection</span>
+      </div>
+      <div class="mt-4 grid grid-cols-9 gap-2">
+        <div><div class="h-12 rounded-md bg-accent-100"></div><div class="text-[10px] font-mono text-ink3 mt-1">100</div></div>
+        <div><div class="h-12 rounded-md bg-accent-200"></div><div class="text-[10px] font-mono text-ink3 mt-1">200</div></div>
+        <div><div class="h-12 rounded-md bg-accent-300"></div><div class="text-[10px] font-mono text-ink3 mt-1">300</div></div>
+        <div><div class="h-12 rounded-md bg-accent-400"></div><div class="text-[10px] font-mono text-ink3 mt-1">400</div></div>
+        <div><div class="h-12 rounded-md bg-accent-500 ring-1 ring-inset ring-white/20"></div><div class="text-[10px] font-mono text-ink3 mt-1">500 ●</div></div>
+        <div><div class="h-12 rounded-md bg-accent-600"></div><div class="text-[10px] font-mono text-ink3 mt-1">600</div></div>
+        <div><div class="h-12 rounded-md bg-accent-700"></div><div class="text-[10px] font-mono text-ink3 mt-1">700</div></div>
+        <div><div class="h-12 rounded-md bg-accent-800"></div><div class="text-[10px] font-mono text-ink3 mt-1">800</div></div>
+        <div><div class="h-12 rounded-md bg-accent-900"></div><div class="text-[10px] font-mono text-ink3 mt-1">900</div></div>
+      </div>
+    </div>
+
+    <!-- Status palette -->
+    <div class="mt-6 grid grid-cols-2 gap-6">
+      <div class="rounded-2xl border border-line-light dark:border-line bg-raised-light dark:bg-raised p-5">
+        <div class="text-[13px] font-semibold">Pipeline status</div>
+        <div class="text-ink3 text-[12px] mt-1">A single, low-saturation chip per stage. Color travels with the card.</div>
+        <div class="mt-4 grid grid-cols-2 gap-x-6 gap-y-3">
+          <div class="flex items-center gap-3"><span class="w-2.5 h-2.5 rounded-full bg-saved"></span><span class="text-[13px]">Saved</span><span class="ml-auto font-mono text-[11px] text-ink3">#9aa0a6</span></div>
+          <div class="flex items-center gap-3"><span class="w-2.5 h-2.5 rounded-full bg-applied"></span><span class="text-[13px]">Applied</span><span class="ml-auto font-mono text-[11px] text-ink3">#4b8df8</span></div>
+          <div class="flex items-center gap-3"><span class="w-2.5 h-2.5 rounded-full bg-replied"></span><span class="text-[13px]">Replied</span><span class="ml-auto font-mono text-[11px] text-ink3">#f5a524</span></div>
+          <div class="flex items-center gap-3"><span class="w-2.5 h-2.5 rounded-full bg-interview"></span><span class="text-[13px]">Interview</span><span class="ml-auto font-mono text-[11px] text-ink3">#22c55e</span></div>
+          <div class="flex items-center gap-3"><span class="w-2.5 h-2.5 rounded-full bg-offer"></span><span class="text-[13px]">Offer</span><span class="ml-auto font-mono text-[11px] text-ink3">#10b981</span></div>
+          <div class="flex items-center gap-3"><span class="w-2.5 h-2.5 rounded-full bg-rejected"></span><span class="text-[13px]">Rejected</span><span class="ml-auto font-mono text-[11px] text-ink3">#ef4444</span></div>
+          <div class="flex items-center gap-3 col-span-2"><span class="w-2.5 h-2.5 rounded-full bg-backlog"></span><span class="text-[13px]">Backlog</span><span class="ml-auto font-mono text-[11px] text-ink3">#6b7280</span></div>
+        </div>
+      </div>
+      <div class="rounded-2xl border border-line-light dark:border-line bg-raised-light dark:bg-raised p-5">
+        <div class="text-[13px] font-semibold">Semantic</div>
+        <div class="text-ink3 text-[12px] mt-1">For toasts, validation, and inline feedback. Borrow from status palette.</div>
+        <div class="mt-4 space-y-2">
+          <div class="flex items-center gap-3 px-3 py-2 rounded-lg border border-interview/30 bg-interview/10">
+            <svg class="w-4 h-4 text-interview" viewBox="0 0 16 16" fill="currentColor"><path d="M8 1.5a6.5 6.5 0 100 13 6.5 6.5 0 000-13zm3.2 4.8L7 10.6 4.8 8.4l1-1L7 8.6l3.2-3.3 1 1z"/></svg>
+            <span class="text-[13px]">Saved as “Pursue.” added to Saved column.</span>
+          </div>
+          <div class="flex items-center gap-3 px-3 py-2 rounded-lg border border-replied/30 bg-replied/10">
+            <svg class="w-4 h-4 text-replied" viewBox="0 0 16 16" fill="currentColor"><path d="M8 1l7 13H1L8 1zm0 5v4h0M8 12v0"/></svg>
+            <span class="text-[13px]">Follow-up overdue by 2 days.</span>
+          </div>
+          <div class="flex items-center gap-3 px-3 py-2 rounded-lg border border-rejected/30 bg-rejected/10">
+            <svg class="w-4 h-4 text-rejected" viewBox="0 0 16 16" fill="currentColor"><path d="M4 4l8 8M12 4l-8 8"/></svg>
+            <span class="text-[13px]">Resume generation failed — retry?</span>
+          </div>
+          <div class="flex items-center gap-3 px-3 py-2 rounded-lg border border-applied/30 bg-applied/10">
+            <svg class="w-4 h-4 text-applied" viewBox="0 0 16 16" fill="currentColor"><path d="M8 1.5a6.5 6.5 0 100 13 6.5 6.5 0 000-13zM7 6h2v5H7V6zm1-3a1 1 0 100 2 1 1 0 000-2z" fill-rule="evenodd"/></svg>
+            <span class="text-[13px]">Analyzing JD with 5 brains. Usually ~12s.</span>
+          </div>
+        </div>
+      </div>
+    </div>
+  </section>
+
+  <!-- ============ TYPOGRAPHY ============ -->
+  <section id="type">
+    <div class="flex items-baseline justify-between mb-6">
+      <div>
+        <div class="text-ink3 text-[11px] font-mono uppercase tracking-[0.16em]">003 / Type</div>
+        <h2 class="mt-1 text-[26px] font-semibold tracking-tight">Scale</h2>
+      </div>
+      <span class="text-ink3 text-[12px]">Inter · -0.02em tracking on headings · tabular numerals</span>
+    </div>
+
+    <div class="rounded-2xl border border-line-light dark:border-line bg-raised-light dark:bg-raised divide-y divide-line-light dark:divide-line">
+      <div class="px-6 py-5 flex items-baseline gap-6">
+        <div class="w-32 shrink-0"><div class="text-[11px] font-mono text-ink3">display · 56/1.05</div><div class="text-[11px] font-mono text-ink3">600</div></div>
+        <div class="text-[56px] leading-[1.05] font-semibold tracking-[-0.02em]">Offer accepted.</div>
+      </div>
+      <div class="px-6 py-5 flex items-baseline gap-6">
+        <div class="w-32 shrink-0"><div class="text-[11px] font-mono text-ink3">h1 · 32/1.15</div><div class="text-[11px] font-mono text-ink3">600</div></div>
+        <div class="text-[32px] leading-[1.15] font-semibold tracking-[-0.02em]">Today’s queue, focused.</div>
+      </div>
+      <div class="px-6 py-5 flex items-baseline gap-6">
+        <div class="w-32 shrink-0"><div class="text-[11px] font-mono text-ink3">h2 · 22/1.2</div><div class="text-[11px] font-mono text-ink3">600</div></div>
+        <div class="text-[22px] leading-[1.2] font-semibold tracking-[-0.015em]">Senior Product Manager — Razorpay</div>
+      </div>
+      <div class="px-6 py-5 flex items-baseline gap-6">
+        <div class="w-32 shrink-0"><div class="text-[11px] font-mono text-ink3">h3 · 15/1.4</div><div class="text-[11px] font-mono text-ink3">600</div></div>
+        <div class="text-[15px] leading-[1.4] font-semibold">JD Brain · extracted requirements</div>
+      </div>
+      <div class="px-6 py-5 flex items-baseline gap-6">
+        <div class="w-32 shrink-0"><div class="text-[11px] font-mono text-ink3">body · 14/1.55</div><div class="text-[11px] font-mono text-ink3">400</div></div>
+        <div class="text-[14px] leading-[1.55] max-w-[60ch]">A small B2B SaaS team is hiring a senior PM to own pricing and packaging. They post weekly on LinkedIn and the founder responds to most cold notes within 48 hours.</div>
+      </div>
+      <div class="px-6 py-5 flex items-baseline gap-6">
+        <div class="w-32 shrink-0"><div class="text-[11px] font-mono text-ink3">small · 13/1.5</div><div class="text-[11px] font-mono text-ink3">400</div></div>
+        <div class="text-[13px] leading-[1.5] text-ink2">Posted 3d ago · 1.2k applicants · actively reviewing</div>
+      </div>
+      <div class="px-6 py-5 flex items-baseline gap-6">
+        <div class="w-32 shrink-0"><div class="text-[11px] font-mono text-ink3">caption · 11/1.4</div><div class="text-[11px] font-mono text-ink3">mono · 500</div></div>
+        <div class="text-[11px] leading-[1.4] font-mono tracking-[0.16em] uppercase text-ink3">activity · 14 events</div>
+      </div>
+      <div class="px-6 py-5 flex items-baseline gap-6">
+        <div class="w-32 shrink-0"><div class="text-[11px] font-mono text-ink3">tabular</div><div class="text-[11px] font-mono text-ink3">JetBrains</div></div>
+        <div class="text-[15px] font-mono tabular tracking-tight">12.4k <span class="text-ink3">/ leads · </span>11.2% <span class="text-ink3">reply · </span>₹38L <span class="text-ink3">target</span></div>
+      </div>
+    </div>
+  </section>
+
+  <!-- ============ SPACING + RADIUS ============ -->
+  <section id="spacing">
+    <div class="flex items-baseline justify-between mb-6">
+      <div>
+        <div class="text-ink3 text-[11px] font-mono uppercase tracking-[0.16em]">004 / Spacing &amp; Radius</div>
+        <h2 class="mt-1 text-[26px] font-semibold tracking-tight">Rhythm</h2>
+      </div>
+      <span class="text-ink3 text-[12px]">4 · 8 · 12 · 16 · 24 · 32 · 48 · 64</span>
+    </div>
+
+    <div class="grid grid-cols-2 gap-6">
+      <div class="rounded-2xl border border-line-light dark:border-line bg-raised-light dark:bg-raised p-5">
+        <div class="text-[13px] font-semibold">Spacing scale</div>
+        <div class="mt-4 space-y-2">
+          <div class="flex items-center gap-4"><span class="w-8 text-[11px] font-mono text-ink3 text-right">4</span><span class="h-2 bg-accent-500/80" style="width:4px"></span></div>
+          <div class="flex items-center gap-4"><span class="w-8 text-[11px] font-mono text-ink3 text-right">8</span><span class="h-2 bg-accent-500/80" style="width:8px"></span></div>
+          <div class="flex items-center gap-4"><span class="w-8 text-[11px] font-mono text-ink3 text-right">12</span><span class="h-2 bg-accent-500/80" style="width:12px"></span></div>
+          <div class="flex items-center gap-4"><span class="w-8 text-[11px] font-mono text-ink3 text-right">16</span><span class="h-2 bg-accent-500/80" style="width:16px"></span></div>
+          <div class="flex items-center gap-4"><span class="w-8 text-[11px] font-mono text-ink3 text-right">24</span><span class="h-2 bg-accent-500/80" style="width:24px"></span></div>
+          <div class="flex items-center gap-4"><span class="w-8 text-[11px] font-mono text-ink3 text-right">32</span><span class="h-2 bg-accent-500/80" style="width:32px"></span></div>
+          <div class="flex items-center gap-4"><span class="w-8 text-[11px] font-mono text-ink3 text-right">48</span><span class="h-2 bg-accent-500/80" style="width:48px"></span></div>
+          <div class="flex items-center gap-4"><span class="w-8 text-[11px] font-mono text-ink3 text-right">64</span><span class="h-2 bg-accent-500/80" style="width:64px"></span></div>
+        </div>
+      </div>
+      <div class="rounded-2xl border border-line-light dark:border-line bg-raised-light dark:bg-raised p-5">
+        <div class="text-[13px] font-semibold">Radii &amp; elevation</div>
+        <div class="mt-4 grid grid-cols-4 gap-3">
+          <div class="flex flex-col items-center gap-2"><div class="w-16 h-16 bg-sunken-light dark:bg-sunken border border-line-light dark:border-line rounded-[4px]"></div><span class="text-[11px] font-mono text-ink3">4 · xs</span></div>
+          <div class="flex flex-col items-center gap-2"><div class="w-16 h-16 bg-sunken-light dark:bg-sunken border border-line-light dark:border-line rounded-md"></div><span class="text-[11px] font-mono text-ink3">6 · sm</span></div>
+          <div class="flex flex-col items-center gap-2"><div class="w-16 h-16 bg-sunken-light dark:bg-sunken border border-line-light dark:border-line rounded-lg"></div><span class="text-[11px] font-mono text-ink3">8 · md</span></div>
+          <div class="flex flex-col items-center gap-2"><div class="w-16 h-16 bg-sunken-light dark:bg-sunken border border-line-light dark:border-line rounded-xl"></div><span class="text-[11px] font-mono text-ink3">12 · lg</span></div>
+          <div class="flex flex-col items-center gap-2"><div class="w-16 h-16 bg-sunken-light dark:bg-sunken border border-line-light dark:border-line rounded-2xl"></div><span class="text-[11px] font-mono text-ink3">16 · xl</span></div>
+          <div class="flex flex-col items-center gap-2"><div class="w-16 h-16 bg-sunken-light dark:bg-sunken border border-line-light dark:border-line rounded-full"></div><span class="text-[11px] font-mono text-ink3">full</span></div>
+          <div class="flex flex-col items-center gap-2"><div class="w-16 h-16 bg-raised-light dark:bg-raised rounded-xl shadow-pop-light dark:shadow-pop"></div><span class="text-[11px] font-mono text-ink3">pop</span></div>
+          <div class="flex flex-col items-center gap-2"><div class="w-16 h-16 bg-raised-light dark:bg-raised rounded-xl ring-1 ring-accent-500/40"></div><span class="text-[11px] font-mono text-ink3">focus</span></div>
+        </div>
+      </div>
+    </div>
+  </section>
+
+  <!-- ============ COMPONENTS ============ -->
+  <section id="components">
+    <div class="flex items-baseline justify-between mb-6">
+      <div>
+        <div class="text-ink3 text-[11px] font-mono uppercase tracking-[0.16em]">005 / Components</div>
+        <h2 class="mt-1 text-[26px] font-semibold tracking-tight">Library</h2>
+      </div>
+      <span class="text-ink3 text-[12px]">all states · keyboard-first</span>
+    </div>
+
+    <!-- BUTTONS -->
+    <div class="rounded-2xl border border-line-light dark:border-line bg-raised-light dark:bg-raised">
+      <div class="flex items-center justify-between px-5 py-3 border-b border-line-light dark:border-line">
+        <div class="text-[13px] font-semibold">Button</div>
+        <div class="text-[11px] font-mono text-ink3">primary · secondary · ghost · destructive · icon</div>
+      </div>
+      <div class="p-6 grid grid-cols-5 gap-x-6 gap-y-5 items-end">
+        <!-- column headers -->
+        <div></div>
+        <div class="text-[11px] font-mono text-ink3 uppercase tracking-[0.16em]">default</div>
+        <div class="text-[11px] font-mono text-ink3 uppercase tracking-[0.16em]">hover</div>
+        <div class="text-[11px] font-mono text-ink3 uppercase tracking-[0.16em]">active</div>
+        <div class="text-[11px] font-mono text-ink3 uppercase tracking-[0.16em]">disabled</div>
+
+        <div class="text-[12px] text-ink2">Primary</div>
+        <button class="h-9 px-3.5 rounded-md bg-accent-500 text-white text-[13px] font-medium shadow-pop">+ Add job</button>
+        <button class="h-9 px-3.5 rounded-md bg-accent-400 text-white text-[13px] font-medium shadow-pop">+ Add job</button>
+        <button class="h-9 px-3.5 rounded-md bg-accent-600 text-white text-[13px] font-medium">+ Add job</button>
+        <button class="h-9 px-3.5 rounded-md bg-accent-500/40 text-white/60 text-[13px] font-medium cursor-not-allowed">+ Add job</button>
+
+        <div class="text-[12px] text-ink2">Secondary</div>
+        <button class="h-9 px-3.5 rounded-md border border-line-light dark:border-line bg-raised-light dark:bg-raised text-[13px] font-medium">Save draft</button>
+        <button class="h-9 px-3.5 rounded-md border border-line2-light dark:border-line2 bg-sunken-light dark:bg-sunken text-[13px] font-medium">Save draft</button>
+        <button class="h-9 px-3.5 rounded-md border border-line2-light dark:border-line2 bg-base-light dark:bg-base text-[13px] font-medium">Save draft</button>
+        <button class="h-9 px-3.5 rounded-md border border-line-light dark:border-line bg-raised-light dark:bg-raised text-ink3 text-[13px] font-medium cursor-not-allowed">Save draft</button>
+
+        <div class="text-[12px] text-ink2">Ghost</div>
+        <button class="h-9 px-3 rounded-md text-ink2 hover:text-ink text-[13px] font-medium">Discard</button>
+        <button class="h-9 px-3 rounded-md text-ink bg-sunken-light dark:bg-sunken text-[13px] font-medium">Discard</button>
+        <button class="h-9 px-3 rounded-md text-ink bg-line-light dark:bg-line text-[13px] font-medium">Discard</button>
+        <button class="h-9 px-3 rounded-md text-ink3 text-[13px] font-medium cursor-not-allowed">Discard</button>
+
+        <div class="text-[12px] text-ink2">Destructive</div>
+        <button class="h-9 px-3.5 rounded-md border border-rejected/40 text-rejected bg-rejected/10 text-[13px] font-medium">Move to Backlog</button>
+        <button class="h-9 px-3.5 rounded-md border border-rejected/60 text-rejected bg-rejected/15 text-[13px] font-medium">Move to Backlog</button>
+        <button class="h-9 px-3.5 rounded-md border border-rejected text-white bg-rejected text-[13px] font-medium">Move to Backlog</button>
+        <button class="h-9 px-3.5 rounded-md border border-rejected/20 text-rejected/50 text-[13px] font-medium cursor-not-allowed">Move to Backlog</button>
+
+        <div class="text-[12px] text-ink2">Icon-only</div>
+        <button class="h-9 w-9 rounded-md border border-line-light dark:border-line bg-raised-light dark:bg-raised grid place-items-center"><svg class="w-4 h-4" fill="none" stroke="currentColor" stroke-width="2" viewBox="0 0 24 24"><rect x="8" y="2" width="8" height="4" rx="1"/><path d="M16 4h2a2 2 0 012 2v14a2 2 0 01-2 2H6a2 2 0 01-2-2V6a2 2 0 012-2h2"/></svg></button>
+        <button class="h-9 w-9 rounded-md border border-line2-light dark:border-line2 bg-sunken-light dark:bg-sunken grid place-items-center"><svg class="w-4 h-4" fill="none" stroke="currentColor" stroke-width="2" viewBox="0 0 24 24"><rect x="8" y="2" width="8" height="4" rx="1"/><path d="M16 4h2a2 2 0 012 2v14a2 2 0 01-2 2H6a2 2 0 01-2-2V6a2 2 0 012-2h2"/></svg></button>
+        <button class="h-9 w-9 rounded-md ring-2 ring-accent-500/50 border border-line-light dark:border-line bg-raised-light dark:bg-raised grid place-items-center"><svg class="w-4 h-4" fill="none" stroke="currentColor" stroke-width="2" viewBox="0 0 24 24"><rect x="8" y="2" width="8" height="4" rx="1"/><path d="M16 4h2a2 2 0 012 2v14a2 2 0 01-2 2H6a2 2 0 01-2-2V6a2 2 0 012-2h2"/></svg></button>
+        <button class="h-9 w-9 rounded-md border border-line-light dark:border-line bg-raised-light dark:bg-raised grid place-items-center text-ink3 cursor-not-allowed"><svg class="w-4 h-4" fill="none" stroke="currentColor" stroke-width="2" viewBox="0 0 24 24"><rect x="8" y="2" width="8" height="4" rx="1"/><path d="M16 4h2a2 2 0 012 2v14a2 2 0 01-2 2H6a2 2 0 01-2-2V6a2 2 0 012-2h2"/></svg></button>
+      </div>
+    </div>
+
+    <!-- BADGES + FIT SCORES -->
+    <div class="mt-6 grid grid-cols-2 gap-6">
+      <div class="rounded-2xl border border-line-light dark:border-line bg-raised-light dark:bg-raised">
+        <div class="flex items-center justify-between px-5 py-3 border-b border-line-light dark:border-line">
+          <div class="text-[13px] font-semibold">Status badge</div>
+          <div class="text-[11px] font-mono text-ink3">dot + label · low-saturation tint</div>
+        </div>
+        <div class="p-5 flex flex-wrap gap-2">
+          <span class="inline-flex items-center gap-1.5 px-2 h-6 rounded-md bg-saved/15 text-saved text-[12px] font-medium"><span class="w-1.5 h-1.5 rounded-full bg-saved"></span>Saved</span>
+          <span class="inline-flex items-center gap-1.5 px-2 h-6 rounded-md bg-applied/15 text-applied text-[12px] font-medium"><span class="w-1.5 h-1.5 rounded-full bg-applied"></span>Applied</span>
+          <span class="inline-flex items-center gap-1.5 px-2 h-6 rounded-md bg-replied/15 text-replied text-[12px] font-medium"><span class="w-1.5 h-1.5 rounded-full bg-replied"></span>Replied</span>
+          <span class="inline-flex items-center gap-1.5 px-2 h-6 rounded-md bg-interview/15 text-interview text-[12px] font-medium"><span class="w-1.5 h-1.5 rounded-full bg-interview"></span>Interview</span>
+          <span class="inline-flex items-center gap-1.5 px-2 h-6 rounded-md bg-offer/15 text-offer text-[12px] font-medium"><span class="w-1.5 h-1.5 rounded-full bg-offer"></span>Offer</span>
+          <span class="inline-flex items-center gap-1.5 px-2 h-6 rounded-md bg-rejected/15 text-rejected text-[12px] font-medium"><span class="w-1.5 h-1.5 rounded-full bg-rejected"></span>Rejected</span>
+          <span class="inline-flex items-center gap-1.5 px-2 h-6 rounded-md bg-backlog/15 text-backlog text-[12px] font-medium"><span class="w-1.5 h-1.5 rounded-full bg-backlog"></span>Backlog</span>
+        </div>
+        <div class="px-5 pb-5 border-t border-line-light dark:border-line pt-4">
+          <div class="text-[11px] font-mono text-ink3 uppercase tracking-[0.16em] mb-3">Chip · filter</div>
+          <div class="flex flex-wrap gap-2">
+            <button class="inline-flex items-center gap-1.5 h-7 px-2.5 rounded-full border border-line-light dark:border-line bg-raised-light dark:bg-raised text-[12px]">Fit ≥ 70</button>
+            <button class="inline-flex items-center gap-1.5 h-7 px-2.5 rounded-full border border-accent-500/40 bg-accent-500/10 text-accent-300 text-[12px]">Has warm contact <span class="ml-1 text-accent-300/70">×</span></button>
+            <button class="inline-flex items-center gap-1.5 h-7 px-2.5 rounded-full border border-line-light dark:border-line bg-raised-light dark:bg-raised text-[12px]">B2B SaaS</button>
+            <button class="inline-flex items-center gap-1.5 h-7 px-2.5 rounded-full border border-line-light dark:border-line bg-raised-light dark:bg-raised text-[12px]">Active 7d</button>
+            <button class="inline-flex items-center gap-1.5 h-7 px-2.5 rounded-full border border-dashed border-line2-light dark:border-line2 text-ink3 text-[12px]">+ Filter</button>
+          </div>
+        </div>
+      </div>
+      <div class="rounded-2xl border border-line-light dark:border-line bg-raised-light dark:bg-raised">
+        <div class="flex items-center justify-between px-5 py-3 border-b border-line-light dark:border-line">
+          <div class="text-[13px] font-semibold">Fit score</div>
+          <div class="text-[11px] font-mono text-ink3">ring · 0–100 · color ramps by tier</div>
+        </div>
+        <div class="p-5 grid grid-cols-4 gap-4 items-center">
+          <!-- Ring component, 4 tiers -->
+          <div class="flex flex-col items-center gap-2">
+            <div class="relative w-16 h-16">
+              <svg viewBox="0 0 36 36" class="w-16 h-16 -rotate-90"><circle cx="18" cy="18" r="15.5" fill="none" stroke="currentColor" class="text-line-light dark:text-line" stroke-width="3"/><circle cx="18" cy="18" r="15.5" fill="none" stroke="currentColor" class="text-rejected" stroke-width="3" stroke-dasharray="22 100" stroke-linecap="round"/></svg>
+              <div class="absolute inset-0 grid place-items-center text-[14px] font-mono tabular font-semibold">22</div>
+            </div>
+            <span class="text-[11px] font-mono text-ink3">low</span>
+          </div>
+          <div class="flex flex-col items-center gap-2">
+            <div class="relative w-16 h-16">
+              <svg viewBox="0 0 36 36" class="w-16 h-16 -rotate-90"><circle cx="18" cy="18" r="15.5" fill="none" stroke="currentColor" class="text-line-light dark:text-line" stroke-width="3"/><circle cx="18" cy="18" r="15.5" fill="none" stroke="currentColor" class="text-replied" stroke-width="3" stroke-dasharray="48 100" stroke-linecap="round"/></svg>
+              <div class="absolute inset-0 grid place-items-center text-[14px] font-mono tabular font-semibold">48</div>
+            </div>
+            <span class="text-[11px] font-mono text-ink3">soft</span>
+          </div>
+          <div class="flex flex-col items-center gap-2">
+            <div class="relative w-16 h-16">
+              <svg viewBox="0 0 36 36" class="w-16 h-16 -rotate-90"><circle cx="18" cy="18" r="15.5" fill="none" stroke="currentColor" class="text-line-light dark:text-line" stroke-width="3"/><circle cx="18" cy="18" r="15.5" fill="none" stroke="currentColor" class="text-applied" stroke-width="3" stroke-dasharray="74 100" stroke-linecap="round"/></svg>
+              <div class="absolute inset-0 grid place-items-center text-[14px] font-mono tabular font-semibold">74</div>
+            </div>
+            <span class="text-[11px] font-mono text-ink3">strong</span>
+          </div>
+          <div class="flex flex-col items-center gap-2">
+            <div class="relative w-16 h-16">
+              <svg viewBox="0 0 36 36" class="w-16 h-16 -rotate-90"><circle cx="18" cy="18" r="15.5" fill="none" stroke="currentColor" class="text-line-light dark:text-line" stroke-width="3"/><circle cx="18" cy="18" r="15.5" fill="none" stroke="currentColor" class="text-interview" stroke-width="3" stroke-dasharray="92 100" stroke-linecap="round"/></svg>
+              <div class="absolute inset-0 grid place-items-center text-[14px] font-mono tabular font-semibold">92</div>
+            </div>
+            <span class="text-[11px] font-mono text-ink3">excellent</span>
+          </div>
+        </div>
+        <div class="px-5 pb-5 border-t border-line-light dark:border-line pt-4">
+          <div class="text-[11px] font-mono text-ink3 uppercase tracking-[0.16em] mb-3">Warm-in indicator</div>
+          <div class="flex flex-wrap items-center gap-3">
+            <div class="inline-flex items-center gap-2 px-2 h-7 rounded-md border border-accent-500/40 bg-accent-500/10 text-accent-300 text-[12px]">
+              <svg class="w-3.5 h-3.5" viewBox="0 0 16 16" fill="currentColor"><path d="M8 1.3l1.9 3.9 4.3.6-3.1 3 .7 4.3L8 11l-3.8 2.1.7-4.3-3.1-3 4.3-.6z"/></svg>
+              <span>2 mutuals</span>
+            </div>
+            <div class="inline-flex items-center gap-2 px-2 h-7 rounded-md border border-line-light dark:border-line bg-raised-light dark:bg-raised text-[12px]">
+              <span class="w-2 h-2 rounded-full bg-interview"></span>Alumni · COEP
+            </div>
+            <div class="inline-flex items-center gap-2 px-2 h-7 rounded-md border border-line-light dark:border-line bg-raised-light dark:bg-raised text-[12px]">
+              <span class="w-2 h-2 rounded-full bg-applied"></span>Ex-colleague
+            </div>
+          </div>
+        </div>
+      </div>
+    </div>
+
+    <!-- INPUTS -->
+    <div class="mt-6 rounded-2xl border border-line-light dark:border-line bg-raised-light dark:bg-raised">
+      <div class="flex items-center justify-between px-5 py-3 border-b border-line-light dark:border-line">
+        <div class="text-[13px] font-semibold">Form controls</div>
+        <div class="text-[11px] font-mono text-ink3">input · select · textarea · search</div>
+      </div>
+      <div class="p-6 grid grid-cols-3 gap-6">
+        <label class="block">
+          <span class="text-[12px] font-medium">Company</span>
+          <input type="text" placeholder="Razorpay" class="mt-1.5 w-full h-9 px-3 rounded-md bg-base-light dark:bg-base border border-line-light dark:border-line text-[13px] focus:outline-none focus:ring-2 focus:ring-accent-500/40 focus:border-accent-500/50 placeholder:text-ink3"/>
+        </label>
+        <label class="block">
+          <span class="text-[12px] font-medium">Status</span>
+          <select class="mt-1.5 w-full h-9 px-3 rounded-md bg-base-light dark:bg-base border border-line-light dark:border-line text-[13px] focus:outline-none focus:ring-2 focus:ring-accent-500/40">
+            <option>Saved</option><option>Applied</option><option>Replied</option><option>Interview</option><option>Offer</option><option>Rejected</option><option>Backlog</option>
+          </select>
+        </label>
+        <label class="block">
+          <span class="text-[12px] font-medium">Global search</span>
+          <div class="relative mt-1.5">
+            <svg class="absolute left-3 top-1/2 -translate-y-1/2 w-4 h-4 text-ink3" viewBox="0 0 16 16" fill="none" stroke="currentColor" stroke-width="2"><circle cx="7" cy="7" r="5"/><path d="M14 14l-3-3"/></svg>
+            <input type="text" placeholder="Search anything…" class="w-full h-9 pl-9 pr-12 rounded-md bg-base-light dark:bg-base border border-line-light dark:border-line text-[13px] placeholder:text-ink3"/>
+            <kbd class="absolute right-2 top-1/2 -translate-y-1/2 px-1.5 h-5 rounded border border-line-light dark:border-line bg-raised-light dark:bg-raised text-[10px] font-mono text-ink3 flex items-center">/</kbd>
+          </div>
+        </label>
+        <label class="block col-span-3">
+          <span class="text-[12px] font-medium">Paste JD text</span>
+          <textarea rows="3" class="mt-1.5 w-full px-3 py-2 rounded-md bg-base-light dark:bg-base border border-line-light dark:border-line text-[13px] placeholder:text-ink3 focus:outline-none focus:ring-2 focus:ring-accent-500/40" placeholder="Paste a job description, or drop a LinkedIn URL on its own line…"></textarea>
+        </label>
+        <!-- states -->
+        <label class="block">
+          <span class="text-[12px] font-medium">Focused</span>
+          <input type="text" value="Senior PM" class="mt-1.5 w-full h-9 px-3 rounded-md bg-base-light dark:bg-base border border-accent-500/60 ring-2 ring-accent-500/30 text-[13px]"/>
+        </label>
+        <label class="block">
+          <span class="text-[12px] font-medium">Error</span>
+          <input type="text" value="not-a-url" class="mt-1.5 w-full h-9 px-3 rounded-md bg-base-light dark:bg-base border border-rejected/60 ring-2 ring-rejected/20 text-[13px]"/>
+          <span class="mt-1 text-[11px] text-rejected">Couldn't read that as a URL.</span>
+        </label>
+        <label class="block">
+          <span class="text-[12px] font-medium">Disabled</span>
+          <input type="text" value="—" disabled class="mt-1.5 w-full h-9 px-3 rounded-md bg-sunken-light dark:bg-sunken border border-line-light dark:border-line text-ink3 text-[13px]"/>
+        </label>
+      </div>
+    </div>
+
+    <!-- TABS + AVATARS -->
+    <div class="mt-6 grid grid-cols-2 gap-6">
+      <div class="rounded-2xl border border-line-light dark:border-line bg-raised-light dark:bg-raised">
+        <div class="flex items-center justify-between px-5 py-3 border-b border-line-light dark:border-line">
+          <div class="text-[13px] font-semibold">Tab strip</div>
+          <div class="text-[11px] font-mono text-ink3">segmented · underline</div>
+        </div>
+        <div class="p-5 space-y-5">
+          <!-- segmented -->
+          <div class="inline-flex p-0.5 rounded-md bg-sunken-light dark:bg-sunken border border-line-light dark:border-line">
+            <button class="h-7 px-3 rounded text-[12px] font-medium bg-raised-light dark:bg-base shadow-pop-light dark:shadow-pop">Paste URL</button>
+            <button class="h-7 px-3 rounded text-[12px] font-medium text-ink2">Paste JD</button>
+            <button class="h-7 px-3 rounded text-[12px] font-medium text-ink2">Manual</button>
+          </div>
+          <!-- underline -->
+          <div class="flex items-center gap-6 border-b border-line-light dark:border-line">
+            <button class="relative pb-2.5 text-[13px] font-medium">JD<span class="absolute inset-x-0 -bottom-px h-0.5 bg-accent-500"></span></button>
+            <button class="pb-2.5 text-[13px] text-ink2">Company</button>
+            <button class="pb-2.5 text-[13px] text-ink2">Persona</button>
+            <button class="pb-2.5 text-[13px] text-ink2">Resume</button>
+            <button class="pb-2.5 text-[13px] text-ink2">Outreach</button>
+          </div>
+        </div>
+      </div>
+      <div class="rounded-2xl border border-line-light dark:border-line bg-raised-light dark:bg-raised">
+        <div class="flex items-center justify-between px-5 py-3 border-b border-line-light dark:border-line">
+          <div class="text-[13px] font-semibold">Avatar</div>
+          <div class="text-[11px] font-mono text-ink3">image · initials · stack</div>
+        </div>
+        <div class="p-5 flex items-center gap-6">
+          <div class="flex -space-x-2">
+            <div class="w-9 h-9 rounded-full border-2 border-raised-light dark:border-raised bg-applied/20 text-applied grid place-items-center text-[12px] font-semibold font-mono">LM</div>
+            <div class="w-9 h-9 rounded-full border-2 border-raised-light dark:border-raised bg-replied/20 text-replied grid place-items-center text-[12px] font-semibold font-mono">AT</div>
+            <div class="w-9 h-9 rounded-full border-2 border-raised-light dark:border-raised bg-interview/20 text-interview grid place-items-center text-[12px] font-semibold font-mono">SR</div>
+            <div class="w-9 h-9 rounded-full border-2 border-raised-light dark:border-raised bg-sunken-light dark:bg-sunken text-ink2 grid place-items-center text-[11px] font-mono">+2</div>
+          </div>
+          <div class="flex items-end gap-4">
+            <div class="flex flex-col items-center gap-1.5"><div class="w-6 h-6 rounded-full bg-accent-500/20 text-accent-300 grid place-items-center text-[10px] font-mono font-semibold">AK</div><span class="text-[10px] font-mono text-ink3">24</span></div>
+            <div class="flex flex-col items-center gap-1.5"><div class="w-8 h-8 rounded-full bg-applied/20 text-applied grid place-items-center text-[11px] font-mono font-semibold">LM</div><span class="text-[10px] font-mono text-ink3">32</span></div>
+            <div class="flex flex-col items-center gap-1.5"><div class="w-10 h-10 rounded-full bg-replied/20 text-replied grid place-items-center text-[13px] font-mono font-semibold">AT</div><span class="text-[10px] font-mono text-ink3">40</span></div>
+          </div>
+        </div>
+      </div>
+    </div>
+
+    <!-- JOB CARD (anchor component) -->
+    <div class="mt-6 rounded-2xl border border-line-light dark:border-line bg-raised-light dark:bg-raised">
+      <div class="flex items-center justify-between px-5 py-3 border-b border-line-light dark:border-line">
+        <div class="text-[13px] font-semibold">Job card · pipeline</div>
+        <div class="text-[11px] font-mono text-ink3">default · hover · selected · dragging · overdue · empty</div>
+      </div>
+      <div class="p-6 grid grid-cols-3 gap-4">
+        <!-- default -->
+        <div class="rounded-lg border border-line-light dark:border-line bg-base-light dark:bg-base p-3 hover:border-line2-light dark:hover:border-line2 transition cursor-grab">
+          <div class="flex items-start gap-2.5">
+            <div class="w-7 h-7 rounded bg-applied/20 text-applied grid place-items-center text-[11px] font-mono font-semibold shrink-0">RP</div>
+            <div class="min-w-0 flex-1">
+              <div class="text-[13px] font-semibold leading-tight truncate">Senior Product Manager</div>
+              <div class="text-[12px] text-ink2 truncate">Razorpay · Bangalore</div>
+            </div>
+            <div class="relative w-8 h-8 shrink-0">
+              <svg viewBox="0 0 36 36" class="w-8 h-8 -rotate-90"><circle cx="18" cy="18" r="15.5" fill="none" stroke="currentColor" class="text-line-light dark:text-line" stroke-width="3"/><circle cx="18" cy="18" r="15.5" fill="none" stroke="currentColor" class="text-applied" stroke-width="3" stroke-dasharray="78 100" stroke-linecap="round"/></svg>
+              <div class="absolute inset-0 grid place-items-center text-[10px] font-mono tabular font-semibold">78</div>
+            </div>
+          </div>
+          <div class="mt-2.5 text-[12px] text-ink2 line-clamp-1">Aditi liked your last update.</div>
+          <div class="mt-2.5 flex items-center justify-between text-[11px]">
+            <div class="flex items-center gap-1.5 text-ink3 font-mono"><svg class="w-3 h-3" viewBox="0 0 16 16" fill="none" stroke="currentColor" stroke-width="2"><rect x="2" y="3" width="12" height="11" rx="1.5"/><path d="M2 6h12M5 1v4M11 1v4"/></svg>Follow-up · Tue</div>
+            <span class="inline-flex items-center gap-1 text-accent-300 font-mono"><svg class="w-3 h-3" viewBox="0 0 16 16" fill="currentColor"><path d="M8 1.3l1.9 3.9 4.3.6-3.1 3 .7 4.3L8 11l-3.8 2.1.7-4.3-3.1-3 4.3-.6z"/></svg>2 warm</span>
+          </div>
+        </div>
+        <!-- hover -->
+        <div class="rounded-lg border border-line2-light dark:border-line2 bg-base-light dark:bg-base p-3 shadow-pop-light dark:shadow-pop">
+          <div class="flex items-start gap-2.5">
+            <div class="w-7 h-7 rounded bg-replied/20 text-replied grid place-items-center text-[11px] font-mono font-semibold shrink-0">NT</div>
+            <div class="min-w-0 flex-1">
+              <div class="text-[13px] font-semibold leading-tight truncate">Group PM, Payments</div>
+              <div class="text-[12px] text-ink2 truncate">Netcore Cloud</div>
+            </div>
+            <span class="inline-flex items-center gap-1.5 px-1.5 h-5 rounded bg-replied/15 text-replied text-[10px] font-mono uppercase tracking-[0.16em]"><span class="w-1 h-1 rounded-full bg-replied"></span>Replied</span>
+          </div>
+          <div class="mt-2.5 text-[12px] text-ink2 line-clamp-1">"Available Friday afternoon?" — Latika</div>
+          <div class="mt-2.5 flex items-center justify-between text-[11px] font-mono">
+            <span class="text-rejected">Overdue · 2d</span>
+            <span class="text-ink3">5 events</span>
+          </div>
+        </div>
+        <!-- selected -->
+        <div class="rounded-lg border border-accent-500/60 ring-2 ring-accent-500/30 bg-base-light dark:bg-base p-3">
+          <div class="flex items-start gap-2.5">
+            <div class="w-7 h-7 rounded bg-interview/20 text-interview grid place-items-center text-[11px] font-mono font-semibold shrink-0">ZH</div>
+            <div class="min-w-0 flex-1">
+              <div class="text-[13px] font-semibold leading-tight truncate">Lead PM · Growth</div>
+              <div class="text-[12px] text-ink2 truncate">Zoho</div>
+            </div>
+            <span class="text-[10px] font-mono text-ink3">⌘+click</span>
+          </div>
+          <div class="mt-2.5 text-[12px] text-ink2 line-clamp-1">Interview prep scheduled with Sreedhar.</div>
+          <div class="mt-2.5 flex items-center justify-between text-[11px] font-mono text-ink3">
+            <span>Round 2 · Thu 4pm</span>
+            <span class="text-accent-300">Selected</span>
+          </div>
+        </div>
+        <!-- dragging (ghost) -->
+        <div class="rounded-lg border border-dashed border-accent-500/50 bg-accent-500/5 p-3 rotate-[-1.4deg] shadow-pop-light dark:shadow-pop">
+          <div class="flex items-start gap-2.5">
+            <div class="w-7 h-7 rounded bg-saved/20 text-saved grid place-items-center text-[11px] font-mono font-semibold shrink-0">PB</div>
+            <div class="min-w-0 flex-1">
+              <div class="text-[13px] font-semibold leading-tight truncate">Senior PM · B2B</div>
+              <div class="text-[12px] text-ink2 truncate">Postman</div>
+            </div>
+            <span class="text-[10px] font-mono text-accent-300">dropping…</span>
+          </div>
+          <div class="mt-2.5 text-[12px] text-ink2">Move to <span class="text-ink">Applied</span>.</div>
+        </div>
+        <!-- overdue / red dot -->
+        <div class="relative rounded-lg border border-line-light dark:border-line bg-base-light dark:bg-base p-3">
+          <span class="absolute top-2.5 right-2.5 w-2 h-2 rounded-full bg-rejected ring-2 ring-base-light dark:ring-base"></span>
+          <div class="flex items-start gap-2.5">
+            <div class="w-7 h-7 rounded bg-saved/20 text-saved grid place-items-center text-[11px] font-mono font-semibold shrink-0">FK</div>
+            <div class="min-w-0 flex-1">
+              <div class="text-[13px] font-semibold leading-tight truncate">Principal PM</div>
+              <div class="text-[12px] text-ink2 truncate">Freshworks</div>
+            </div>
+          </div>
+          <div class="mt-2.5 text-[12px] text-rejected font-medium">Send DM · overdue 4 days</div>
+          <div class="mt-2.5 flex items-center justify-between text-[11px] font-mono text-ink3">
+            <span>Saved · 5 May</span>
+            <span>Going cold</span>
+          </div>
+        </div>
+        <!-- empty drop slot -->
+        <div class="rounded-lg border border-dashed border-line2-light dark:border-line2 grid place-items-center text-center p-4 min-h-[112px]">
+          <div>
+            <div class="text-[13px] font-medium text-ink2">No jobs in Offer yet.</div>
+            <div class="text-[11px] font-mono text-ink3 mt-1">Drop a card here when you get one.</div>
+          </div>
+        </div>
+      </div>
+    </div>
+
+    <!-- AI BRAIN CARD -->
+    <div class="mt-6 rounded-2xl border border-line-light dark:border-line bg-raised-light dark:bg-raised">
+      <div class="flex items-center justify-between px-5 py-3 border-b border-line-light dark:border-line">
+        <div class="text-[13px] font-semibold">Brain output card</div>
+        <div class="text-[11px] font-mono text-ink3">JD · Company · Persona · Resume · Outreach</div>
+      </div>
+      <div class="p-5 grid grid-cols-2 gap-4">
+        <div class="rounded-xl border border-line-light dark:border-line bg-base-light dark:bg-base p-4">
+          <div class="flex items-center gap-2">
+            <span class="w-5 h-5 rounded grid place-items-center bg-applied/20 text-applied text-[10px] font-mono font-bold">JD</span>
+            <span class="text-[12px] font-semibold">JD Brain</span>
+            <span class="ml-auto text-[10px] font-mono text-ink3">conf 92%</span>
+          </div>
+          <div class="mt-3 text-[13px] font-medium leading-snug">Senior Product Manager · 5–8 yrs · B2B SaaS · Bangalore</div>
+          <div class="mt-3 flex flex-wrap gap-1.5">
+            <span class="px-1.5 h-5 inline-flex items-center rounded bg-sunken-light dark:bg-sunken text-[11px] font-mono">SQL</span>
+            <span class="px-1.5 h-5 inline-flex items-center rounded bg-sunken-light dark:bg-sunken text-[11px] font-mono">Pricing</span>
+            <span class="px-1.5 h-5 inline-flex items-center rounded bg-sunken-light dark:bg-sunken text-[11px] font-mono">PLG</span>
+            <span class="px-1.5 h-5 inline-flex items-center rounded bg-sunken-light dark:bg-sunken text-[11px] font-mono">RICE</span>
+            <span class="px-1.5 h-5 inline-flex items-center rounded bg-accent-500/15 text-accent-300 text-[11px] font-mono">+ match</span>
+          </div>
+          <div class="mt-4 flex items-center justify-end gap-2">
+            <button class="h-7 px-2.5 rounded-md text-[12px] text-ink2 hover:text-ink">Discard</button>
+            <button class="h-7 px-2.5 rounded-md border border-line-light dark:border-line text-[12px]">Copy</button>
+            <button class="h-7 px-2.5 rounded-md bg-accent-500 text-white text-[12px] font-medium">Apply</button>
+          </div>
+        </div>
+        <div class="rounded-xl border border-line-light dark:border-line bg-base-light dark:bg-base p-4">
+          <div class="flex items-center gap-2">
+            <span class="w-5 h-5 rounded grid place-items-center bg-replied/20 text-replied text-[10px] font-mono font-bold">OU</span>
+            <span class="text-[12px] font-semibold">Outreach Brain</span>
+            <span class="ml-auto text-[10px] font-mono text-ink3">3 drafts</span>
+          </div>
+          <div class="mt-3 rounded-md bg-sunken-light dark:bg-sunken p-3 text-[12.5px] leading-relaxed">
+            "Hi Latika — saw the Sr PM role for Pricing &amp; Packaging. I owned billing redesign at Cubeit (3.2× ARPU), would love 15 min if you're open."
+            <div class="mt-2 flex items-center gap-2 text-[10px] font-mono text-ink3"><span>198 / 200</span><span>·</span><span>warm tone</span></div>
+          </div>
+          <div class="mt-4 flex items-center justify-end gap-2">
+            <button class="h-7 px-2.5 rounded-md text-[12px] text-ink2 hover:text-ink">Regenerate</button>
+            <button class="h-7 px-2.5 rounded-md border border-line-light dark:border-line text-[12px]">Copy</button>
+            <button class="h-7 px-2.5 rounded-md bg-accent-500 text-white text-[12px] font-medium">Send via LinkedIn</button>
+          </div>
+        </div>
+      </div>
+    </div>
+
+    <!-- COMMENT THREAD + ACTIVITY TIMELINE -->
+    <div class="mt-6 grid grid-cols-2 gap-6">
+      <div class="rounded-2xl border border-line-light dark:border-line bg-raised-light dark:bg-raised">
+        <div class="flex items-center justify-between px-5 py-3 border-b border-line-light dark:border-line">
+          <div class="text-[13px] font-semibold">Comment thread</div>
+          <div class="text-[11px] font-mono text-ink3">chat-style · markdown</div>
+        </div>
+        <div class="p-5 space-y-4">
+          <div class="flex gap-3">
+            <div class="w-7 h-7 rounded-full bg-accent-500/20 text-accent-300 grid place-items-center text-[11px] font-mono font-semibold shrink-0">AK</div>
+            <div class="flex-1 min-w-0">
+              <div class="flex items-baseline gap-2"><span class="text-[12.5px] font-semibold">Ajinkya</span><span class="text-[11px] font-mono text-ink3">Tue 14:22</span></div>
+              <div class="mt-0.5 text-[13px] leading-relaxed">Called <strong>Latika</strong> — voicemail. Will retry Thu morning before standup.</div>
+            </div>
+          </div>
+          <div class="flex gap-3">
+            <div class="w-7 h-7 rounded-full bg-accent-500/20 text-accent-300 grid place-items-center text-[11px] font-mono font-semibold shrink-0">AK</div>
+            <div class="flex-1 min-w-0">
+              <div class="flex items-baseline gap-2"><span class="text-[12.5px] font-semibold">Ajinkya</span><span class="text-[11px] font-mono text-ink3">Tue 16:01</span></div>
+              <div class="mt-0.5 text-[13px] leading-relaxed">Aditi (mutual) confirmed Latika is leaning <em>experienced</em> over <em>cheap</em>. Highlight Cubeit pricing work.</div>
+              <div class="mt-2 inline-flex items-center gap-1.5 text-[11px] text-ink2"><button class="px-1.5 py-0.5 rounded border border-line-light dark:border-line bg-sunken-light dark:bg-sunken">👍 1</button><button class="px-1.5 py-0.5 rounded border border-line-light dark:border-line bg-sunken-light dark:bg-sunken">🔥 1</button></div>
+            </div>
+          </div>
+          <div class="mt-2 flex items-start gap-3 pt-4 border-t border-line-light dark:border-line">
+            <div class="w-7 h-7 rounded-full bg-accent-500/20 text-accent-300 grid place-items-center text-[11px] font-mono font-semibold shrink-0">AK</div>
+            <div class="flex-1">
+              <div class="rounded-lg border border-line-light dark:border-line bg-base-light dark:bg-base px-3 py-2">
+                <textarea rows="2" class="w-full bg-transparent text-[13px] placeholder:text-ink3 outline-none resize-none" placeholder="Add a note… (Markdown supported)"></textarea>
+                <div class="flex items-center justify-between mt-1 pt-1 border-t border-line-light dark:border-line">
+                  <div class="flex items-center gap-3 text-[11px] font-mono text-ink3"><span>B</span><span>i</span><span>·</span><span>md</span></div>
+                  <button class="h-7 px-2.5 rounded-md bg-accent-500 text-white text-[12px] font-medium">Comment ⌘↵</button>
+                </div>
+              </div>
+            </div>
+          </div>
+        </div>
+      </div>
+      <div class="rounded-2xl border border-line-light dark:border-line bg-raised-light dark:bg-raised">
+        <div class="flex items-center justify-between px-5 py-3 border-b border-line-light dark:border-line">
+          <div class="text-[13px] font-semibold">Activity timeline</div>
+          <div class="text-[11px] font-mono text-ink3">events · grouped by day</div>
+        </div>
+        <div class="p-5">
+          <div class="text-[11px] font-mono uppercase tracking-[0.16em] text-ink3">Today · 24 May</div>
+          <ol class="mt-3 relative pl-5 space-y-3 before:absolute before:left-[7px] before:top-2 before:bottom-2 before:w-px before:bg-line-light dark:before:bg-line">
+            <li class="relative">
+              <span class="absolute -left-[18px] top-1.5 w-3 h-3 rounded-full bg-accent-500 ring-4 ring-raised-light dark:ring-raised"></span>
+              <div class="text-[13px]"><span class="font-medium">JD Brain</span> finished analysis · <span class="font-mono text-ink3">12.4s</span></div>
+              <div class="text-[11px] font-mono text-ink3">10:42</div>
+            </li>
+            <li class="relative">
+              <span class="absolute -left-[18px] top-1.5 w-3 h-3 rounded-full bg-applied ring-4 ring-raised-light dark:ring-raised"></span>
+              <div class="text-[13px]">Status moved <span class="font-medium">Saved → Applied</span></div>
+              <div class="text-[11px] font-mono text-ink3">09:30</div>
+            </li>
+            <li class="relative">
+              <span class="absolute -left-[18px] top-1.5 w-3 h-3 rounded-full bg-replied ring-4 ring-raised-light dark:ring-raised"></span>
+              <div class="text-[13px]">Latika opened your DM</div>
+              <div class="text-[11px] font-mono text-ink3">09:08</div>
+            </li>
+          </ol>
+          <div class="mt-5 text-[11px] font-mono uppercase tracking-[0.16em] text-ink3">Yesterday</div>
+          <ol class="mt-3 relative pl-5 space-y-3 before:absolute before:left-[7px] before:top-2 before:bottom-2 before:w-px before:bg-line-light dark:before:bg-line">
+            <li class="relative">
+              <span class="absolute -left-[18px] top-1.5 w-3 h-3 rounded-full bg-saved ring-4 ring-raised-light dark:ring-raised"></span>
+              <div class="text-[13px]">Card created from LinkedIn URL</div>
+              <div class="text-[11px] font-mono text-ink3">19:14</div>
+            </li>
+          </ol>
+        </div>
+      </div>
+    </div>
+
+    <!-- MODAL + TOAST + EMPTY -->
+    <div class="mt-6 grid grid-cols-2 gap-6">
+      <div class="rounded-2xl border border-line-light dark:border-line bg-raised-light dark:bg-raised">
+        <div class="flex items-center justify-between px-5 py-3 border-b border-line-light dark:border-line">
+          <div class="text-[13px] font-semibold">Modal · preview</div>
+          <div class="text-[11px] font-mono text-ink3">esc · backdrop · close</div>
+        </div>
+        <div class="p-5 relative">
+          <!-- backdrop simulation -->
+          <div class="rounded-xl bg-sunken-light dark:bg-sunken border border-line-light dark:border-line h-[260px] relative overflow-hidden">
+            <div class="absolute inset-0 grid-dots text-line-light dark:text-line"></div>
+            <!-- modal -->
+            <div class="absolute left-1/2 top-1/2 -translate-x-1/2 -translate-y-1/2 w-[300px] rounded-xl border border-line-light dark:border-line bg-raised-light dark:bg-raised shadow-pop-light dark:shadow-pop">
+              <div class="px-4 py-3 flex items-center justify-between border-b border-line-light dark:border-line">
+                <div class="text-[13px] font-semibold">Add job</div>
+                <button class="w-6 h-6 grid place-items-center text-ink2 hover:text-ink">×</button>
+              </div>
+              <div class="p-4">
+                <input type="text" placeholder="Paste LinkedIn URL" class="w-full h-9 px-3 rounded-md bg-base-light dark:bg-base border border-line-light dark:border-line text-[12px]"/>
+                <div class="mt-2 flex items-center justify-end gap-2">
+                  <button class="h-7 px-2.5 rounded-md text-[12px] text-ink2">Cancel</button>
+                  <button class="h-7 px-2.5 rounded-md bg-accent-500 text-white text-[12px] font-medium">Analyze</button>
+                </div>
+              </div>
+            </div>
+          </div>
+        </div>
+      </div>
+      <div class="rounded-2xl border border-line-light dark:border-line bg-raised-light dark:bg-raised">
+        <div class="flex items-center justify-between px-5 py-3 border-b border-line-light dark:border-line">
+          <div class="text-[13px] font-semibold">Toast · empty · skeleton</div>
+          <div class="text-[11px] font-mono text-ink3">feedback states</div>
+        </div>
+        <div class="p-5 space-y-3">
+          <!-- toast success -->
+          <div class="flex items-center gap-3 rounded-lg border border-interview/30 bg-interview/10 px-3 py-2">
+            <svg class="w-4 h-4 text-interview" viewBox="0 0 16 16" fill="currentColor"><path d="M8 1.5a6.5 6.5 0 100 13 6.5 6.5 0 000-13zm3.2 4.8L7 10.6 4.8 8.4l1-1L7 8.6l3.2-3.3 1 1z"/></svg>
+            <div class="flex-1">
+              <div class="text-[13px] font-medium">Moved Razorpay → Applied</div>
+              <div class="text-[11px] text-ink3 font-mono">undo · ⌘Z</div>
+            </div>
+            <button class="text-[11px] font-mono text-ink2">Dismiss</button>
+          </div>
+          <!-- empty state -->
+          <div class="rounded-lg border border-dashed border-line2-light dark:border-line2 px-4 py-6 text-center">
+            <div class="mx-auto w-9 h-9 rounded-lg bg-sunken-light dark:bg-sunken grid place-items-center text-ink3">
+              <svg class="w-5 h-5" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8"><path d="M4 7h16M4 12h16M4 17h10"/></svg>
+            </div>
+            <div class="mt-3 text-[13px] font-semibold">No jobs in Replied yet</div>
+            <div class="text-[12px] text-ink2 mt-1 max-w-xs mx-auto">When a hiring contact responds, drag their card here.</div>
+          </div>
+          <!-- skeleton -->
+          <div class="rounded-lg border border-line-light dark:border-line bg-base-light dark:bg-base p-3">
+            <div class="flex items-center gap-2.5">
+              <div class="w-7 h-7 rounded bg-sunken-light dark:bg-sunken skeleton-light dark:skeleton"></div>
+              <div class="flex-1">
+                <div class="h-3 w-3/5 rounded bg-sunken-light dark:bg-sunken skeleton-light dark:skeleton"></div>
+                <div class="mt-1.5 h-2.5 w-2/5 rounded bg-sunken-light dark:bg-sunken skeleton-light dark:skeleton"></div>
+              </div>
+              <div class="w-8 h-8 rounded-full bg-sunken-light dark:bg-sunken skeleton-light dark:skeleton"></div>
+            </div>
+            <div class="mt-3 h-2.5 w-4/5 rounded bg-sunken-light dark:bg-sunken skeleton-light dark:skeleton"></div>
+          </div>
+        </div>
+      </div>
+    </div>
+
+    <!-- KEYBOARD MAP -->
+    <div class="mt-6 rounded-2xl border border-line-light dark:border-line bg-raised-light dark:bg-raised">
+      <div class="flex items-center justify-between px-5 py-3 border-b border-line-light dark:border-line">
+        <div class="text-[13px] font-semibold">Keyboard map</div>
+        <div class="text-[11px] font-mono text-ink3">power-user first</div>
+      </div>
+      <div class="p-5 grid grid-cols-4 gap-y-3 gap-x-6 text-[13px]">
+        <div class="flex items-center gap-2"><kbd class="px-1.5 h-5 rounded border border-line-light dark:border-line bg-sunken-light dark:bg-sunken text-[11px] font-mono">N</kbd><span>New job</span></div>
+        <div class="flex items-center gap-2"><kbd class="px-1.5 h-5 rounded border border-line-light dark:border-line bg-sunken-light dark:bg-sunken text-[11px] font-mono">/</kbd><span>Focus search</span></div>
+        <div class="flex items-center gap-2"><kbd class="px-1.5 h-5 rounded border border-line-light dark:border-line bg-sunken-light dark:bg-sunken text-[11px] font-mono">E</kbd><span>Expand selected</span></div>
+        <div class="flex items-center gap-2"><kbd class="px-1.5 h-5 rounded border border-line-light dark:border-line bg-sunken-light dark:bg-sunken text-[11px] font-mono">J</kbd>/<kbd class="px-1.5 h-5 rounded border border-line-light dark:border-line bg-sunken-light dark:bg-sunken text-[11px] font-mono">K</kbd><span>Next / Prev card</span></div>
+        <div class="flex items-center gap-2"><kbd class="px-1.5 h-5 rounded border border-line-light dark:border-line bg-sunken-light dark:bg-sunken text-[11px] font-mono">⌘</kbd>+<kbd class="px-1.5 h-5 rounded border border-line-light dark:border-line bg-sunken-light dark:bg-sunken text-[11px] font-mono">Click</kbd><span>Multi-select</span></div>
+        <div class="flex items-center gap-2"><kbd class="px-1.5 h-5 rounded border border-line-light dark:border-line bg-sunken-light dark:bg-sunken text-[11px] font-mono">⌘</kbd>+<kbd class="px-1.5 h-5 rounded border border-line-light dark:border-line bg-sunken-light dark:bg-sunken text-[11px] font-mono">↵</kbd><span>Submit comment</span></div>
+        <div class="flex items-center gap-2"><kbd class="px-1.5 h-5 rounded border border-line-light dark:border-line bg-sunken-light dark:bg-sunken text-[11px] font-mono">G</kbd>+<kbd class="px-1.5 h-5 rounded border border-line-light dark:border-line bg-sunken-light dark:bg-sunken text-[11px] font-mono">T</kbd><span>Today view</span></div>
+        <div class="flex items-center gap-2"><kbd class="px-1.5 h-5 rounded border border-line-light dark:border-line bg-sunken-light dark:bg-sunken text-[11px] font-mono">Esc</kbd><span>Close modal</span></div>
+      </div>
+    </div>
+  </section>
+
+  <!-- ============ INVENTORY ============ -->
+  <section id="inventory">
+    <div class="flex items-baseline justify-between mb-6">
+      <div>
+        <div class="text-ink3 text-[11px] font-mono uppercase tracking-[0.16em]">006 / Inventory</div>
+        <h2 class="mt-1 text-[26px] font-semibold tracking-tight">What lives where</h2>
+      </div>
+      <span class="text-ink3 text-[12px]">screens × components</span>
+    </div>
+    <div class="rounded-2xl border border-line-light dark:border-line overflow-hidden">
+      <table class="w-full text-[13px]">
+        <thead class="bg-sunken-light dark:bg-sunken text-ink3">
+          <tr class="text-left"><th class="px-4 py-2.5 font-mono text-[11px] uppercase tracking-[0.16em] font-medium">Screen</th><th class="px-4 py-2.5 font-mono text-[11px] uppercase tracking-[0.16em] font-medium">Anchor components</th></tr>
+        </thead>
+        <tbody class="bg-raised-light dark:bg-raised divide-y divide-line-light dark:divide-line">
+          <tr><td class="px-4 py-2.5 font-medium">1 · Pipeline Kanban</td><td class="px-4 py-2.5 text-ink2">Stats card, Filter chip, Status badge, Job card, Fit ring, Warm-in chip, FAB</td></tr>
+          <tr><td class="px-4 py-2.5 font-medium">2 · Job Detail</td><td class="px-4 py-2.5 text-ink2">Tab strip (underline), Brain card, Avatar, Comment thread, Activity timeline, Quick-action bar</td></tr>
+          <tr><td class="px-4 py-2.5 font-medium">3 · Add Job Modal</td><td class="px-4 py-2.5 text-ink2">Modal, Tab strip (segmented), Input, Textarea, Skeleton, Toast</td></tr>
+          <tr><td class="px-4 py-2.5 font-medium">4 · Today (mobile)</td><td class="px-4 py-2.5 text-ink2">Action card, Swipe gesture, Empty state, Avatar</td></tr>
+          <tr><td class="px-4 py-2.5 font-medium">5 · Resume Studio</td><td class="px-4 py-2.5 text-ink2">Split pane, Diff line, Suggestion card, Select, Button (primary)</td></tr>
+          <tr><td class="px-4 py-2.5 font-medium">6 · Settings</td><td class="px-4 py-2.5 text-ink2">Input (password), Textarea, Tab strip, Toast, Theme toggle</td></tr>
+        </tbody>
+      </table>
+    </div>
+  </section>
+
+  <footer class="pt-6 border-t border-line-light dark:border-line text-[11px] font-mono text-ink3 flex items-center justify-between">
+    <span>Job Tracker · Design System · 0.1.0</span>
+    <span>Inter · JetBrains Mono · Tailwind CDN · HTMX-ready</span>
+  </footer>
+
+</main>
+
+<script>
+  const root = document.documentElement;
+  document.getElementById('theme-toggle').addEventListener('click', () => {
+    root.classList.toggle('dark');
+  });
+</script>
+</body>
+</html>

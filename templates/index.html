@@ -1,168 +1,215 @@
-<!DOCTYPE html>
-<html lang="en">
-<head>
-    <meta charset="UTF-8">
-    <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>Job Tracker · {{ today }} · {{ jobs|length }} jobs</title>
-    <link rel="icon" href="data:image/svg+xml,<svg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 100 100'><text y='.9em' font-size='90'>%F0%9F%93%8B</text></svg>">
-    <script src="https://cdn.tailwindcss.com"></script>
-    <style>
-        body { font-feature-settings: "cv11", "ss01", "ss03"; }
-        .pulse-dot { animation: pulse 2s ease-in-out infinite; }
-        @keyframes pulse {
-            0%, 100% { opacity: 1; }
-            50% { opacity: 0.4; }
-        }
-    </style>
-</head>
-<body class="bg-gradient-to-b from-gray-50 to-gray-100 text-gray-900 min-h-screen">
-    <div class="max-w-5xl mx-auto p-4 md:p-8">
+{% extends "base.html" %}
 
-        <header class="mb-8 pb-5 border-b border-gray-200">
-            <div class="flex items-start justify-between gap-3 flex-wrap">
-                <div>
-                    <h1 class="text-3xl md:text-4xl font-bold tracking-tight flex items-center gap-2.5">
-                        <span aria-hidden="true">📋</span>
-                        <span>Job Tracker</span>
-                    </h1>
-                    <p class="text-sm text-gray-600 mt-1.5">
-                        Never lose a thread · <span class="font-mono text-xs bg-gray-100 px-1.5 py-0.5 rounded">{{ today }}</span>
-                    </p>
-                </div>
-                {% if drafts_pending and drafts_pending > 0 %}
-                <div class="inline-flex items-center gap-2 px-3 py-1.5 rounded-full bg-blue-50 border border-blue-200 text-blue-700 text-sm font-medium">
-                    <span class="w-2 h-2 rounded-full bg-blue-500 pulse-dot"></span>
-                    {{ drafts_pending }} message{% if drafts_pending != 1 %}s{% endif %} ready
-                </div>
-                {% endif %}
-            </div>
-        </header>
+{% block title %}Job Tracker · {{ today }} · {{ jobs|length }} jobs{% endblock %}
 
-        <section class="grid grid-cols-2 md:grid-cols-4 gap-3 mb-8">
-            <div class="bg-white border rounded-lg p-3">
-                <div class="text-xs text-gray-500 uppercase tracking-wide">Due today</div>
-                <div class="text-2xl font-bold {% if due %}text-red-700{% else %}text-gray-400{% endif %}">{{ due|length }}</div>
-            </div>
-            <div class="bg-white border rounded-lg p-3">
-                <div class="text-xs text-gray-500 uppercase tracking-wide">Upcoming</div>
-                <div class="text-2xl font-bold text-gray-800">{{ upcoming|length }}</div>
-            </div>
-            <div class="bg-white border rounded-lg p-3">
-                <div class="text-xs text-gray-500 uppercase tracking-wide">Active pipeline</div>
-                <div class="text-2xl font-bold text-blue-700">{{ total_active }}</div>
-            </div>
-            <div class="bg-white border rounded-lg p-3">
-                <div class="text-xs text-gray-500 uppercase tracking-wide">Backlog</div>
-                <div class="text-2xl font-bold text-gray-500">{{ backlog_count }}</div>
-            </div>
-        </section>
+{% block topbar_breadcrumb %}
+<div class="text-ink3 dark:text-ink3 text-[13px] hidden md:block">/ Pipeline</div>
+{% endblock %}
 
-        {% if due %}
-        <section class="mb-8">
-            <h2 class="text-xl font-semibold text-red-700 mb-3">Due now ({{ due|length }})</h2>
-            <div class="space-y-3">
-                {% for job in due %}
-                <a href="/jobs/{{ job.id }}" class="block border border-red-300 bg-red-50 rounded-lg p-4 hover:border-red-500 transition">
-                    <div class="flex justify-between items-start gap-2">
-                        <div>
-                            <div class="font-semibold">[{{ job.id }}] {{ job.title }}</div>
-                            <div class="text-sm text-gray-700">@ {{ job.company }}</div>
-                        </div>
-                        <span class="inline-block px-2 py-1 rounded text-xs bg-red-200 text-red-900 font-medium whitespace-nowrap">{{ job.next_action_at }}</span>
-                    </div>
-                    {% if job.next_action_note %}
-                    <div class="mt-2 text-sm">{{ job.next_action_note }}</div>
-                    {% endif %}
-                </a>
-                {% endfor %}
-            </div>
-        </section>
-        {% endif %}
+{% block topbar_actions %}
+{% if drafts_pending and drafts_pending > 0 %}
+<span class="hidden md:inline-flex items-center gap-1.5 px-2.5 h-8 rounded-md border border-accent-500/40 bg-accent-500/10 text-accent-300 text-[12px] font-medium">
+  <span class="w-1.5 h-1.5 rounded-full bg-accent-500"></span>
+  {{ drafts_pending }} draft{% if drafts_pending != 1 %}s{% endif %} ready
+</span>
+{% endif %}
+{% endblock %}
 
-        {% if upcoming %}
-        <section class="mb-8">
-            <h2 class="text-xl font-semibold mb-3">Upcoming</h2>
-            <div class="space-y-2">
-                {% for job in upcoming %}
-                <a href="/jobs/{{ job.id }}" class="block border border-gray-200 bg-white rounded-lg p-3 hover:border-gray-400 transition">
-                    <div class="flex justify-between items-start gap-2">
-                        <div class="flex-1">
-                            <div class="font-medium">[{{ job.id }}] {{ job.title }} <span class="text-gray-500">@ {{ job.company }}</span></div>
-                            {% if job.next_action_note %}
-                            <div class="text-sm text-gray-700 mt-1">{{ job.next_action_note }}</div>
-                            {% endif %}
-                        </div>
-                        <span class="inline-block px-2 py-1 rounded text-xs bg-yellow-100 text-yellow-800 font-medium whitespace-nowrap">{{ job.next_action_at }}</span>
-                    </div>
-                </a>
-                {% endfor %}
-            </div>
-        </section>
-        {% endif %}
+{% block content %}
 
-        <section>
-            <h2 class="text-xl font-semibold mb-3">All jobs ({{ jobs|length }})</h2>
-            <div class="space-y-3">
-                {% for job in jobs %}
-                <a href="/jobs/{{ job.id }}"
-                   class="block border rounded-lg p-4 transition hover:border-gray-500
-                          {% if job.worth_pursuing == 'no' %}bg-gray-100 border-gray-300 opacity-70
-                          {% elif job.is_overdue %}bg-red-50 border-red-300
-                          {% else %}bg-white border-gray-200{% endif %}">
-                    <div class="flex justify-between items-start gap-2">
-                        <div class="flex-1 min-w-0">
-                            <div class="font-semibold truncate">[{{ job.id }}] {{ job.title }}</div>
-                            <div class="text-sm text-gray-700">@ {{ job.company }}</div>
-                        </div>
-                        <span class="inline-block px-2 py-1 rounded text-xs font-medium whitespace-nowrap
-                            {% if job.worth_pursuing == 'no' %}bg-gray-200 text-gray-700
-                            {% elif job.status == 'awaiting_hr_review' %}bg-yellow-200 text-yellow-900
-                            {% elif job.status == 'applied' %}bg-blue-100 text-blue-800
-                            {% elif job.status == 'interview' %}bg-green-100 text-green-800
-                            {% else %}bg-gray-100 text-gray-700{% endif %}">{{ job.status }}</span>
-                    </div>
-
-                    {% if job.link %}
-                    <div class="mt-2 text-sm">
-                        <span class="text-blue-600 truncate inline-block max-w-full">{{ job.link }}</span>
-                    </div>
-                    {% endif %}
-
-                    {% if job.next_action_at and job.worth_pursuing != 'no' %}
-                    <div class="mt-3 text-sm bg-yellow-50 border-l-4 border-yellow-400 px-3 py-2 rounded-r">
-                        <span class="font-semibold">{{ job.next_action_at }}:</span> {{ job.next_action_note }}
-                    </div>
-                    {% endif %}
-
-                    {% if job.resume_md %}
-                    <div class="mt-2">
-                        <span class="inline-block px-2 py-0.5 rounded text-xs bg-blue-50 text-blue-700 border border-blue-200 font-medium">📄 resume ready</span>
-                    </div>
-                    {% endif %}
-
-                    {% if job.contacts %}
-                    <div class="mt-3 space-y-1 pl-3 border-l-2 border-gray-200">
-                        {% for c in job.contacts %}
-                        <div class="text-sm">
-                            <span class="font-medium">{{ c.name }}</span>
-                            <span class="text-gray-600">
-                            {%- if c.role %} · {{ c.role }}{% endif -%}
-                            {%- if c.email %} · {{ c.email }}{% endif -%}
-                            {%- if c.phone %} · {{ c.phone }}{% endif -%}
-                            </span>
-                        </div>
-                        {% endfor %}
-                    </div>
-                    {% endif %}
-                </a>
-                {% endfor %}
-            </div>
-        </section>
-
-        <footer class="mt-12 text-xs text-gray-400 text-center">
-            Job Tracker · running locally · view raw data: <code>sqlite3 tracker.db</code>
-        </footer>
-
+{# ============ HERO + STATS ============ #}
+<section class="mb-8">
+  <div class="flex items-baseline justify-between gap-3 flex-wrap">
+    <div>
+      <div class="text-ink3 text-[11px] font-mono uppercase tracking-[0.16em]">Pipeline</div>
+      <h1 class="mt-2 text-[28px] md:text-[32px] leading-[1.15] font-semibold tracking-[-0.02em]">Today's queue, focused.</h1>
+      <p class="mt-1.5 text-ink2 dark:text-ink2 text-[13px]">
+        <span class="font-mono">{{ today }}</span>
+        <span class="text-ink3"> · </span>
+        Never lose a thread.
+      </p>
     </div>
-</body>
-</html>
+  </div>
+
+  <div class="mt-6 grid grid-cols-2 md:grid-cols-5 gap-3">
+    <div class="rounded-xl border border-line-light dark:border-line bg-raised-light dark:bg-raised p-4">
+      <div class="text-[11px] font-mono text-ink3 uppercase tracking-[0.16em]">Due today</div>
+      <div class="mt-2 text-[22px] font-semibold tabular {% if due %}text-rejected{% else %}text-ink3{% endif %}">{{ due|length }}</div>
+    </div>
+    <div class="rounded-xl border border-line-light dark:border-line bg-raised-light dark:bg-raised p-4">
+      <div class="text-[11px] font-mono text-ink3 uppercase tracking-[0.16em]">Upcoming</div>
+      <div class="mt-2 text-[22px] font-semibold tabular">{{ upcoming|length }}</div>
+    </div>
+    <div class="rounded-xl border border-line-light dark:border-line bg-raised-light dark:bg-raised p-4">
+      <div class="text-[11px] font-mono text-ink3 uppercase tracking-[0.16em]">Active</div>
+      <div class="mt-2 text-[22px] font-semibold tabular text-applied">{{ total_active }}</div>
+    </div>
+    <div class="rounded-xl border border-line-light dark:border-line bg-raised-light dark:bg-raised p-4">
+      <div class="text-[11px] font-mono text-ink3 uppercase tracking-[0.16em]">Drafts ready</div>
+      <div class="mt-2 text-[22px] font-semibold tabular text-accent-300">{{ drafts_pending or 0 }}</div>
+    </div>
+    <div class="rounded-xl border border-line-light dark:border-line bg-raised-light dark:bg-raised p-4">
+      <div class="text-[11px] font-mono text-ink3 uppercase tracking-[0.16em]">Backlog</div>
+      <div class="mt-2 text-[22px] font-semibold tabular text-ink3">{{ backlog_count }}</div>
+    </div>
+  </div>
+</section>
+
+{# ============ DUE NOW ============ #}
+{% if due %}
+<section class="mb-8">
+  <h2 class="text-[11px] font-mono text-rejected uppercase tracking-[0.16em] mb-3">Due now ({{ due|length }})</h2>
+  <div class="space-y-2">
+    {% for job in due %}
+    <a href="/jobs/{{ job.id }}" class="block rounded-lg border border-rejected/40 bg-rejected/5 hover:border-rejected/60 hover:bg-rejected/10 transition px-4 py-3">
+      <div class="flex items-start justify-between gap-3">
+        <div class="min-w-0 flex-1">
+          <div class="font-semibold text-[14px] truncate">{{ job.title }}</div>
+          <div class="text-[12px] text-ink2 truncate">@ {{ job.company }}</div>
+        </div>
+        <span class="shrink-0 px-2 h-6 inline-flex items-center gap-1.5 rounded-md bg-rejected/15 text-rejected text-[11px] font-mono font-medium">
+          <span class="w-1.5 h-1.5 rounded-full bg-rejected"></span>{{ job.next_action_at }}
+        </span>
+      </div>
+      {% if job.next_action_note %}
+      <div class="mt-2 text-[12.5px] text-ink2 leading-relaxed line-clamp-2">{{ job.next_action_note }}</div>
+      {% endif %}
+    </a>
+    {% endfor %}
+  </div>
+</section>
+{% endif %}
+
+{# ============ UPCOMING ============ #}
+{% if upcoming %}
+<section class="mb-8">
+  <h2 class="text-[11px] font-mono text-replied uppercase tracking-[0.16em] mb-3">Upcoming ({{ upcoming|length }})</h2>
+  <div class="space-y-2">
+    {% for job in upcoming %}
+    <a href="/jobs/{{ job.id }}" class="block rounded-lg border border-line-light dark:border-line bg-raised-light dark:bg-raised hover:border-line2-light dark:hover:border-line2 transition px-4 py-3">
+      <div class="flex items-start justify-between gap-3">
+        <div class="min-w-0 flex-1">
+          <div class="font-semibold text-[14px] truncate">{{ job.title }}<span class="text-ink2 font-normal"> · {{ job.company }}</span></div>
+          {% if job.next_action_note %}
+          <div class="mt-1 text-[12.5px] text-ink2 line-clamp-1">{{ job.next_action_note }}</div>
+          {% endif %}
+        </div>
+        <span class="shrink-0 px-2 h-6 inline-flex items-center rounded-md bg-replied/15 text-replied text-[11px] font-mono font-medium">{{ job.next_action_at }}</span>
+      </div>
+    </a>
+    {% endfor %}
+  </div>
+</section>
+{% endif %}
+
+{# ============ ALL JOBS ============ #}
+<section class="mb-12">
+  <div class="flex items-baseline justify-between mb-4">
+    <h2 class="text-[11px] font-mono text-ink3 uppercase tracking-[0.16em]">All jobs ({{ jobs|length }})</h2>
+    <div class="hidden md:flex flex-wrap gap-2">
+      <button class="inline-flex items-center gap-1.5 h-7 px-2.5 rounded-full border border-dashed border-line2-light dark:border-line2 text-ink3 text-[12px]">+ Filter (Phase B)</button>
+    </div>
+  </div>
+
+  {% if not jobs %}
+  <div class="rounded-xl border border-dashed border-line2-light dark:border-line2 p-12 text-center">
+    <div class="mx-auto w-9 h-9 rounded-lg bg-sunken-light dark:bg-sunken grid place-items-center text-ink3 mb-3">
+      <svg class="w-5 h-5" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8"><path d="M4 7h16M4 12h16M4 17h10"/></svg>
+    </div>
+    <div class="text-[14px] font-semibold">No jobs yet</div>
+    <div class="text-[12px] text-ink2 mt-1">Add your first job with <code class="font-mono">python3 tracker.py add</code></div>
+  </div>
+  {% else %}
+  <div class="space-y-2">
+    {% for job in jobs %}
+    {% set initials = (job.company or '?')[:2]|upper %}
+    {% set is_backlog = job.worth_pursuing == 'no' %}
+    <a href="/jobs/{{ job.id }}"
+       class="block rounded-lg border {% if is_backlog %}border-line-light dark:border-line bg-base-light/50 dark:bg-base/50 opacity-70{% elif job.is_overdue %}border-rejected/40 bg-rejected/5{% else %}border-line-light dark:border-line bg-raised-light dark:bg-raised{% endif %} hover:border-line2-light dark:hover:border-line2 transition p-3.5">
+      <div class="flex items-start gap-3">
+        {# Status-tinted initials block #}
+        <div class="w-9 h-9 rounded shrink-0 grid place-items-center text-[11px] font-mono font-semibold
+          {% if job.status == 'applied' %}bg-applied/20 text-applied
+          {% elif job.status == 'interview' %}bg-interview/20 text-interview
+          {% elif job.status == 'replied' %}bg-replied/20 text-replied
+          {% elif job.status == 'offer' %}bg-offer/20 text-offer
+          {% elif job.status == 'rejected' %}bg-rejected/20 text-rejected
+          {% elif job.status == 'backlog' %}bg-backlog/20 text-backlog
+          {% else %}bg-saved/20 text-saved{% endif %}">{{ initials }}</div>
+
+        <div class="min-w-0 flex-1">
+          <div class="flex items-start justify-between gap-2">
+            <div class="min-w-0 flex-1">
+              <div class="font-semibold text-[14px] leading-tight truncate">{{ job.title }}</div>
+              <div class="text-[12px] text-ink2 truncate">{{ job.company }}{% if job.location %} · {{ job.location }}{% endif %}</div>
+            </div>
+            <div class="flex items-center gap-2 shrink-0">
+              {# Status badge #}
+              <span class="px-2 h-5 inline-flex items-center gap-1.5 rounded text-[10px] font-mono uppercase tracking-[0.12em] font-medium
+                {% if job.status == 'applied' %}bg-applied/15 text-applied
+                {% elif job.status == 'interview' %}bg-interview/15 text-interview
+                {% elif job.status == 'replied' %}bg-replied/15 text-replied
+                {% elif job.status == 'offer' %}bg-offer/15 text-offer
+                {% elif job.status == 'rejected' %}bg-rejected/15 text-rejected
+                {% elif job.status == 'backlog' %}bg-backlog/15 text-backlog
+                {% else %}bg-saved/15 text-saved{% endif %}">
+                <span class="w-1 h-1 rounded-full
+                  {% if job.status == 'applied' %}bg-applied
+                  {% elif job.status == 'interview' %}bg-interview
+                  {% elif job.status == 'replied' %}bg-replied
+                  {% elif job.status == 'offer' %}bg-offer
+                  {% elif job.status == 'rejected' %}bg-rejected
+                  {% elif job.status == 'backlog' %}bg-backlog
+                  {% else %}bg-saved{% endif %}"></span>
+                {{ job.status }}
+              </span>
+            </div>
+          </div>
+
+          {% if job.next_action_at and not is_backlog %}
+          <div class="mt-2 text-[12.5px] text-ink2 line-clamp-1">
+            {% if job.is_overdue %}
+            <span class="text-rejected font-medium">Overdue · {{ job.next_action_at }}:</span>
+            {% else %}
+            <span class="text-replied font-mono text-[11px]">{{ job.next_action_at }}:</span>
+            {% endif %}
+            {{ job.next_action_note }}
+          </div>
+          {% endif %}
+
+          {% if job.contacts %}
+          <div class="mt-2 flex items-center gap-2 text-[11px] text-ink3">
+            <div class="flex -space-x-1.5">
+              {% for c in job.contacts[:3] %}
+              {% set c_initials = (c.name or '?')[:2]|upper %}
+              <div class="w-5 h-5 rounded-full border-2 border-raised-light dark:border-raised bg-sunken-light dark:bg-sunken grid place-items-center text-[9px] font-mono font-semibold text-ink2">{{ c_initials }}</div>
+              {% endfor %}
+            </div>
+            <span class="font-mono">{{ job.contacts|length }} contact{% if job.contacts|length != 1 %}s{% endif %}</span>
+            {% if job.resume_md %}
+            <span class="ml-auto inline-flex items-center gap-1 text-accent-300">
+              <svg class="w-3 h-3" viewBox="0 0 16 16" fill="currentColor"><path d="M3 1.5h7l3 3v10A1.5 1.5 0 0111.5 16h-8.5A1.5 1.5 0 011.5 14.5v-12A1 1 0 013 1.5z"/></svg>
+              resume ready
+            </span>
+            {% endif %}
+          </div>
+          {% elif job.resume_md %}
+          <div class="mt-2 inline-flex items-center gap-1 text-[11px] text-accent-300">
+            <svg class="w-3 h-3" viewBox="0 0 16 16" fill="currentColor"><path d="M3 1.5h7l3 3v10A1.5 1.5 0 0111.5 16h-8.5A1.5 1.5 0 011.5 14.5v-12A1 1 0 013 1.5z"/></svg>
+            resume ready
+          </div>
+          {% endif %}
+        </div>
+      </div>
+    </a>
+    {% endfor %}
+  </div>
+  {% endif %}
+</section>
+
+<footer class="pt-6 border-t border-line-light dark:border-line text-[11px] font-mono text-ink3 flex items-center justify-between">
+  <span>Job Tracker · <span class="text-ink2">{{ jobs|length }} jobs tracked</span></span>
+  <span>Phase B: kanban + filters · Phase C: in-app status updates</span>
+</footer>
+
+{% endblock %}

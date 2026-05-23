@@ -1,278 +1,173 @@
-<!DOCTYPE html>
-<html lang="en">
+<!doctype html>
+<html lang="en" class="dark">
 <head>
-    <meta charset="UTF-8">
-    <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>{{ pdf_filename | replace('.pdf', '') if pdf_filename else 'Resume' }}</title>
-    <link rel="icon" href="data:image/svg+xml,<svg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 100 100'><text y='.9em' font-size='90'>%F0%9F%93%8B</text></svg>">
-    <style>
-        /* Screen styles */
-        :root {
-            --ink: #1a1a1a;
-            --muted: #5a5a5a;
-            --accent: #1d4ed8;
-            --border: #e5e7eb;
-            --bg: #f5f5f4;
-        }
+<meta charset="utf-8" />
+<meta name="viewport" content="width=device-width, initial-scale=1" />
+<title>{{ pdf_filename | replace('.pdf', '') if pdf_filename else 'Resume' }}</title>
+<link rel="icon" href="data:image/svg+xml,<svg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 100 100'><text y='.9em' font-size='90'>%F0%9F%93%8B</text></svg>">
+<script src="https://cdn.tailwindcss.com"></script>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&family=JetBrains+Mono:wght@400;500;600&display=swap" rel="stylesheet">
+<script>
+  tailwind.config = {
+    darkMode: 'class',
+    theme: {
+      extend: {
+        fontFamily: {
+          sans: ['Inter', 'ui-sans-serif', 'system-ui', 'sans-serif'],
+          mono: ['"JetBrains Mono"', 'ui-monospace', 'monospace'],
+        },
+        colors: {
+          base:   { light: '#fafaf9', DEFAULT: '#0b0b0e' },
+          raised: { light: '#ffffff', DEFAULT: '#131318' },
+          sunken: { light: '#f1f0ee', DEFAULT: '#08080b' },
+          line:   { light: '#e6e4e0', DEFAULT: '#26262e' },
+          ink:    { light: '#0f0f12', DEFAULT: '#f4f3ef' },
+          ink2:   { light: '#55554f', DEFAULT: '#a7a6a1' },
+          ink3:   { light: '#85847d', DEFAULT: '#6c6c72' },
+          accent: { 300:'#b896ff', 400:'#9a6bff', 500:'#7e44ff', 600:'#6a2ef0' },
+          replied: '#f5a524',
+        },
+      }
+    }
+  };
+</script>
+<style>
+  /* Resume paper — designed for browser-native Print → Save as PDF (true WYSIWYG) */
+  :root {
+    --paper-ink: #1a1a1a;
+    --paper-muted: #5a5a5a;
+    --paper-accent: #1d4ed8;
+    --paper-border: #e5e7eb;
+  }
+  body { font-family: 'Inter', system-ui, sans-serif; }
 
-        * { box-sizing: border-box; }
+  /* The actual resume rendered onto white paper, always — regardless of dark/light mode */
+  .paper {
+    max-width: 820px;
+    margin: 24px auto;
+    padding: 56px 64px;
+    background: white;
+    color: var(--paper-ink);
+    border: 1px solid var(--paper-border);
+    border-radius: 4px;
+    box-shadow: 0 1px 3px rgba(0,0,0,0.04), 0 4px 12px rgba(0,0,0,0.04);
+    min-height: calc(100vh - 96px);
+  }
 
-        body {
-            margin: 0;
-            background: var(--bg);
-            font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, "Helvetica Neue", Arial, sans-serif;
-            color: var(--ink);
-            line-height: 1.45;
-        }
+  /* Markdown-rendered content — tightened for ~1.5 page target */
+  .resume h1 {
+    font-size: 24px; font-weight: 700; margin: 0 0 2px;
+    letter-spacing: -0.02em; color: var(--paper-ink);
+  }
+  .resume h1 + p {
+    font-size: 12px; color: var(--paper-muted);
+    margin: 0 0 14px; line-height: 1.35;
+  }
+  .resume hr { border: 0; border-top: 1px solid var(--paper-border); margin: 10px 0; }
+  .resume h2 {
+    font-size: 10.5px; font-weight: 700; text-transform: uppercase;
+    letter-spacing: 0.08em; color: var(--paper-accent);
+    margin: 12px 0 5px; padding-bottom: 3px;
+    border-bottom: 1px solid var(--paper-border);
+  }
+  .resume h3 { font-size: 13.5px; font-weight: 700; margin: 9px 0 1px; color: var(--paper-ink); }
+  .resume h3 + p {
+    font-size: 12px; color: var(--paper-muted); margin: 0 0 5px;
+    font-style: italic; line-height: 1.35;
+  }
+  .resume p { margin: 0 0 4px; font-size: 13px; line-height: 1.4; color: var(--paper-ink); }
+  .resume strong { font-weight: 700; color: var(--paper-ink); }
+  .resume ul { margin: 2px 0 8px; padding-left: 16px; }
+  .resume li { margin: 0 0 2px; font-size: 12.5px; line-height: 1.4; color: var(--paper-ink); }
+  .resume a { color: var(--paper-accent); text-decoration: none; }
+  .resume a:hover { text-decoration: underline; }
 
-        .toolbar {
-            background: white;
-            border-bottom: 1px solid var(--border);
-            padding: 12px 24px;
-            display: flex;
-            align-items: center;
-            justify-content: space-between;
-            gap: 12px;
-            flex-wrap: wrap;
-            position: sticky;
-            top: 0;
-            z-index: 10;
-        }
-
-        .toolbar .ctx {
-            font-size: 13px;
-            color: var(--muted);
-        }
-
-        .toolbar .ctx strong { color: var(--ink); }
-
-        .toolbar .actions {
-            display: flex;
-            gap: 8px;
-        }
-
-        .btn {
-            padding: 8px 16px;
-            font-size: 13px;
-            font-weight: 600;
-            border-radius: 6px;
-            border: 1px solid transparent;
-            cursor: pointer;
-            transition: all 0.15s;
-            text-decoration: none;
-            display: inline-flex;
-            align-items: center;
-            gap: 6px;
-        }
-        .btn:active { transform: scale(0.97); }
-
-        .btn-primary {
-            background: var(--accent);
-            color: white;
-        }
-        .btn-primary:hover { background: #1e40af; }
-
-        .btn-secondary {
-            background: white;
-            color: var(--ink);
-            border-color: var(--border);
-        }
-        .btn-secondary:hover { background: var(--bg); }
-
-        .page {
-            max-width: 820px;
-            margin: 24px auto;
-            padding: 56px 64px;
-            background: white;
-            border: 1px solid var(--border);
-            border-radius: 4px;
-            box-shadow: 0 1px 3px rgba(0,0,0,0.04), 0 4px 12px rgba(0,0,0,0.04);
-            min-height: calc(100vh - 96px);
-        }
-
-        .print-tip {
-            max-width: 820px;
-            margin: 12px auto 0;
-            padding: 12px 16px;
-            background: #fef3c7;
-            border: 1px solid #fcd34d;
-            border-radius: 6px;
-            color: #78350f;
-            font-size: 13px;
-            line-height: 1.5;
-        }
-        .print-tip code {
-            background: rgba(255, 255, 255, 0.6);
-            padding: 1px 5px;
-            border-radius: 3px;
-            font-size: 11.5px;
-            color: #57321a;
-        }
-
-        .empty {
-            text-align: center;
-            color: var(--muted);
-            padding: 80px 20px;
-        }
-        .empty h2 {
-            color: var(--ink);
-            font-size: 18px;
-            margin-bottom: 8px;
-        }
-        .empty code {
-            background: var(--bg);
-            padding: 2px 6px;
-            border-radius: 3px;
-            font-size: 12px;
-        }
-
-        /* Markdown-rendered content — tightened for ~1.5 page target */
-        .resume h1 {
-            font-size: 24px;
-            font-weight: 700;
-            margin: 0 0 2px;
-            letter-spacing: -0.02em;
-        }
-        .resume h1 + p {
-            font-size: 12px;
-            color: var(--muted);
-            margin: 0 0 14px;
-            line-height: 1.35;
-        }
-        .resume hr {
-            border: 0;
-            border-top: 1px solid var(--border);
-            margin: 10px 0;
-        }
-        .resume h2 {
-            font-size: 10.5px;
-            font-weight: 700;
-            text-transform: uppercase;
-            letter-spacing: 0.08em;
-            color: var(--accent);
-            margin: 12px 0 5px;
-            padding-bottom: 3px;
-            border-bottom: 1px solid var(--border);
-        }
-        .resume h3 {
-            font-size: 13.5px;
-            font-weight: 700;
-            margin: 9px 0 1px;
-        }
-        .resume h3 + p {
-            font-size: 12px;
-            color: var(--muted);
-            margin: 0 0 5px;
-            font-style: italic;
-            line-height: 1.35;
-        }
-        .resume p { margin: 0 0 4px; font-size: 13px; line-height: 1.4; }
-        .resume strong { font-weight: 700; color: var(--ink); }
-        .resume ul {
-            margin: 2px 0 8px;
-            padding-left: 16px;
-        }
-        .resume li {
-            margin: 0 0 2px;
-            font-size: 12.5px;
-            line-height: 1.4;
-        }
-        .resume a {
-            color: var(--accent);
-            text-decoration: none;
-        }
-        .resume a:hover { text-decoration: underline; }
-
-        /* Print rules — clean PDF output (true WYSIWYG to what user sees on screen) */
-        @media print {
-            @page {
-                size: A4;
-                margin: 12mm 14mm;
-            }
-            html, body {
-                background: white !important;
-                margin: 0;
-                padding: 0;
-            }
-            .toolbar,
-            .print-tip,
-            .no-print {
-                display: none !important;
-            }
-            .page {
-                max-width: 100%;
-                margin: 0 !important;
-                padding: 0 !important;
-                box-shadow: none !important;
-                border: none !important;
-                min-height: 0;
-                background: white;
-            }
-            .resume {
-                color: black;
-            }
-            .resume h2 {
-                margin-top: 12px;
-                page-break-after: avoid;
-                break-after: avoid;
-            }
-            .resume h3 {
-                page-break-after: avoid;
-                break-after: avoid;
-            }
-            .resume li,
-            .resume p {
-                page-break-inside: avoid;
-                break-inside: avoid;
-            }
-            .resume a {
-                color: black !important;
-                text-decoration: none;
-            }
-        }
-    </style>
+  /* Print rules — true WYSIWYG to what user sees on screen */
+  @media print {
+    @page { size: A4; margin: 12mm 14mm; }
+    html, body { background: white !important; margin: 0; padding: 0; }
+    .toolbar, .print-tip, .no-print { display: none !important; }
+    .paper {
+      max-width: 100%; margin: 0 !important; padding: 0 !important;
+      box-shadow: none !important; border: none !important;
+      min-height: 0; background: white;
+    }
+    .resume h2 { margin-top: 12px; page-break-after: avoid; break-after: avoid; }
+    .resume h3 { page-break-after: avoid; break-after: avoid; }
+    .resume li, .resume p { page-break-inside: avoid; break-inside: avoid; }
+    .resume a { color: black !important; text-decoration: none; }
+  }
+</style>
 </head>
-<body>
-    <div class="toolbar no-print">
-        <div class="ctx">
-            <a href="/jobs/{{ job.id }}" style="color: var(--accent); text-decoration: none;">&larr; back to job</a>
-            &nbsp;·&nbsp;
-            Resume tailored for <strong>{{ job.title }}</strong> @ <strong>{{ job.company }}</strong>
-        </div>
-        <div class="actions">
-            {% if resume_html %}
-            <button onclick="window.print()" class="btn btn-primary">📄 Save as PDF</button>
-            <a href="/jobs/{{ job.id }}" class="btn btn-secondary">Back</a>
-            {% else %}
-            <a href="/jobs/{{ job.id }}" class="btn btn-secondary">Back</a>
-            {% endif %}
-        </div>
-    </div>
+<body class="bg-base-light text-ink-light dark:bg-base dark:text-ink antialiased">
 
-    {% if resume_html %}
-    <div class="print-tip no-print">
-        <strong>📌 One-time setup for clean PDF:</strong>
-        when you click <strong>Save as PDF</strong>, Chrome's print dialog opens —
-        scroll to <strong>More settings</strong>, <strong>UNCHECK</strong> the <strong>"Headers and footers"</strong> checkbox,
-        then click <strong>Save</strong>. Chrome remembers this for next time.
-        <br>
-        Default filename will be <code>{{ pdf_filename | replace('.pdf', '') }}.pdf</code>.
+<header class="toolbar no-print sticky top-0 z-40 border-b border-line-light dark:border-line bg-base-light/80 dark:bg-base/80 backdrop-blur">
+  <div class="max-w-[1280px] mx-auto px-6 md:px-8 h-14 flex items-center justify-between gap-3">
+    <div class="flex items-center gap-3 min-w-0">
+      <a href="/jobs/{{ job.id }}" class="inline-flex items-center gap-2 text-[13px] text-ink2 dark:text-ink2 hover:text-ink dark:hover:text-ink transition shrink-0">
+        <svg class="w-4 h-4" viewBox="0 0 16 16" fill="none" stroke="currentColor" stroke-width="2"><path d="M10 4L6 8l4 4"/></svg>
+        back
+      </a>
+      <span class="text-ink3 dark:text-ink3 text-[13px] hidden md:inline">/</span>
+      <div class="text-[13px] truncate hidden md:block">
+        Resume tailored for <span class="font-semibold">{{ job.title }}</span>
+        <span class="text-ink3"> @ </span>
+        <span class="font-semibold">{{ job.company }}</span>
+      </div>
     </div>
-    {% endif %}
-
-    <div class="page" id="resume-page">
-        {% if resume_html %}
-            <div class="resume" id="resume-content">{{ resume_html | safe }}</div>
-        {% else %}
-            <div class="empty">
-                <h2>No tailored resume yet for this job</h2>
-                <p>Paste the JD in chat, and a tailored markdown resume will be generated and stored on this job. Then refresh this page to download it.</p>
-                <p style="margin-top: 16px; font-size: 12px;">
-                    Or set <code>resume_md</code> directly via SQL on the jobs row.
-                </p>
-            </div>
-        {% endif %}
+    <div class="flex items-center gap-2 shrink-0">
+      {% if resume_html %}
+      <button onclick="window.print()" class="h-9 px-3.5 rounded-md bg-accent-500 hover:bg-accent-400 text-white text-[13px] font-medium transition">
+        📄 Save as PDF
+      </button>
+      {% endif %}
+      <button id="theme-toggle" class="h-9 px-3 rounded-md border border-line-light dark:border-line bg-raised-light dark:bg-raised text-[12px] font-medium hover:bg-sunken-light dark:hover:bg-sunken transition">
+        <span class="dark:hidden">☾ Dark</span>
+        <span class="hidden dark:inline">☀ Light</span>
+      </button>
     </div>
+  </div>
+</header>
 
+{% if resume_html %}
+<div class="print-tip no-print max-w-[820px] mx-auto mt-4 px-4 py-3 rounded-lg border border-replied/40 bg-replied/10 text-[12.5px] leading-relaxed">
+  <strong class="text-replied">One-time setup for clean PDF:</strong>
+  when the print dialog opens, scroll to <strong>More settings</strong>, <strong>UNCHECK</strong>
+  the <strong>"Headers and footers"</strong> checkbox, then click <strong>Save</strong>.
+  Chrome remembers it next time. Default filename:
+  <code class="font-mono text-[11.5px] px-1.5 py-0.5 rounded bg-sunken-light dark:bg-sunken">{{ pdf_filename | replace('.pdf', '') }}.pdf</code>
+</div>
+{% endif %}
+
+<div class="paper">
+  {% if resume_html %}
+    <div class="resume">{{ resume_html | safe }}</div>
+  {% else %}
+    <div class="text-center text-[14px] py-20" style="color: var(--paper-muted);">
+      <div class="text-[16px] font-semibold mb-2" style="color: var(--paper-ink);">No tailored resume yet for this job</div>
+      <p>Paste the JD in chat, and a tailored markdown resume will be generated and stored on this job. Then refresh this page to download it.</p>
+    </div>
+  {% endif %}
+</div>
+
+<script>
+  // Theme toggle with localStorage (shared logic with base.html)
+  (function() {
+    const root = document.documentElement;
+    const stored = localStorage.getItem('jt-theme');
+    if (stored === 'light') root.classList.remove('dark');
+    else if (stored === 'dark') root.classList.add('dark');
+
+    const btn = document.getElementById('theme-toggle');
+    if (btn) {
+      btn.addEventListener('click', () => {
+        root.classList.toggle('dark');
+        localStorage.setItem('jt-theme', root.classList.contains('dark') ? 'dark' : 'light');
+      });
+    }
+  })();
+</script>
 </body>
 </html>

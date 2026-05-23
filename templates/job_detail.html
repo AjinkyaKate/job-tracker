@@ -1,220 +1,311 @@
-<!DOCTYPE html>
-<html lang="en">
-<head>
-    <meta charset="UTF-8">
-    <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>{{ job.title }} @ {{ job.company }} · Job Tracker</title>
-    <link rel="icon" href="data:image/svg+xml,<svg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 100 100'><text y='.9em' font-size='90'>%F0%9F%93%8B</text></svg>">
-    <script src="https://cdn.tailwindcss.com"></script>
-    <style>
-        body { font-feature-settings: "cv11", "ss01", "ss03"; }
-        .draft-card pre { font-family: ui-sans-serif, system-ui, -apple-system, "Segoe UI", Roboto, sans-serif; }
-        .copy-btn:active { transform: scale(0.96); }
-    </style>
-</head>
-<body class="bg-gradient-to-b from-gray-50 to-gray-100 text-gray-900 min-h-screen">
-    <div class="max-w-4xl mx-auto p-4 md:p-8">
+{% extends "base.html" %}
 
-        <nav class="mb-6 flex items-center justify-between">
-            <a href="/" class="text-sm text-blue-600 hover:underline inline-flex items-center gap-1">
-                <span aria-hidden="true">📋</span>
-                <span>back to dashboard</span>
-            </a>
-            <span class="text-xs text-gray-400 font-mono">job #{{ job.id }}</span>
-        </nav>
+{% block title %}{{ job.title }} @ {{ job.company }} · Job Tracker{% endblock %}
 
-        <header class="mb-6">
-            <div class="flex items-start justify-between gap-3 flex-wrap">
-                <div class="min-w-0 flex-1">
-                    <h1 class="text-2xl md:text-3xl font-bold leading-tight">{{ job.title }}</h1>
-                    <p class="text-gray-700 mt-1">@ {{ job.company }}</p>
-                </div>
-                <span class="inline-block px-3 py-1 rounded font-medium text-sm whitespace-nowrap
-                    {% if job.worth_pursuing == 'no' %}bg-gray-200 text-gray-700
-                    {% elif job.status == 'awaiting_hr_review' %}bg-yellow-200 text-yellow-900
-                    {% elif job.status == 'applied' %}bg-blue-100 text-blue-800
-                    {% elif job.status == 'interview' %}bg-green-100 text-green-800
-                    {% elif job.status == 'networking' %}bg-purple-100 text-purple-800
-                    {% else %}bg-gray-100 text-gray-700{% endif %}">{{ job.status }}</span>
-            </div>
+{% block topbar_breadcrumb %}
+<div class="text-ink3 dark:text-ink3 text-[13px] hidden md:flex items-center gap-2">
+  <span>/</span>
+  <a href="/" class="hover:text-ink dark:hover:text-ink">Pipeline</a>
+  <span>/</span>
+  <span class="text-ink2 dark:text-ink2 truncate max-w-[200px]">{{ job.company }}</span>
+</div>
+{% endblock %}
 
-            {% if job.link %}
-            <a href="{{ job.link }}" target="_blank" rel="noopener"
-               class="inline-flex items-center gap-1 mt-3 text-sm text-blue-600 hover:underline">
-                open job posting &nearr;
-            </a>
-            {% endif %}
-        </header>
+{% block topbar_actions %}
+<span class="text-[11px] font-mono text-ink3 hidden md:inline">job #{{ job.id }}</span>
+{% endblock %}
 
-        {% if job.next_action_at and job.worth_pursuing != 'no' %}
-        <section class="mb-6 bg-yellow-50 border-l-4 border-yellow-500 p-4 rounded-r">
-            <div class="text-xs uppercase tracking-wide text-yellow-800 font-semibold">Next action — {{ job.next_action_at }}</div>
-            <div class="mt-1 text-sm leading-relaxed">{{ job.next_action_note }}</div>
-        </section>
-        {% endif %}
+{% block content %}
 
-        {% if job.resume_md %}
-        <section class="mb-6">
-            <a href="/jobs/{{ job.id }}/resume" class="inline-flex items-center gap-2 px-4 py-3 bg-blue-600 hover:bg-blue-700 text-white font-semibold rounded-lg transition shadow-sm">
-                <span>📄</span>
-                <span>Open tailored resume → print as PDF</span>
-            </a>
-        </section>
-        {% endif %}
+{# Compute fit-score visual from worth_pursuing #}
+{% set fit_score = 78 if job.worth_pursuing == 'yes' else (50 if job.worth_pursuing == 'unsure' else 22) %}
+{% set fit_color = 'interview' if fit_score >= 75 else ('applied' if fit_score >= 50 else ('replied' if fit_score >= 25 else 'rejected')) %}
+{% set is_backlog = job.worth_pursuing == 'no' %}
 
-        <section class="grid grid-cols-2 md:grid-cols-4 gap-2 mb-6 text-sm">
-            <div class="bg-white border rounded p-3">
-                <div class="text-xs text-gray-500">Pursue</div>
-                <div class="font-medium">{{ job.worth_pursuing or 'unsure' }}</div>
-            </div>
-            <div class="bg-white border rounded p-3">
-                <div class="text-xs text-gray-500">Added</div>
-                <div class="font-medium text-xs">{{ job.added_at[:10] if job.added_at else '—' }}</div>
-            </div>
-            <div class="bg-white border rounded p-3">
-                <div class="text-xs text-gray-500">Last activity</div>
-                <div class="font-medium text-xs">{{ job.last_activity_at[:10] if job.last_activity_at else '—' }}</div>
-            </div>
-            <div class="bg-white border rounded p-3">
-                <div class="text-xs text-gray-500">Events</div>
-                <div class="font-medium">{{ events|length + drafts|length }}</div>
-            </div>
-        </section>
+<nav class="mb-5 md:hidden">
+  <a href="/" class="text-[12px] text-accent-300 hover:underline">&larr; back to pipeline</a>
+</nav>
 
-        {% if drafts %}
-        <section class="mb-8">
-            <h2 class="text-sm font-semibold uppercase tracking-wide text-gray-600 mb-3 flex items-center gap-2">
-                <span>Ready-to-send messages</span>
-                <span class="px-2 py-0.5 rounded-full bg-blue-600 text-white text-xs font-bold">{{ drafts|length }}</span>
-            </h2>
-            <p class="text-xs text-gray-500 mb-3">Click <strong>Copy</strong>, paste into LinkedIn / Gmail, edit lightly, send. Then click <strong>Mark sent</strong> coming soon — for now log via <code>tracker.py event {{ job.id }} message_sent "..."</code>.</p>
-            <div class="space-y-3">
-            {% for d in drafts %}
-                <div class="draft-card bg-white border border-gray-300 rounded-lg overflow-hidden shadow-sm hover:shadow-md transition">
-                    <div class="flex items-center justify-between gap-3 px-4 py-3 bg-gradient-to-r from-blue-50 to-gray-50 border-b border-gray-200">
-                        <div class="min-w-0 flex-1">
-                            <h3 class="font-semibold text-sm text-gray-900 truncate">{{ d.label }}</h3>
-                            {% if d.contact_name %}
-                            <p class="text-xs text-gray-600 mt-0.5 flex items-center gap-1">
-                                <span>to <strong>{{ d.contact_name }}</strong></span>
-                                {% if d.contact_linkedin %}
-                                <a href="{{ d.contact_linkedin }}" target="_blank" rel="noopener"
-                                   class="text-blue-600 hover:underline ml-1">open LinkedIn &nearr;</a>
-                                {% endif %}
-                            </p>
-                            {% endif %}
-                        </div>
-                        <button onclick="copyDraft('draft-{{ d.id }}', this)"
-                                class="copy-btn shrink-0 px-3 py-1.5 text-xs font-semibold bg-blue-600 text-white rounded-md hover:bg-blue-700 transition shadow-sm">
-                            Copy
-                        </button>
-                    </div>
-                    <pre id="draft-{{ d.id }}" class="text-sm whitespace-pre-wrap p-4 leading-relaxed text-gray-800">{{ d.message }}</pre>
-                </div>
-            {% endfor %}
-            </div>
-        </section>
-        {% endif %}
+{# ============ JOB HEADER ============ #}
+<header class="mb-6 pb-6 border-b border-line-light dark:border-line">
+  <div class="flex items-start justify-between gap-4 flex-wrap">
+    <div class="flex items-start gap-4 min-w-0 flex-1">
+      {# Company initials block, status-tinted #}
+      {% set initials = (job.company or '?')[:2]|upper %}
+      <div class="w-12 h-12 rounded-lg shrink-0 grid place-items-center text-[14px] font-mono font-bold
+        {% if job.status == 'applied' %}bg-applied/20 text-applied
+        {% elif job.status == 'interview' %}bg-interview/20 text-interview
+        {% elif job.status == 'replied' %}bg-replied/20 text-replied
+        {% elif job.status == 'offer' %}bg-offer/20 text-offer
+        {% elif job.status == 'rejected' %}bg-rejected/20 text-rejected
+        {% elif job.status == 'backlog' %}bg-backlog/20 text-backlog
+        {% else %}bg-saved/20 text-saved{% endif %}">{{ initials }}</div>
 
-        {% if job.notes %}
-        <section class="mb-6">
-            <h2 class="text-sm font-semibold uppercase tracking-wide text-gray-600 mb-2">Notes</h2>
-            <div class="bg-white border rounded p-4 whitespace-pre-line text-sm leading-relaxed">{{ job.notes }}</div>
-        </section>
-        {% endif %}
+      <div class="min-w-0 flex-1">
+        <h1 class="text-[22px] md:text-[26px] leading-[1.2] font-semibold tracking-[-0.015em] truncate">{{ job.title }}</h1>
+        <p class="mt-1 text-[14px] text-ink2 dark:text-ink2">
+          {{ job.company }}{% if job.location %}<span class="text-ink3"> · {{ job.location }}</span>{% endif %}
+        </p>
+        <div class="mt-3 flex flex-wrap items-center gap-2">
+          {# Status badge #}
+          <span class="inline-flex items-center gap-1.5 px-2 h-6 rounded-md text-[11px] font-mono uppercase tracking-[0.12em] font-medium
+            {% if job.status == 'applied' %}bg-applied/15 text-applied
+            {% elif job.status == 'interview' %}bg-interview/15 text-interview
+            {% elif job.status == 'replied' %}bg-replied/15 text-replied
+            {% elif job.status == 'offer' %}bg-offer/15 text-offer
+            {% elif job.status == 'rejected' %}bg-rejected/15 text-rejected
+            {% elif job.status == 'backlog' %}bg-backlog/15 text-backlog
+            {% else %}bg-saved/15 text-saved{% endif %}">
+            <span class="w-1.5 h-1.5 rounded-full
+              {% if job.status == 'applied' %}bg-applied
+              {% elif job.status == 'interview' %}bg-interview
+              {% elif job.status == 'replied' %}bg-replied
+              {% elif job.status == 'offer' %}bg-offer
+              {% elif job.status == 'rejected' %}bg-rejected
+              {% elif job.status == 'backlog' %}bg-backlog
+              {% else %}bg-saved{% endif %}"></span>
+            {{ job.status }}
+          </span>
 
-        <section class="mb-6">
-            <h2 class="text-sm font-semibold uppercase tracking-wide text-gray-600 mb-2">Contacts ({{ contacts|length }})</h2>
-            {% if contacts %}
-            <div class="grid md:grid-cols-2 gap-3">
-                {% for c in contacts %}
-                <div class="bg-white border rounded-lg p-4 hover:border-gray-400 transition">
-                    <div class="flex items-start justify-between gap-2">
-                        <div class="min-w-0 flex-1">
-                            <div class="font-semibold">{{ c.name }}</div>
-                            {% if c.role %}<div class="text-sm text-gray-700">{{ c.role }}</div>{% endif %}
-                        </div>
-                        {% if c.linkedin_url %}
-                        <a href="{{ c.linkedin_url }}" target="_blank" rel="noopener"
-                           class="shrink-0 inline-flex items-center gap-1 px-2 py-1 text-xs font-medium bg-blue-50 text-blue-700 rounded hover:bg-blue-100 transition border border-blue-200">
-                            LinkedIn &nearr;
-                        </a>
-                        {% endif %}
-                    </div>
-                    <div class="mt-2 text-sm space-y-1">
-                        {% if c.email %}
-                        <div class="flex items-center gap-1">
-                            <span class="text-gray-500 text-xs">email:</span>
-                            <a href="mailto:{{ c.email }}" class="text-blue-600 hover:underline truncate">{{ c.email }}</a>
-                        </div>
-                        {% endif %}
-                        {% if c.phone %}
-                        <div class="flex items-center gap-1">
-                            <span class="text-gray-500 text-xs">phone:</span>
-                            <a href="tel:{{ c.phone }}" class="text-blue-600 hover:underline">{{ c.phone }}</a>
-                        </div>
-                        {% endif %}
-                    </div>
-                    {% if c.notes %}<div class="mt-2 text-xs text-gray-600 whitespace-pre-line">{{ c.notes }}</div>{% endif %}
-                </div>
-                {% endfor %}
-            </div>
-            {% else %}
-            <div class="text-sm text-gray-500">No contacts yet.</div>
-            {% endif %}
-        </section>
+          {# Worth-pursuing indicator #}
+          {% if is_backlog %}
+          <span class="inline-flex items-center px-2 h-6 rounded-md bg-backlog/15 text-backlog text-[11px] font-mono uppercase tracking-[0.12em] font-medium">backlog</span>
+          {% endif %}
 
-        <section class="mb-12">
-            <h2 class="text-sm font-semibold uppercase tracking-wide text-gray-600 mb-2">Activity log ({{ events|length }} events)</h2>
-            {% if events %}
-            <div class="bg-white border rounded">
-                {% for e in events %}
-                <div class="px-4 py-3 {% if not loop.last %}border-b border-gray-100{% endif %}">
-                    <div class="flex items-baseline justify-between gap-2 flex-wrap">
-                        <span class="text-xs font-medium text-gray-500">{{ e.occurred_at }}</span>
-                        <span class="text-xs px-2 py-0.5 rounded
-                            {% if e.event_type == 'application_sent' %}bg-blue-100 text-blue-800
-                            {% elif e.event_type == 'message_sent' %}bg-green-100 text-green-800
-                            {% elif e.event_type == 'message_received' or e.event_type == 'email_received' %}bg-purple-100 text-purple-800
-                            {% elif e.event_type == 'status_change' %}bg-yellow-100 text-yellow-800
-                            {% else %}bg-gray-100 text-gray-700{% endif %}">{{ e.event_type }}</span>
-                    </div>
-                    {% if e.body %}<div class="text-sm mt-1 whitespace-pre-line">{{ e.body }}</div>{% endif %}
-                </div>
-                {% endfor %}
-            </div>
-            {% else %}
-            <div class="text-sm text-gray-500">No events logged.</div>
-            {% endif %}
-        </section>
+          {% if job.level %}<span class="font-mono text-[11px] text-ink3">{{ job.level }}</span>{% endif %}
+          {% if job.yoe_required %}<span class="font-mono text-[11px] text-ink3">· {{ job.yoe_required }} yrs</span>{% endif %}
 
-        <footer class="mt-12 text-xs text-gray-400 text-center">
-            <a href="/" class="hover:underline">&larr; back to dashboard</a>
-        </footer>
-
+          {% if job.link %}
+          <a href="{{ job.link }}" target="_blank" rel="noopener" class="ml-auto md:ml-0 inline-flex items-center gap-1 text-[12px] text-accent-300 hover:underline">
+            open job posting &nearr;
+          </a>
+          {% endif %}
+        </div>
+      </div>
     </div>
 
-    <script>
-        function copyDraft(id, btn) {
-            const el = document.getElementById(id);
-            if (!el) return;
-            const text = el.innerText;
-            const original = btn.innerText;
-            navigator.clipboard.writeText(text).then(() => {
-                btn.innerText = '✓ Copied';
-                btn.classList.remove('bg-blue-600', 'hover:bg-blue-700');
-                btn.classList.add('bg-green-600');
-                setTimeout(() => {
-                    btn.innerText = original;
-                    btn.classList.remove('bg-green-600');
-                    btn.classList.add('bg-blue-600', 'hover:bg-blue-700');
-                }, 1500);
-            }).catch((err) => {
-                btn.innerText = 'Copy failed';
-                console.error('Clipboard error:', err);
-                setTimeout(() => { btn.innerText = original; }, 1500);
-            });
-        }
-    </script>
-</body>
-</html>
+    {# Fit-score ring #}
+    <div class="flex flex-col items-center gap-1">
+      <div class="relative w-14 h-14">
+        <svg viewBox="0 0 36 36" class="w-14 h-14 -rotate-90">
+          <circle cx="18" cy="18" r="15.5" fill="none" stroke="currentColor" class="text-line-light dark:text-line" stroke-width="3"/>
+          <circle cx="18" cy="18" r="15.5" fill="none" stroke="currentColor" class="text-{{ fit_color }}" stroke-width="3" stroke-dasharray="{{ fit_score }} 100" stroke-linecap="round"/>
+        </svg>
+        <div class="absolute inset-0 grid place-items-center text-[13px] font-mono tabular font-semibold">{{ fit_score }}</div>
+      </div>
+      <span class="text-[10px] font-mono text-ink3 uppercase tracking-[0.16em]">Fit</span>
+    </div>
+  </div>
+</header>
+
+{# ============ NEXT ACTION ============ #}
+{% if job.next_action_at and not is_backlog %}
+<section class="mb-5 rounded-xl border border-replied/40 bg-replied/10 px-4 py-3.5">
+  <div class="flex items-start gap-3">
+    <svg class="w-4 h-4 text-replied mt-0.5 shrink-0" viewBox="0 0 16 16" fill="currentColor"><path d="M8 1.5a6.5 6.5 0 100 13 6.5 6.5 0 000-13zM8 4a.75.75 0 01.75.75v3.59l2.31 1.34a.75.75 0 11-.74 1.3l-2.69-1.55A.75.75 0 017.25 9V4.75A.75.75 0 018 4z"/></svg>
+    <div class="min-w-0 flex-1">
+      <div class="text-[11px] font-mono text-replied uppercase tracking-[0.16em]">Next action · {{ job.next_action_at }}</div>
+      <div class="mt-1 text-[14px] leading-relaxed">{{ job.next_action_note }}</div>
+    </div>
+  </div>
+</section>
+{% endif %}
+
+{# ============ TAILORED RESUME CTA ============ #}
+{% if job.resume_md %}
+<section class="mb-5">
+  <a href="/jobs/{{ job.id }}/resume" class="group flex items-center justify-between gap-3 rounded-xl border border-accent-500/40 bg-accent-500/10 hover:bg-accent-500/15 transition px-4 py-3.5">
+    <div class="flex items-center gap-3 min-w-0">
+      <div class="w-9 h-9 rounded-md bg-accent-500 text-white grid place-items-center shrink-0">
+        <svg class="w-4 h-4" viewBox="0 0 16 16" fill="currentColor"><path d="M3 1.5h7l3 3v10A1.5 1.5 0 0111.5 16h-8.5A1.5 1.5 0 011.5 14.5v-12A1 1 0 013 1.5z"/></svg>
+      </div>
+      <div class="min-w-0">
+        <div class="text-[13px] font-semibold text-accent-300">Tailored resume ready</div>
+        <div class="text-[11.5px] text-ink2 truncate">Open the preview → Save as PDF for this role</div>
+      </div>
+    </div>
+    <svg class="w-4 h-4 text-accent-300 group-hover:translate-x-0.5 transition shrink-0" viewBox="0 0 16 16" fill="none" stroke="currentColor" stroke-width="2"><path d="M6 4l4 4-4 4"/></svg>
+  </a>
+</section>
+{% endif %}
+
+{# ============ STATS STRIP ============ #}
+<section class="grid grid-cols-2 md:grid-cols-4 gap-2 mb-6 text-[12px]">
+  <div class="rounded-lg border border-line-light dark:border-line bg-raised-light dark:bg-raised px-3 py-2.5">
+    <div class="text-[10px] font-mono text-ink3 uppercase tracking-[0.16em]">Pursue</div>
+    <div class="mt-0.5 font-medium">{{ job.worth_pursuing or 'unsure' }}</div>
+  </div>
+  <div class="rounded-lg border border-line-light dark:border-line bg-raised-light dark:bg-raised px-3 py-2.5">
+    <div class="text-[10px] font-mono text-ink3 uppercase tracking-[0.16em]">Added</div>
+    <div class="mt-0.5 font-mono text-[11px]">{{ job.added_at[:10] if job.added_at else '—' }}</div>
+  </div>
+  <div class="rounded-lg border border-line-light dark:border-line bg-raised-light dark:bg-raised px-3 py-2.5">
+    <div class="text-[10px] font-mono text-ink3 uppercase tracking-[0.16em]">Last activity</div>
+    <div class="mt-0.5 font-mono text-[11px]">{{ job.last_activity_at[:10] if job.last_activity_at else '—' }}</div>
+  </div>
+  <div class="rounded-lg border border-line-light dark:border-line bg-raised-light dark:bg-raised px-3 py-2.5">
+    <div class="text-[10px] font-mono text-ink3 uppercase tracking-[0.16em]">Events</div>
+    <div class="mt-0.5 font-mono tabular">{{ events|length + drafts|length }}</div>
+  </div>
+</section>
+
+{# ============ READY-TO-SEND MESSAGES ============ #}
+{% if drafts %}
+<section class="mb-8">
+  <div class="flex items-baseline justify-between mb-3">
+    <h2 class="text-[11px] font-mono text-accent-300 uppercase tracking-[0.16em]">Ready-to-send messages · {{ drafts|length }}</h2>
+    <span class="text-[11px] text-ink3">Click Copy → paste in LinkedIn / Gmail</span>
+  </div>
+  <div class="space-y-3">
+    {% for d in drafts %}
+    <div class="rounded-xl border border-line-light dark:border-line bg-raised-light dark:bg-raised overflow-hidden">
+      <div class="flex items-center justify-between gap-3 px-4 py-2.5 border-b border-line-light dark:border-line">
+        <div class="min-w-0 flex-1">
+          <div class="flex items-center gap-2">
+            <span class="w-5 h-5 rounded grid place-items-center bg-replied/20 text-replied text-[10px] font-mono font-bold">OU</span>
+            <h3 class="text-[12.5px] font-semibold truncate">{{ d.label }}</h3>
+          </div>
+          {% if d.contact_name %}
+          <p class="mt-0.5 ml-7 text-[11px] text-ink3 flex items-center gap-1.5">
+            to <strong class="text-ink2">{{ d.contact_name }}</strong>
+            {% if d.contact_linkedin %}
+            <a href="{{ d.contact_linkedin }}" target="_blank" rel="noopener" class="text-accent-300 hover:underline">LinkedIn &nearr;</a>
+            {% endif %}
+          </p>
+          {% endif %}
+        </div>
+        <button onclick="copyDraft('draft-{{ d.id }}', this)"
+                class="shrink-0 h-7 px-2.5 rounded-md bg-accent-500 hover:bg-accent-400 text-white text-[12px] font-medium transition">
+          Copy
+        </button>
+      </div>
+      <pre id="draft-{{ d.id }}" class="text-[13px] whitespace-pre-wrap font-sans leading-relaxed p-4 bg-sunken-light dark:bg-sunken text-ink dark:text-ink">{{ d.message }}</pre>
+    </div>
+    {% endfor %}
+  </div>
+</section>
+{% endif %}
+
+{# ============ NOTES ============ #}
+{% if job.notes %}
+<section class="mb-8">
+  <h2 class="text-[11px] font-mono text-ink3 uppercase tracking-[0.16em] mb-3">Notes</h2>
+  <div class="rounded-xl border border-line-light dark:border-line bg-raised-light dark:bg-raised p-4 text-[13px] leading-relaxed whitespace-pre-line">{{ job.notes }}</div>
+</section>
+{% endif %}
+
+{# ============ CONTACTS ============ #}
+<section class="mb-8">
+  <h2 class="text-[11px] font-mono text-ink3 uppercase tracking-[0.16em] mb-3">Contacts · {{ contacts|length }}</h2>
+  {% if contacts %}
+  <div class="grid md:grid-cols-2 gap-3">
+    {% for c in contacts %}
+    {% set c_initials = (c.name or '?')[:2]|upper %}
+    <div class="rounded-xl border border-line-light dark:border-line bg-raised-light dark:bg-raised p-4">
+      <div class="flex items-start gap-3">
+        <div class="w-8 h-8 rounded-full bg-applied/20 text-applied grid place-items-center text-[10px] font-mono font-semibold shrink-0">{{ c_initials }}</div>
+        <div class="min-w-0 flex-1">
+          <div class="flex items-start justify-between gap-2">
+            <div class="min-w-0 flex-1">
+              <div class="text-[13.5px] font-semibold truncate">{{ c.name }}</div>
+              {% if c.role %}<div class="text-[11.5px] text-ink2 truncate">{{ c.role }}</div>{% endif %}
+            </div>
+            {% if c.linkedin_url %}
+            <a href="{{ c.linkedin_url }}" target="_blank" rel="noopener" class="shrink-0 inline-flex items-center gap-1 px-2 h-6 rounded text-[10px] font-mono text-accent-300 border border-accent-500/40 hover:bg-accent-500/10">LinkedIn &nearr;</a>
+            {% endif %}
+          </div>
+          <div class="mt-2 space-y-1 text-[12px]">
+            {% if c.email %}
+            <div class="flex items-center gap-1.5">
+              <span class="text-ink3 font-mono text-[10px] uppercase tracking-[0.12em]">email</span>
+              <a href="mailto:{{ c.email }}" class="text-accent-300 hover:underline truncate">{{ c.email }}</a>
+            </div>
+            {% endif %}
+            {% if c.phone %}
+            <div class="flex items-center gap-1.5">
+              <span class="text-ink3 font-mono text-[10px] uppercase tracking-[0.12em]">phone</span>
+              <a href="tel:{{ c.phone }}" class="text-accent-300 hover:underline">{{ c.phone }}</a>
+            </div>
+            {% endif %}
+          </div>
+          {% if c.notes %}
+          <div class="mt-2 text-[11.5px] text-ink2 whitespace-pre-line line-clamp-3">{{ c.notes }}</div>
+          {% endif %}
+        </div>
+      </div>
+    </div>
+    {% endfor %}
+  </div>
+  {% else %}
+  <div class="rounded-lg border border-dashed border-line2-light dark:border-line2 px-4 py-6 text-center text-[12.5px] text-ink2">No contacts yet</div>
+  {% endif %}
+</section>
+
+{# ============ ACTIVITY TIMELINE ============ #}
+<section class="mb-12">
+  <h2 class="text-[11px] font-mono text-ink3 uppercase tracking-[0.16em] mb-3">Activity · {{ events|length }} events</h2>
+  {% if events %}
+  <div class="rounded-xl border border-line-light dark:border-line bg-raised-light dark:bg-raised overflow-hidden">
+    <ol class="divide-y divide-line-light dark:divide-line">
+      {% for e in events %}
+      <li class="px-4 py-3 flex items-start gap-3">
+        <span class="mt-1 w-2 h-2 rounded-full shrink-0
+          {% if e.event_type == 'application_sent' %}bg-applied
+          {% elif e.event_type == 'message_sent' %}bg-interview
+          {% elif e.event_type == 'message_received' or e.event_type == 'email_received' %}bg-replied
+          {% elif e.event_type == 'status_change' %}bg-accent-500
+          {% else %}bg-ink3{% endif %}"></span>
+        <div class="min-w-0 flex-1">
+          <div class="flex items-baseline justify-between gap-2 flex-wrap">
+            <span class="font-mono text-[11px] text-ink3">{{ e.occurred_at }}</span>
+            <span class="px-1.5 h-4 inline-flex items-center rounded text-[10px] font-mono uppercase tracking-[0.12em]
+              {% if e.event_type == 'application_sent' %}bg-applied/15 text-applied
+              {% elif e.event_type == 'message_sent' %}bg-interview/15 text-interview
+              {% elif e.event_type == 'message_received' or e.event_type == 'email_received' %}bg-replied/15 text-replied
+              {% elif e.event_type == 'status_change' %}bg-accent-500/15 text-accent-300
+              {% else %}bg-sunken-light dark:bg-sunken text-ink2{% endif %}">{{ e.event_type }}</span>
+          </div>
+          {% if e.body %}
+          <div class="mt-1 text-[12.5px] leading-relaxed whitespace-pre-line">{{ e.body }}</div>
+          {% endif %}
+        </div>
+      </li>
+      {% endfor %}
+    </ol>
+  </div>
+  {% else %}
+  <div class="rounded-lg border border-dashed border-line2-light dark:border-line2 px-4 py-6 text-center text-[12.5px] text-ink2">No events logged yet</div>
+  {% endif %}
+</section>
+
+<footer class="pt-6 border-t border-line-light dark:border-line text-[11px] font-mono text-ink3 flex items-center justify-between">
+  <a href="/" class="hover:text-ink">&larr; pipeline</a>
+  <span>job #{{ job.id }} · {{ events|length + drafts|length }} events · {{ contacts|length }} contacts</span>
+</footer>
+
+{% endblock %}
+
+{% block extra_scripts %}
+<script>
+  function copyDraft(id, btn) {
+    const el = document.getElementById(id);
+    if (!el) return;
+    const text = el.innerText;
+    const original = btn.innerText;
+    navigator.clipboard.writeText(text).then(() => {
+      btn.innerText = '✓ Copied';
+      btn.classList.remove('bg-accent-500', 'hover:bg-accent-400');
+      btn.classList.add('bg-interview');
+      setTimeout(() => {
+        btn.innerText = original;
+        btn.classList.remove('bg-interview');
+        btn.classList.add('bg-accent-500', 'hover:bg-accent-400');
+      }, 1500);
+    }).catch((err) => {
+      btn.innerText = 'Copy failed';
+      console.error(err);
+      setTimeout(() => { btn.innerText = original; }, 1500);
+    });
+  }
+</script>
+{% endblock %}

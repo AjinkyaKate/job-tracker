@@ -1,0 +1,756 @@
+<!doctype html>
+<html lang="en" class="dark">
+<head>
+<meta charset="utf-8" />
+<meta name="viewport" content="width=device-width, initial-scale=1" />
+<title>Job Tracker — Razorpay · Senior PM</title>
+<script src="https://cdn.tailwindcss.com"></script>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&family=JetBrains+Mono:wght@400;500;600&display=swap" rel="stylesheet">
+<script>
+  tailwind.config = {
+    darkMode: 'class',
+    theme: {
+      extend: {
+        fontFamily: {
+          sans: ['Inter', 'ui-sans-serif', 'system-ui', 'sans-serif'],
+          mono: ['"JetBrains Mono"', 'ui-monospace', 'monospace'],
+        },
+        colors: {
+          base:   { light: '#fafaf9', DEFAULT: '#0b0b0e' },
+          raised: { light: '#ffffff', DEFAULT: '#131318' },
+          sunken: { light: '#f1f0ee', DEFAULT: '#08080b' },
+          line:   { light: '#e6e4e0', DEFAULT: '#26262e' },
+          line2:  { light: '#d8d6d1', DEFAULT: '#32323c' },
+          ink:    { light: '#0f0f12', DEFAULT: '#f4f3ef' },
+          ink2:   { light: '#55554f', DEFAULT: '#a7a6a1' },
+          ink3:   { light: '#85847d', DEFAULT: '#6c6c72' },
+          accent: { 100:'#e9deff',300:'#b896ff',400:'#9a6bff',500:'#7e44ff',600:'#6a2ef0',700:'#5520c4' },
+          saved:'#9aa0a6', applied:'#4b8df8', replied:'#f5a524',
+          interview:'#22c55e', offer:'#10b981', rejected:'#ef4444', backlog:'#6b7280',
+        },
+        boxShadow: {
+          'pop': '0 8px 24px -8px rgba(0,0,0,0.55), 0 2px 6px -1px rgba(0,0,0,0.35)',
+          'pop-light': '0 8px 24px -8px rgba(15,15,18,0.12), 0 2px 6px -1px rgba(15,15,18,0.06)',
+        },
+      }
+    }
+  };
+</script>
+<style>
+  html, body { height: 100%; }
+  body { font-family: 'Inter', system-ui, sans-serif; font-feature-settings: 'ss01','cv11','cv02'; }
+  .tabular { font-variant-numeric: tabular-nums; }
+  .nice-scroll::-webkit-scrollbar { width: 10px; height: 10px; }
+  .nice-scroll::-webkit-scrollbar-thumb { background: rgba(255,255,255,0.06); border-radius: 999px; }
+  .nice-scroll::-webkit-scrollbar-track { background: transparent; }
+  html:not(.dark) .nice-scroll::-webkit-scrollbar-thumb { background: rgba(15,15,18,0.08); }
+  .ringline { background: linear-gradient(transparent, transparent), conic-gradient(var(--c) calc(var(--v)*1%), rgba(255,255,255,0.08) 0); }
+  /* diff lines */
+  .diff-line { display:block; padding: 2px 12px; border-left: 2px solid transparent; }
+  .diff-add { background: rgb(34 197 94 / 0.08); border-left-color: rgb(34 197 94 / 0.6); }
+  .diff-mod { background: rgb(75 141 248 / 0.08); border-left-color: rgb(75 141 248 / 0.6); }
+  .diff-del { background: rgb(239 68 68 / 0.06); border-left-color: rgb(239 68 68 / 0.4); text-decoration: line-through; color: var(--ink3, #6c6c72); }
+  .diff-ctx { color: rgb(167 166 161); }
+  html:not(.dark) .diff-ctx { color: #55554f; }
+  /* scroll-margin so jump-nav lands correctly under sticky bar */
+  [data-anchor] { scroll-margin-top: 96px; }
+  /* simple "linkedin-like" preview card neutral */
+  .stripe { background-image: repeating-linear-gradient(135deg, currentColor 0 1px, transparent 1px 9px); }
+</style>
+</head>
+<body class="bg-base-light dark:bg-base text-ink-light dark:text-ink antialiased min-h-screen flex flex-col">
+
+<!-- ============ TOP BAR ============ -->
+<header class="shrink-0 border-b border-line-light dark:border-line bg-base-light/85 dark:bg-base/85 backdrop-blur sticky top-0 z-30">
+  <div class="px-6 h-12 flex items-center gap-4">
+    <div class="flex items-center gap-2.5">
+      <div class="w-6 h-6 rounded-md bg-accent-500 grid place-items-center">
+        <svg viewBox="0 0 20 20" class="w-3.5 h-3.5 text-white" fill="none" stroke="currentColor" stroke-width="2.4"><path d="M4 11l4 4 8-9"/></svg>
+      </div>
+      <span class="text-[13px] font-semibold tracking-tight">Job Tracker</span>
+    </div>
+    <nav class="flex items-center gap-1 ml-2 text-[12.5px] text-ink2 dark:text-ink2">
+      <a href="01-dashboard-kanban.html" class="px-1.5 h-7 rounded inline-flex items-center hover:text-ink hover:bg-sunken-light dark:hover:bg-sunken">Pipeline</a>
+      <span class="text-ink3">/</span>
+      <span class="px-1.5 h-7 rounded inline-flex items-center text-ink2"><span class="w-1.5 h-1.5 rounded-full bg-applied mr-1.5"></span>Applied</span>
+      <span class="text-ink3">/</span>
+      <span class="px-1.5 h-7 rounded inline-flex items-center text-ink-light dark:text-ink font-medium">Razorpay · Senior PM</span>
+    </nav>
+    <div class="flex-1"></div>
+    <div class="flex items-center gap-1.5 text-[11.5px] text-ink3 font-mono">
+      <kbd class="px-1.5 h-5 rounded border border-line-light dark:border-line bg-sunken-light dark:bg-sunken inline-flex items-center">J</kbd>
+      <kbd class="px-1.5 h-5 rounded border border-line-light dark:border-line bg-sunken-light dark:bg-sunken inline-flex items-center">K</kbd>
+      <span class="ml-1">prev / next</span>
+    </div>
+    <button id="theme-toggle" class="h-7 w-7 grid place-items-center rounded-md text-ink2 hover:text-ink hover:bg-sunken-light dark:hover:bg-sunken">
+      <svg class="w-3.5 h-3.5 dark:hidden" viewBox="0 0 16 16" fill="currentColor"><path d="M6 1A6 6 0 008 13a6 6 0 005.9-5A4.5 4.5 0 116 1z"/></svg>
+      <svg class="w-3.5 h-3.5 hidden dark:block" viewBox="0 0 16 16" fill="currentColor"><path d="M8 4a4 4 0 100 8 4 4 0 000-8zM8 0v2M8 14v2M16 8h-2M2 8H0M13.7 2.3l-1.4 1.4M3.7 12.3l-1.4 1.4M13.7 13.7l-1.4-1.4M3.7 3.7L2.3 2.3"/></svg>
+    </button>
+    <div class="w-7 h-7 rounded-full bg-accent-500/20 text-accent-300 grid place-items-center text-[11px] font-mono font-semibold">AK</div>
+  </div>
+</header>
+
+<!-- ============ JOB HEADER ============ -->
+<section class="shrink-0 border-b border-line-light dark:border-line bg-base-light dark:bg-base">
+  <div class="px-6 pt-6 pb-5 grid gap-5" style="grid-template-columns: minmax(0,1fr) 360px;">
+    <!-- Left: company + role + meta -->
+    <div class="min-w-0">
+      <div class="flex items-start gap-4">
+        <!-- big logo -->
+        <div class="w-14 h-14 rounded-lg bg-applied/15 text-applied grid place-items-center text-[18px] font-mono font-bold shrink-0">RP</div>
+        <div class="min-w-0 flex-1">
+          <div class="flex items-center gap-2 flex-wrap">
+            <h1 class="text-[24px] font-semibold tracking-[-0.015em] leading-tight">Senior Product Manager · Pricing &amp; Packaging</h1>
+            <span class="inline-flex items-center gap-1.5 px-2 h-6 rounded-md bg-applied/15 text-applied text-[12px] font-medium">
+              <span class="w-1.5 h-1.5 rounded-full bg-applied"></span>Applied
+            </span>
+          </div>
+          <div class="mt-1.5 flex items-center gap-3 text-[13px] text-ink2 dark:text-ink2 flex-wrap">
+            <span class="font-medium text-ink dark:text-ink">Razorpay</span>
+            <span class="w-1 h-1 rounded-full bg-ink3"></span>
+            <span>Bangalore · Hybrid</span>
+            <span class="w-1 h-1 rounded-full bg-ink3"></span>
+            <span class="font-mono">₹38–48L + ESOPs</span>
+            <span class="w-1 h-1 rounded-full bg-ink3"></span>
+            <a href="#" class="text-ink2 hover:text-accent-300 inline-flex items-center gap-1 underline-offset-4 hover:underline">linkedin.com/jobs/3984…<svg class="w-3 h-3" viewBox="0 0 16 16" fill="none" stroke="currentColor" stroke-width="1.6"><path d="M10 3h3v3M13 3l-6 6M7 4H4v8h8V9"/></svg></a>
+          </div>
+          <!-- urgency strip -->
+          <div class="mt-3 flex items-center gap-2 flex-wrap">
+            <span class="inline-flex items-center gap-1.5 px-2 h-6 rounded-md bg-replied/12 text-replied text-[11.5px] font-medium font-mono">
+              <span class="w-1.5 h-1.5 rounded-full bg-replied"></span>Posted 3d ago
+            </span>
+            <span class="inline-flex items-center gap-1.5 px-2 h-6 rounded-md bg-sunken-light dark:bg-sunken text-[11.5px] font-mono text-ink2">1.2k applicants</span>
+            <span class="inline-flex items-center gap-1.5 px-2 h-6 rounded-md bg-sunken-light dark:bg-sunken text-[11.5px] font-mono text-ink2">Actively reviewing</span>
+            <span class="inline-flex items-center gap-1.5 px-2 h-6 rounded-md bg-accent-500/12 text-accent-300 text-[11.5px] font-mono">
+              <svg class="w-3 h-3" viewBox="0 0 16 16" fill="currentColor"><path d="M8 1.3l1.9 3.9 4.3.6-3.1 3 .7 4.3L8 11l-3.8 2.1.7-4.3-3.1-3 4.3-.6z"/></svg>
+              2 warm contacts
+            </span>
+          </div>
+        </div>
+      </div>
+    </div>
+
+    <!-- Right: fit ring + actions -->
+    <div class="flex items-start justify-end gap-4">
+      <div class="flex flex-col items-center gap-1.5">
+        <div class="relative w-16 h-16">
+          <svg viewBox="0 0 36 36" class="w-16 h-16 -rotate-90">
+            <circle cx="18" cy="18" r="15.5" fill="none" stroke="currentColor" class="text-line-light dark:text-line" stroke-width="3"/>
+            <circle cx="18" cy="18" r="15.5" fill="none" stroke="currentColor" class="text-applied" stroke-width="3" stroke-dasharray="78 100" stroke-linecap="round"/>
+          </svg>
+          <div class="absolute inset-0 grid place-items-center text-[16px] font-mono tabular font-semibold">78</div>
+        </div>
+        <span class="text-[10.5px] font-mono uppercase tracking-[0.16em] text-ink3">fit · strong</span>
+      </div>
+      <div class="flex flex-col gap-1.5 items-stretch min-w-[180px]">
+        <button class="h-8 px-3 rounded-md bg-accent-500 text-white text-[12.5px] font-medium inline-flex items-center justify-center gap-1.5">
+          <svg class="w-3.5 h-3.5" viewBox="0 0 16 16" fill="none" stroke="currentColor" stroke-width="2"><path d="M3 8l3 3 7-7"/></svg>
+          Mark Replied
+        </button>
+        <div class="flex gap-1.5">
+          <button class="flex-1 h-8 px-2.5 rounded-md border border-line-light dark:border-line bg-raised-light dark:bg-raised text-[12.5px] font-medium">Schedule</button>
+          <button class="h-8 w-8 grid place-items-center rounded-md border border-line-light dark:border-line bg-raised-light dark:bg-raised text-ink2">
+            <svg class="w-3.5 h-3.5" viewBox="0 0 16 16" fill="currentColor"><circle cx="3.5" cy="8" r="1.2"/><circle cx="8" cy="8" r="1.2"/><circle cx="12.5" cy="8" r="1.2"/></svg>
+          </button>
+        </div>
+      </div>
+    </div>
+  </div>
+
+  <!-- Sticky sub-nav: brain anchors + quick actions -->
+  <div class="px-6 h-11 flex items-center gap-1 border-t border-line-light dark:border-line bg-base-light/95 dark:bg-base/95 sticky top-12 z-20">
+    <div class="flex items-center gap-1 -mb-px">
+      <a href="#jd"       class="brain-anchor relative px-3 h-11 inline-flex items-center gap-2 text-[12.5px] font-medium text-ink-light dark:text-ink"><span class="w-1.5 h-1.5 rounded-full bg-applied"></span>JD<span class="absolute inset-x-0 bottom-0 h-0.5 bg-accent-500"></span></a>
+      <a href="#company"  class="brain-anchor px-3 h-11 inline-flex items-center gap-2 text-[12.5px] text-ink2 hover:text-ink"><span class="w-1.5 h-1.5 rounded-full bg-interview"></span>Company</a>
+      <a href="#persona"  class="brain-anchor px-3 h-11 inline-flex items-center gap-2 text-[12.5px] text-ink2 hover:text-ink"><span class="w-1.5 h-1.5 rounded-full bg-replied"></span>Persona<span class="ml-1 px-1 h-4 rounded bg-sunken-light dark:bg-sunken text-[10px] font-mono text-ink3">3</span></a>
+      <a href="#resume"   class="brain-anchor px-3 h-11 inline-flex items-center gap-2 text-[12.5px] text-ink2 hover:text-ink"><span class="w-1.5 h-1.5 rounded-full bg-accent-400"></span>Resume<span class="ml-1 px-1 h-4 rounded bg-accent-500/15 text-accent-300 text-[10px] font-mono">5 tweaks</span></a>
+      <a href="#outreach" class="brain-anchor px-3 h-11 inline-flex items-center gap-2 text-[12.5px] text-ink2 hover:text-ink"><span class="w-1.5 h-1.5 rounded-full bg-offer"></span>Outreach<span class="ml-1 px-1 h-4 rounded bg-sunken-light dark:bg-sunken text-[10px] font-mono text-ink3">3</span></a>
+    </div>
+    <div class="ml-auto flex items-center gap-1.5 text-[12px]">
+      <button class="h-7 px-2.5 rounded-md text-ink2 hover:text-ink hover:bg-sunken-light dark:hover:bg-sunken inline-flex items-center gap-1.5">
+        <svg class="w-3.5 h-3.5" viewBox="0 0 16 16" fill="none" stroke="currentColor" stroke-width="1.8"><path d="M3 8h10M9 4l4 4-4 4"/></svg>
+        Apply via link
+      </button>
+      <button class="h-7 px-2.5 rounded-md text-ink2 hover:text-ink hover:bg-sunken-light dark:hover:bg-sunken inline-flex items-center gap-1.5">
+        <svg class="w-3.5 h-3.5" viewBox="0 0 16 16" fill="none" stroke="currentColor" stroke-width="1.8"><rect x="2" y="3" width="12" height="11" rx="1.5"/><path d="M2 6h12M5 1v4M11 1v4"/></svg>
+        Follow-up
+      </button>
+      <button class="h-7 px-2.5 rounded-md text-ink2 hover:text-ink hover:bg-sunken-light dark:hover:bg-sunken inline-flex items-center gap-1.5">
+        <svg class="w-3.5 h-3.5" viewBox="0 0 16 16" fill="currentColor"><circle cx="8" cy="8" r="6" fill="none" stroke="currentColor" stroke-width="1.4"/><path d="M5 7a3 3 0 016 0c0 1-1 1.5-1.5 2L9 10" stroke="currentColor" stroke-width="1.4" fill="none"/><circle cx="9" cy="12" r="0.6"/></svg>
+        Move to Backlog
+      </button>
+      <span class="h-4 w-px bg-line-light dark:bg-line mx-1"></span>
+      <button class="h-7 w-7 grid place-items-center rounded-md text-ink2 hover:text-ink hover:bg-sunken-light dark:hover:bg-sunken">
+        <svg class="w-3.5 h-3.5" viewBox="0 0 16 16" fill="none" stroke="currentColor" stroke-width="1.8"><path d="M8 1v10M4 7l4 4 4-4M2 13h12"/></svg>
+      </button>
+    </div>
+  </div>
+</section>
+
+<!-- ============ BODY: 2-COL ============ -->
+<section class="flex-1 min-h-0 grid" style="grid-template-columns: minmax(0,1fr) 360px;">
+  <!-- ===== LEFT: brain stack ===== -->
+  <div class="overflow-y-auto nice-scroll px-6 py-6 space-y-5 border-r border-line-light dark:border-line">
+
+    <!-- analyzing banner / brain status pill row -->
+    <div class="rounded-xl border border-line-light dark:border-line bg-raised-light dark:bg-raised">
+      <div class="px-4 py-2.5 flex items-center justify-between border-b border-line-light dark:border-line">
+        <div class="text-[11px] font-mono uppercase tracking-[0.16em] text-ink3">5 brains · last run 11 min ago</div>
+        <button class="text-[12px] font-medium text-accent-300 hover:text-accent-400 inline-flex items-center gap-1.5">
+          <svg class="w-3.5 h-3.5" viewBox="0 0 16 16" fill="none" stroke="currentColor" stroke-width="1.8"><path d="M13 8a5 5 0 11-1.5-3.5M13 3v3h-3"/></svg>
+          Re-run all
+        </button>
+      </div>
+      <div class="px-4 py-3 grid grid-cols-5 gap-2 text-[11.5px]">
+        <div class="flex items-center gap-2"><span class="w-2 h-2 rounded-full bg-interview"></span>JD<span class="ml-auto font-mono text-ink3">92%</span></div>
+        <div class="flex items-center gap-2"><span class="w-2 h-2 rounded-full bg-interview"></span>Company<span class="ml-auto font-mono text-ink3">88%</span></div>
+        <div class="flex items-center gap-2"><span class="w-2 h-2 rounded-full bg-interview"></span>Persona<span class="ml-auto font-mono text-ink3">3 found</span></div>
+        <div class="flex items-center gap-2"><span class="w-2 h-2 rounded-full bg-replied animate-pulse"></span>Resume<span class="ml-auto font-mono text-ink3">5 tweaks</span></div>
+        <div class="flex items-center gap-2"><span class="w-2 h-2 rounded-full bg-interview"></span>Outreach<span class="ml-auto font-mono text-ink3">3 drafts</span></div>
+      </div>
+    </div>
+
+    <!-- =========== JD BRAIN =========== -->
+    <article id="jd" data-anchor class="rounded-xl border border-line-light dark:border-line bg-raised-light dark:bg-raised overflow-hidden">
+      <header class="px-5 py-3.5 flex items-center gap-3 border-b border-line-light dark:border-line">
+        <div class="w-7 h-7 rounded grid place-items-center bg-applied/15 text-applied text-[11px] font-mono font-bold">JD</div>
+        <div class="flex-1 min-w-0">
+          <div class="text-[13.5px] font-semibold">JD Brain</div>
+          <div class="text-[11.5px] text-ink3 font-mono">extracted requirements · conf 92%</div>
+        </div>
+        <button class="h-7 px-2.5 rounded-md text-[12px] text-ink2 hover:text-ink hover:bg-sunken-light dark:hover:bg-sunken">Discard</button>
+        <button class="h-7 px-2.5 rounded-md border border-line-light dark:border-line text-[12px] font-medium inline-flex items-center gap-1.5">
+          <svg class="w-3 h-3" viewBox="0 0 16 16" fill="none" stroke="currentColor" stroke-width="2"><rect x="4" y="4" width="9" height="9" rx="1.5"/><path d="M3 11V3.5A1.5 1.5 0 014.5 2H12"/></svg>
+          Copy
+        </button>
+        <button class="h-7 px-2.5 rounded-md bg-accent-500 text-white text-[12px] font-medium">Apply</button>
+      </header>
+      <div class="p-5 grid gap-5" style="grid-template-columns: 1fr 280px;">
+        <div>
+          <!-- key meta -->
+          <div class="grid grid-cols-4 gap-3">
+            <div><div class="text-[10.5px] font-mono uppercase tracking-[0.14em] text-ink3">Level</div><div class="mt-1 text-[13px] font-medium">Senior · IC4</div></div>
+            <div><div class="text-[10.5px] font-mono uppercase tracking-[0.14em] text-ink3">YoE</div><div class="mt-1 text-[13px] font-medium font-mono tabular">5 – 8 yrs</div></div>
+            <div><div class="text-[10.5px] font-mono uppercase tracking-[0.14em] text-ink3">Domain</div><div class="mt-1 text-[13px] font-medium">B2B Payments</div></div>
+            <div><div class="text-[10.5px] font-mono uppercase tracking-[0.14em] text-ink3">Reports to</div><div class="mt-1 text-[13px] font-medium">Director, PM</div></div>
+          </div>
+
+          <!-- must-haves -->
+          <div class="mt-5">
+            <div class="text-[10.5px] font-mono uppercase tracking-[0.14em] text-ink3">Must-have skills</div>
+            <div class="mt-2 flex flex-wrap gap-1.5">
+              <span class="px-2 h-6 inline-flex items-center rounded-md bg-applied/12 text-applied text-[11.5px] font-medium gap-1">SQL <span class="text-[10px] text-applied/80 font-mono">·match</span></span>
+              <span class="px-2 h-6 inline-flex items-center rounded-md bg-applied/12 text-applied text-[11.5px] font-medium gap-1">Pricing strategy <span class="text-[10px] text-applied/80 font-mono">·match</span></span>
+              <span class="px-2 h-6 inline-flex items-center rounded-md bg-applied/12 text-applied text-[11.5px] font-medium gap-1">PLG metrics <span class="text-[10px] text-applied/80 font-mono">·match</span></span>
+              <span class="px-2 h-6 inline-flex items-center rounded-md bg-sunken-light dark:bg-sunken text-ink2 text-[11.5px]">Stakeholder mgmt</span>
+              <span class="px-2 h-6 inline-flex items-center rounded-md bg-sunken-light dark:bg-sunken text-ink2 text-[11.5px]">Roadmapping</span>
+              <span class="px-2 h-6 inline-flex items-center rounded-md bg-rejected/12 text-rejected text-[11.5px] font-medium gap-1">FinTech regs <span class="text-[10px] text-rejected/80 font-mono">·gap</span></span>
+            </div>
+          </div>
+
+          <!-- nice-to-haves -->
+          <div class="mt-4">
+            <div class="text-[10.5px] font-mono uppercase tracking-[0.14em] text-ink3">Nice-to-haves</div>
+            <div class="mt-2 flex flex-wrap gap-1.5">
+              <span class="px-2 h-6 inline-flex items-center rounded-md bg-sunken-light dark:bg-sunken text-ink2 text-[11.5px]">API products</span>
+              <span class="px-2 h-6 inline-flex items-center rounded-md bg-sunken-light dark:bg-sunken text-ink2 text-[11.5px]">Marketplace economics</span>
+              <span class="px-2 h-6 inline-flex items-center rounded-md bg-sunken-light dark:bg-sunken text-ink2 text-[11.5px]">A/B experimentation</span>
+              <span class="px-2 h-6 inline-flex items-center rounded-md bg-applied/12 text-applied text-[11.5px] font-medium gap-1">Subscription billing <span class="text-[10px] text-applied/80 font-mono">·match</span></span>
+            </div>
+          </div>
+
+          <!-- raw JD collapsed -->
+          <details class="mt-5 group">
+            <summary class="cursor-pointer list-none inline-flex items-center gap-2 text-[12.5px] text-ink2 hover:text-ink">
+              <svg class="w-3 h-3 transition group-open:rotate-90" viewBox="0 0 16 16" fill="currentColor"><path d="M6 4l4 4-4 4z"/></svg>
+              Raw JD (1,840 words)
+            </summary>
+            <div class="mt-3 rounded-lg border border-line-light dark:border-line bg-base-light dark:bg-base p-4 text-[12.5px] leading-relaxed text-ink2 max-h-48 overflow-y-auto nice-scroll">
+              <p>Razorpay is hiring a Senior PM to own pricing and packaging for our payments stack. You'll partner with finance, growth, and sales to design and ship monetization experiments that move ARPU and conversion.</p>
+              <p class="mt-2">You'll own the pricing page, in-product upgrade flows, packaging tiers, and the billing logic underneath. We expect strong SQL chops, fluency in PLG metrics, and a track record of shipping price changes that survive contact with enterprise sales.</p>
+              <p class="mt-2 text-ink3">[expand to see remaining 1,562 words]</p>
+            </div>
+          </details>
+        </div>
+
+        <!-- signals column -->
+        <aside class="rounded-lg border border-line-light dark:border-line bg-base-light dark:bg-base p-4 self-start">
+          <div class="text-[11px] font-mono uppercase tracking-[0.14em] text-ink3">Signals</div>
+          <ul class="mt-3 space-y-2.5 text-[12.5px]">
+            <li class="flex items-start gap-2"><span class="w-1.5 h-1.5 rounded-full bg-replied mt-1.5 shrink-0"></span><div><span class="font-medium">Recently posted</span> <span class="text-ink3 font-mono">· 3d</span></div></li>
+            <li class="flex items-start gap-2"><span class="w-1.5 h-1.5 rounded-full bg-interview mt-1.5 shrink-0"></span><div><span class="font-medium">Actively reviewing</span> <span class="text-ink3 font-mono">· seen on profile</span></div></li>
+            <li class="flex items-start gap-2"><span class="w-1.5 h-1.5 rounded-full bg-applied mt-1.5 shrink-0"></span><div><span class="font-medium">Comp signal</span> <span class="text-ink3 font-mono">· P75 of market</span></div></li>
+            <li class="flex items-start gap-2"><span class="w-1.5 h-1.5 rounded-full bg-rejected mt-1.5 shrink-0"></span><div><span class="font-medium">1,200 applicants</span> <span class="text-ink3 font-mono">· crowded</span></div></li>
+          </ul>
+          <div class="mt-3 pt-3 border-t border-line-light dark:border-line">
+            <div class="text-[11px] font-mono uppercase tracking-[0.14em] text-ink3">Verdict</div>
+            <div class="mt-1.5 text-[12.5px]">Worth pursuing — apply within 48h to land in top of stack.</div>
+          </div>
+        </aside>
+      </div>
+    </article>
+
+    <!-- =========== COMPANY BRAIN =========== -->
+    <article id="company" data-anchor class="rounded-xl border border-line-light dark:border-line bg-raised-light dark:bg-raised overflow-hidden">
+      <header class="px-5 py-3.5 flex items-center gap-3 border-b border-line-light dark:border-line">
+        <div class="w-7 h-7 rounded grid place-items-center bg-interview/15 text-interview text-[11px] font-mono font-bold">CO</div>
+        <div class="flex-1 min-w-0">
+          <div class="text-[13.5px] font-semibold">Company Brain</div>
+          <div class="text-[11.5px] text-ink3 font-mono">Razorpay · conf 88%</div>
+        </div>
+        <button class="h-7 px-2.5 rounded-md text-[12px] text-ink2 hover:text-ink hover:bg-sunken-light dark:hover:bg-sunken">Discard</button>
+        <button class="h-7 px-2.5 rounded-md border border-line-light dark:border-line text-[12px] font-medium">Copy</button>
+        <button class="h-7 px-2.5 rounded-md bg-accent-500 text-white text-[12px] font-medium">Apply</button>
+      </header>
+      <div class="p-5 grid gap-5" style="grid-template-columns: 1fr 280px;">
+        <div>
+          <p class="text-[13.5px] leading-relaxed">
+            Razorpay is a B2B payments + business banking platform serving ~10M businesses across India and SEA. Core stack is online payments + a neobanking layer (RazorpayX). Most recent push is into <span class="bg-accent-500/15 text-accent-300 px-1 rounded">monetization &amp; packaging</span> after the FY24 cost-cuts.
+          </p>
+          <div class="mt-4 grid grid-cols-4 gap-3">
+            <div class="rounded-lg border border-line-light dark:border-line bg-base-light dark:bg-base p-3">
+              <div class="text-[10.5px] font-mono uppercase tracking-[0.14em] text-ink3">Employees</div>
+              <div class="mt-1 text-[16px] font-semibold font-mono tabular">2,800</div>
+              <div class="text-[10.5px] text-rejected font-mono">↓ 12% YoY</div>
+            </div>
+            <div class="rounded-lg border border-line-light dark:border-line bg-base-light dark:bg-base p-3">
+              <div class="text-[10.5px] font-mono uppercase tracking-[0.14em] text-ink3">Funding</div>
+              <div class="mt-1 text-[16px] font-semibold font-mono tabular">Series F</div>
+              <div class="text-[10.5px] text-ink3 font-mono">$7.5B valn</div>
+            </div>
+            <div class="rounded-lg border border-line-light dark:border-line bg-base-light dark:bg-base p-3">
+              <div class="text-[10.5px] font-mono uppercase tracking-[0.14em] text-ink3">PM org</div>
+              <div class="mt-1 text-[16px] font-semibold font-mono tabular">~60</div>
+              <div class="text-[10.5px] text-ink3 font-mono">est. open: 4</div>
+            </div>
+            <div class="rounded-lg border border-line-light dark:border-line bg-base-light dark:bg-base p-3">
+              <div class="text-[10.5px] font-mono uppercase tracking-[0.14em] text-ink3">Glassdoor</div>
+              <div class="mt-1 text-[16px] font-semibold font-mono tabular">3.8</div>
+              <div class="text-[10.5px] text-replied font-mono">↘ 0.2 YoY</div>
+            </div>
+          </div>
+          <div class="mt-4">
+            <div class="text-[11px] font-mono uppercase tracking-[0.14em] text-ink3">Recent signals</div>
+            <ul class="mt-2 space-y-2 text-[13px]">
+              <li class="flex items-start gap-2"><span class="w-1.5 h-1.5 rounded-full bg-interview mt-2 shrink-0"></span><span><span class="font-medium">Hiring spree on monetization team</span> <span class="text-ink3">· 4 PM reqs in 2 weeks</span></span></li>
+              <li class="flex items-start gap-2"><span class="w-1.5 h-1.5 rounded-full bg-replied mt-2 shrink-0"></span><span><span class="font-medium">Pricing page A/B test live</span> <span class="text-ink3">· detected via wayback</span></span></li>
+              <li class="flex items-start gap-2"><span class="w-1.5 h-1.5 rounded-full bg-applied mt-2 shrink-0"></span><span><span class="font-medium">Press: RazorpayX adds payroll</span> <span class="text-ink3">· The Ken, 18 May</span></span></li>
+            </ul>
+          </div>
+        </div>
+        <aside class="rounded-lg border border-line-light dark:border-line bg-base-light dark:bg-base p-4 self-start">
+          <div class="text-[11px] font-mono uppercase tracking-[0.14em] text-ink3">Key facts</div>
+          <dl class="mt-3 text-[12.5px] grid grid-cols-2 gap-y-2">
+            <dt class="text-ink3">HQ</dt><dd>Bangalore</dd>
+            <dt class="text-ink3">Founded</dt><dd class="font-mono">2014</dd>
+            <dt class="text-ink3">Founders</dt><dd>Harshil M., Shashank K.</dd>
+            <dt class="text-ink3">Stage</dt><dd>Late · pre-IPO</dd>
+            <dt class="text-ink3">CEO churn</dt><dd class="text-interview">Stable 2y+</dd>
+          </dl>
+        </aside>
+      </div>
+    </article>
+
+    <!-- =========== PERSONA BRAIN =========== -->
+    <article id="persona" data-anchor class="rounded-xl border border-line-light dark:border-line bg-raised-light dark:bg-raised overflow-hidden">
+      <header class="px-5 py-3.5 flex items-center gap-3 border-b border-line-light dark:border-line">
+        <div class="w-7 h-7 rounded grid place-items-center bg-replied/15 text-replied text-[11px] font-mono font-bold">PE</div>
+        <div class="flex-1 min-w-0">
+          <div class="text-[13.5px] font-semibold">Persona Brain</div>
+          <div class="text-[11.5px] text-ink3 font-mono">3 hiring-team contacts mapped</div>
+        </div>
+        <button class="h-7 px-2.5 rounded-md text-[12px] text-ink2 hover:text-ink hover:bg-sunken-light dark:hover:bg-sunken">Discard</button>
+        <button class="h-7 px-2.5 rounded-md border border-line-light dark:border-line text-[12px] font-medium">Copy</button>
+        <button class="h-7 px-2.5 rounded-md bg-accent-500 text-white text-[12px] font-medium">Apply</button>
+      </header>
+      <div class="p-5 space-y-3">
+        <!-- Contact 1 — Hiring manager -->
+        <div class="rounded-lg border border-line-light dark:border-line bg-base-light dark:bg-base p-4 flex items-start gap-4">
+          <div class="w-10 h-10 rounded-full bg-applied/20 text-applied grid place-items-center text-[12.5px] font-mono font-semibold shrink-0">LM</div>
+          <div class="flex-1 min-w-0">
+            <div class="flex items-center gap-2 flex-wrap">
+              <span class="text-[13.5px] font-semibold">Latika M.</span>
+              <span class="px-1.5 h-5 inline-flex items-center rounded bg-accent-500/15 text-accent-300 text-[10.5px] font-mono">Hiring manager</span>
+              <span class="px-1.5 h-5 inline-flex items-center rounded bg-interview/15 text-interview text-[10.5px] font-mono">Decision maker</span>
+            </div>
+            <div class="text-[12px] text-ink2 mt-0.5">Director, PM (Monetization) · 8 yrs Razorpay · ex-Zeta</div>
+            <!-- mutuals + tone -->
+            <div class="mt-3 flex items-center gap-4 flex-wrap">
+              <div class="flex items-center gap-2">
+                <div class="flex -space-x-1.5">
+                  <div class="w-5 h-5 rounded-full border-2 border-base-light dark:border-base bg-replied/25 text-replied grid place-items-center text-[9px] font-mono font-semibold">AK</div>
+                  <div class="w-5 h-5 rounded-full border-2 border-base-light dark:border-base bg-interview/25 text-interview grid place-items-center text-[9px] font-mono font-semibold">SR</div>
+                </div>
+                <span class="text-[11.5px] font-mono text-ink2">2 mutuals · Aditi K, Sumant R</span>
+              </div>
+              <span class="h-3 w-px bg-line-light dark:bg-line"></span>
+              <div class="flex items-center gap-1.5">
+                <span class="text-[10.5px] font-mono uppercase tracking-[0.14em] text-ink3">tone</span>
+                <span class="px-1.5 h-5 inline-flex items-center rounded bg-replied/15 text-replied text-[11px] font-medium">warm + specific</span>
+              </div>
+              <span class="h-3 w-px bg-line-light dark:bg-line"></span>
+              <div class="flex items-center gap-1.5 text-[11.5px] text-ink2"><svg class="w-3 h-3 text-interview" viewBox="0 0 16 16" fill="currentColor"><path d="M3 8l3 3 7-7"/></svg>Open to DMs · 92%</div>
+            </div>
+          </div>
+          <div class="flex flex-col gap-1.5 items-stretch w-[140px]">
+            <button class="h-7 px-2.5 rounded-md bg-accent-500 text-white text-[12px] font-medium">Draft DM</button>
+            <button class="h-7 px-2.5 rounded-md border border-line-light dark:border-line text-[12px]">Open LinkedIn ↗</button>
+          </div>
+        </div>
+        <!-- Contact 2 — Recruiter -->
+        <div class="rounded-lg border border-line-light dark:border-line bg-base-light dark:bg-base p-4 flex items-start gap-4">
+          <div class="w-10 h-10 rounded-full bg-replied/20 text-replied grid place-items-center text-[12.5px] font-mono font-semibold shrink-0">AT</div>
+          <div class="flex-1 min-w-0">
+            <div class="flex items-center gap-2 flex-wrap">
+              <span class="text-[13.5px] font-semibold">Athar T.</span>
+              <span class="px-1.5 h-5 inline-flex items-center rounded bg-applied/15 text-applied text-[10.5px] font-mono">Tech recruiter</span>
+            </div>
+            <div class="text-[12px] text-ink2 mt-0.5">Senior recruiter · 3 yrs Razorpay</div>
+            <div class="mt-3 flex items-center gap-4 flex-wrap">
+              <div class="flex items-center gap-2"><span class="text-[11.5px] font-mono text-ink3">No mutuals</span></div>
+              <div class="flex items-center gap-1.5">
+                <span class="text-[10.5px] font-mono uppercase tracking-[0.14em] text-ink3">tone</span>
+                <span class="px-1.5 h-5 inline-flex items-center rounded bg-applied/15 text-applied text-[11px] font-medium">formal · concise</span>
+              </div>
+              <span class="h-3 w-px bg-line-light dark:bg-line"></span>
+              <div class="flex items-center gap-1.5 text-[11.5px] text-ink2"><svg class="w-3 h-3 text-replied" viewBox="0 0 16 16" fill="currentColor"><circle cx="8" cy="8" r="6" fill="none" stroke="currentColor" stroke-width="1.4"/><path d="M8 5v3l2 1" stroke="currentColor" stroke-width="1.4" fill="none"/></svg>Replies w/in 24h · usually</div>
+            </div>
+          </div>
+          <div class="flex flex-col gap-1.5 items-stretch w-[140px]">
+            <button class="h-7 px-2.5 rounded-md border border-line-light dark:border-line text-[12px] font-medium">Draft message</button>
+            <button class="h-7 px-2.5 rounded-md border border-line-light dark:border-line text-[12px]">Open LinkedIn ↗</button>
+          </div>
+        </div>
+        <!-- Contact 3 — Skip-level -->
+        <div class="rounded-lg border border-line-light dark:border-line bg-base-light dark:bg-base p-4 flex items-start gap-4">
+          <div class="w-10 h-10 rounded-full bg-interview/20 text-interview grid place-items-center text-[12.5px] font-mono font-semibold shrink-0">SR</div>
+          <div class="flex-1 min-w-0">
+            <div class="flex items-center gap-2 flex-wrap">
+              <span class="text-[13.5px] font-semibold">Sreedhar R.</span>
+              <span class="px-1.5 h-5 inline-flex items-center rounded bg-sunken-light dark:bg-sunken text-ink2 text-[10.5px] font-mono">VP, PM (skip)</span>
+              <span class="px-1.5 h-5 inline-flex items-center rounded bg-rejected/15 text-rejected text-[10.5px] font-mono">cold DMs ignored</span>
+            </div>
+            <div class="text-[12px] text-ink2 mt-0.5">VP Product · ex-Flipkart · public speaker</div>
+            <div class="mt-3 flex items-center gap-4 flex-wrap">
+              <div class="flex items-center gap-1.5">
+                <span class="text-[10.5px] font-mono uppercase tracking-[0.14em] text-ink3">tone</span>
+                <span class="px-1.5 h-5 inline-flex items-center rounded bg-rejected/15 text-rejected text-[11px] font-medium">avoid cold DM</span>
+              </div>
+              <span class="text-[11.5px] text-ink3 font-mono">Last post: 4d ago · talk @ ProductCon</span>
+            </div>
+          </div>
+          <div class="flex flex-col gap-1.5 items-stretch w-[140px]">
+            <button class="h-7 px-2.5 rounded-md border border-line-light dark:border-line text-[12px]">Engage on post ↗</button>
+          </div>
+        </div>
+      </div>
+    </article>
+
+    <!-- =========== RESUME BRAIN =========== -->
+    <article id="resume" data-anchor class="rounded-xl border border-line-light dark:border-line bg-raised-light dark:bg-raised overflow-hidden">
+      <header class="px-5 py-3.5 flex items-center gap-3 border-b border-line-light dark:border-line">
+        <div class="w-7 h-7 rounded grid place-items-center bg-accent-500/15 text-accent-300 text-[11px] font-mono font-bold">RS</div>
+        <div class="flex-1 min-w-0">
+          <div class="text-[13.5px] font-semibold">Resume Brain</div>
+          <div class="text-[11.5px] text-ink3 font-mono">5 proposed tweaks · tailored for this JD</div>
+        </div>
+        <button class="h-7 px-2.5 rounded-md text-[12px] text-ink2 hover:text-ink hover:bg-sunken-light dark:hover:bg-sunken">Open studio ↗</button>
+        <button class="h-7 px-2.5 rounded-md border border-line-light dark:border-line text-[12px] font-medium">Apply all</button>
+        <button class="h-7 px-2.5 rounded-md bg-accent-500 text-white text-[12px] font-medium inline-flex items-center gap-1.5">
+          <svg class="w-3 h-3" viewBox="0 0 16 16" fill="none" stroke="currentColor" stroke-width="2"><path d="M8 2v9M4 8l4 4 4-4M2 14h12"/></svg>
+          Download · Razorpay_AjinkyaKate.pdf
+        </button>
+      </header>
+      <div class="p-5 space-y-3">
+        <!-- Tweak 1 (add) -->
+        <div class="rounded-lg border border-line-light dark:border-line bg-base-light dark:bg-base overflow-hidden">
+          <div class="px-3 py-2 flex items-center gap-2 border-b border-line-light dark:border-line">
+            <span class="px-1.5 h-5 inline-flex items-center rounded bg-interview/15 text-interview text-[10px] font-mono uppercase tracking-[0.16em]">+ Add</span>
+            <span class="text-[12px] text-ink2">Bullet 3 under <span class="font-medium text-ink-light dark:text-ink">Cubeit · PM, Billing</span></span>
+            <span class="ml-auto text-[11px] font-mono text-ink3">matches: SQL, PLG, Pricing</span>
+            <button class="h-6 px-2 rounded text-[11px] font-medium text-ink2 hover:text-ink hover:bg-sunken-light dark:hover:bg-sunken">Discard</button>
+            <button class="h-6 px-2 rounded bg-accent-500 text-white text-[11px] font-medium">Apply</button>
+          </div>
+          <pre class="text-[12.5px] leading-[1.7] font-mono whitespace-pre-wrap m-0 py-2"><span class="diff-line diff-ctx">  • Owned billing &amp; subscriptions roadmap for 11k SMB customers (₹38Cr ARR).</span><span class="diff-line diff-add">+ • Designed price-tier experiment driving <span class="font-semibold">3.2× ARPU</span> over 6 months, using SQL cohorts + PLG funnel.</span><span class="diff-line diff-ctx">  • Partnered with finance on revenue-recognition mapping for new SKUs.</span></pre>
+        </div>
+        <!-- Tweak 2 (mod) -->
+        <div class="rounded-lg border border-line-light dark:border-line bg-base-light dark:bg-base overflow-hidden">
+          <div class="px-3 py-2 flex items-center gap-2 border-b border-line-light dark:border-line">
+            <span class="px-1.5 h-5 inline-flex items-center rounded bg-applied/15 text-applied text-[10px] font-mono uppercase tracking-[0.16em]">~ Rewrite</span>
+            <span class="text-[12px] text-ink2">Headline summary</span>
+            <span class="ml-auto text-[11px] font-mono text-ink3">tightens to 1 line · 28 → 22 words</span>
+            <button class="h-6 px-2 rounded text-[11px] font-medium text-ink2 hover:text-ink hover:bg-sunken-light dark:hover:bg-sunken">Discard</button>
+            <button class="h-6 px-2 rounded bg-accent-500 text-white text-[11px] font-medium">Apply</button>
+          </div>
+          <pre class="text-[12.5px] leading-[1.7] font-mono whitespace-pre-wrap m-0 py-2"><span class="diff-line diff-del">- Product manager with 4 years of experience across B2B SaaS, looking to drive impact through customer-obsessed product strategy.</span><span class="diff-line diff-mod">~ Senior PM, 5 yrs · pricing &amp; packaging for B2B SaaS · scaled Cubeit billing from ₹12Cr → ₹38Cr ARR.</span></pre>
+        </div>
+        <!-- Tweak 3 (add) -->
+        <div class="rounded-lg border border-line-light dark:border-line bg-base-light dark:bg-base overflow-hidden">
+          <div class="px-3 py-2 flex items-center gap-2 border-b border-line-light dark:border-line">
+            <span class="px-1.5 h-5 inline-flex items-center rounded bg-interview/15 text-interview text-[10px] font-mono uppercase tracking-[0.16em]">+ Add</span>
+            <span class="text-[12px] text-ink2">Skills block</span>
+            <span class="ml-auto text-[11px] font-mono text-ink3">surface buried keywords</span>
+            <button class="h-6 px-2 rounded text-[11px] font-medium text-ink2 hover:text-ink hover:bg-sunken-light dark:hover:bg-sunken">Discard</button>
+            <button class="h-6 px-2 rounded bg-accent-500 text-white text-[11px] font-medium">Apply</button>
+          </div>
+          <div class="px-3 py-2 flex flex-wrap gap-1.5">
+            <span class="px-2 h-6 inline-flex items-center rounded bg-interview/15 text-interview text-[11.5px] font-mono">+ PLG metrics</span>
+            <span class="px-2 h-6 inline-flex items-center rounded bg-interview/15 text-interview text-[11.5px] font-mono">+ Subscription billing</span>
+            <span class="px-2 h-6 inline-flex items-center rounded bg-interview/15 text-interview text-[11.5px] font-mono">+ Cohort SQL</span>
+          </div>
+        </div>
+        <button class="w-full h-9 rounded-lg border border-dashed border-line-light dark:border-line text-[12.5px] text-ink2 hover:text-ink hover:bg-sunken-light dark:hover:bg-sunken">Show 2 more tweaks</button>
+      </div>
+    </article>
+
+    <!-- =========== OUTREACH BRAIN =========== -->
+    <article id="outreach" data-anchor class="rounded-xl border border-line-light dark:border-line bg-raised-light dark:bg-raised overflow-hidden">
+      <header class="px-5 py-3.5 flex items-center gap-3 border-b border-line-light dark:border-line">
+        <div class="w-7 h-7 rounded grid place-items-center bg-offer/15 text-offer text-[11px] font-mono font-bold">OU</div>
+        <div class="flex-1 min-w-0">
+          <div class="text-[13.5px] font-semibold">Outreach Brain</div>
+          <div class="text-[11.5px] text-ink3 font-mono">3 drafts · matched to contacts above</div>
+        </div>
+        <button class="h-7 px-2.5 rounded-md text-[12px] text-ink2 hover:text-ink hover:bg-sunken-light dark:hover:bg-sunken">Regenerate</button>
+        <button class="h-7 px-2.5 rounded-md border border-line-light dark:border-line text-[12px] font-medium">Copy all</button>
+      </header>
+      <div class="p-5 grid grid-cols-3 gap-3">
+        <!-- Draft 1 -->
+        <div class="rounded-lg border border-line-light dark:border-line bg-base-light dark:bg-base p-4 flex flex-col">
+          <div class="flex items-center gap-2">
+            <span class="px-1.5 h-5 inline-flex items-center rounded bg-accent-500/15 text-accent-300 text-[10px] font-mono uppercase tracking-[0.16em]">Connect</span>
+            <span class="text-[11.5px] text-ink3 font-mono">→ Latika M.</span>
+            <span class="ml-auto text-[10.5px] font-mono text-ink3">198 / 200</span>
+          </div>
+          <div class="mt-2.5 text-[12.5px] leading-relaxed flex-1">
+            "Hi Latika — saw the Sr PM role for Pricing &amp; Packaging. I owned billing redesign at Cubeit (3.2× ARPU) and have been following Razorpay's monetization push. Would love 15 min if open."
+          </div>
+          <div class="mt-3 flex items-center justify-between">
+            <span class="inline-flex items-center gap-1.5 text-[10.5px] font-mono text-ink3">
+              <span class="w-1.5 h-1.5 rounded-full bg-replied"></span>warm tone
+            </span>
+            <div class="flex items-center gap-1.5">
+              <button class="h-7 w-7 grid place-items-center rounded border border-line-light dark:border-line text-ink2" title="Regenerate">
+                <svg class="w-3 h-3" viewBox="0 0 16 16" fill="none" stroke="currentColor" stroke-width="1.8"><path d="M13 8a5 5 0 11-1.5-3.5M13 3v3h-3"/></svg>
+              </button>
+              <button class="h-7 px-2.5 rounded-md bg-accent-500 text-white text-[12px] font-medium inline-flex items-center gap-1.5">
+                <svg class="w-3 h-3" viewBox="0 0 16 16" fill="none" stroke="currentColor" stroke-width="2"><rect x="4" y="4" width="9" height="9" rx="1.5"/><path d="M3 11V3.5A1.5 1.5 0 014.5 2H12"/></svg>
+                Copy
+              </button>
+            </div>
+          </div>
+        </div>
+        <!-- Draft 2 -->
+        <div class="rounded-lg border border-line-light dark:border-line bg-base-light dark:bg-base p-4 flex flex-col">
+          <div class="flex items-center gap-2">
+            <span class="px-1.5 h-5 inline-flex items-center rounded bg-applied/15 text-applied text-[10px] font-mono uppercase tracking-[0.16em]">Follow-up</span>
+            <span class="text-[11.5px] text-ink3 font-mono">→ post-accept</span>
+            <span class="ml-auto text-[10.5px] font-mono text-ink3">128 wd</span>
+          </div>
+          <div class="mt-2.5 text-[12.5px] leading-relaxed flex-1">
+            "Thanks for connecting, Latika. Quick context: at Cubeit I ran a 4-tier pricing test that survived enterprise sales objections and lifted MRR 38% in two quarters. Happy to walk through the experiment design — what does your week look like?"
+          </div>
+          <div class="mt-3 flex items-center justify-between">
+            <span class="inline-flex items-center gap-1.5 text-[10.5px] font-mono text-ink3">
+              <span class="w-1.5 h-1.5 rounded-full bg-applied"></span>specific · proof
+            </span>
+            <div class="flex items-center gap-1.5">
+              <button class="h-7 w-7 grid place-items-center rounded border border-line-light dark:border-line text-ink2"><svg class="w-3 h-3" viewBox="0 0 16 16" fill="none" stroke="currentColor" stroke-width="1.8"><path d="M13 8a5 5 0 11-1.5-3.5M13 3v3h-3"/></svg></button>
+              <button class="h-7 px-2.5 rounded-md bg-accent-500 text-white text-[12px] font-medium">Copy</button>
+            </div>
+          </div>
+        </div>
+        <!-- Draft 3 -->
+        <div class="rounded-lg border border-line-light dark:border-line bg-base-light dark:bg-base p-4 flex flex-col">
+          <div class="flex items-center gap-2">
+            <span class="px-1.5 h-5 inline-flex items-center rounded bg-offer/15 text-offer text-[10px] font-mono uppercase tracking-[0.16em]">Cold (fallback)</span>
+            <span class="text-[11.5px] text-ink3 font-mono">→ Athar T.</span>
+            <span class="ml-auto text-[10.5px] font-mono text-ink3">96 wd</span>
+          </div>
+          <div class="mt-2.5 text-[12.5px] leading-relaxed flex-1">
+            "Hi Athar — applied via portal yesterday for the Sr PM Pricing role. Wanted to flag my profile: closest match is pricing redesign at Cubeit (3.2× ARPU, 4-tier model). Happy to share a short Loom if useful."
+          </div>
+          <div class="mt-3 flex items-center justify-between">
+            <span class="inline-flex items-center gap-1.5 text-[10.5px] font-mono text-ink3">
+              <span class="w-1.5 h-1.5 rounded-full bg-offer"></span>formal · concise
+            </span>
+            <div class="flex items-center gap-1.5">
+              <button class="h-7 w-7 grid place-items-center rounded border border-line-light dark:border-line text-ink2"><svg class="w-3 h-3" viewBox="0 0 16 16" fill="none" stroke="currentColor" stroke-width="1.8"><path d="M13 8a5 5 0 11-1.5-3.5M13 3v3h-3"/></svg></button>
+              <button class="h-7 px-2.5 rounded-md bg-accent-500 text-white text-[12px] font-medium">Copy</button>
+            </div>
+          </div>
+        </div>
+      </div>
+      <div class="px-5 pb-5">
+        <div class="rounded-lg bg-sunken-light dark:bg-sunken px-3 py-2.5 flex items-center justify-between">
+          <div class="flex items-center gap-2.5 text-[11.5px] text-ink2">
+            <svg class="w-3.5 h-3.5 text-accent-400" viewBox="0 0 16 16" fill="currentColor"><circle cx="8" cy="8" r="6.5" fill="none" stroke="currentColor" stroke-width="1.4"/><path d="M8 4v4M8 11h0" stroke="currentColor" stroke-width="1.4"/></svg>
+            Mark each draft "sent" after you ship it · auto-logs to activity.
+          </div>
+          <div class="flex items-center gap-2">
+            <button class="text-[12px] font-medium text-accent-300 hover:text-accent-400">Mark Connect sent</button>
+            <span class="text-ink3">·</span>
+            <button class="text-[12px] font-medium text-accent-300 hover:text-accent-400">Mark Follow-up sent</button>
+            <span class="text-ink3">·</span>
+            <button class="text-[12px] font-medium text-accent-300 hover:text-accent-400">Mark Cold sent</button>
+          </div>
+        </div>
+      </div>
+    </article>
+
+  </div>
+
+  <!-- ===== RIGHT: activity + comments rail ===== -->
+  <aside class="flex flex-col min-h-0 bg-base-light dark:bg-base">
+    <div class="shrink-0 px-5 pt-5 pb-3 flex items-center justify-between">
+      <div>
+        <div class="text-[13px] font-semibold">Activity</div>
+        <div class="text-[11px] font-mono text-ink3">14 events · 2 unread</div>
+      </div>
+      <div class="inline-flex p-0.5 rounded-md bg-sunken-light dark:bg-sunken border border-line-light dark:border-line">
+        <button class="h-6 px-2 rounded text-[11px] font-medium bg-raised-light dark:bg-raised">All</button>
+        <button class="h-6 px-2 rounded text-[11px] font-medium text-ink2">Brains</button>
+        <button class="h-6 px-2 rounded text-[11px] font-medium text-ink2">Notes</button>
+      </div>
+    </div>
+
+    <div class="flex-1 min-h-0 overflow-y-auto nice-scroll px-5 pb-2">
+      <!-- TODAY -->
+      <div class="text-[10.5px] font-mono uppercase tracking-[0.16em] text-ink3 mt-1">Today · 24 May</div>
+      <ol class="mt-3 relative pl-5 space-y-3 before:absolute before:left-[7px] before:top-2 before:bottom-2 before:w-px before:bg-line-light dark:before:bg-line">
+        <li class="relative">
+          <span class="absolute -left-[18px] top-1.5 w-3 h-3 rounded-full bg-accent-500 ring-4 ring-base-light dark:ring-base"></span>
+          <div class="text-[12.5px]"><span class="font-medium">JD Brain</span> finished analysis</div>
+          <div class="text-[11px] font-mono text-ink3">10:42 · 12.4s</div>
+        </li>
+        <li class="relative">
+          <span class="absolute -left-[18px] top-1.5 w-3 h-3 rounded-full bg-applied ring-4 ring-base-light dark:ring-base"></span>
+          <div class="text-[12.5px]">Status moved <span class="font-medium">Saved → Applied</span></div>
+          <div class="text-[11px] font-mono text-ink3">09:30</div>
+        </li>
+        <li class="relative">
+          <span class="absolute -left-[18px] top-1.5 w-3 h-3 rounded-full bg-replied ring-4 ring-base-light dark:ring-base"></span>
+          <div class="text-[12.5px]">Latika opened your DM <span class="text-ink3">· LinkedIn</span></div>
+          <div class="text-[11px] font-mono text-ink3">09:08</div>
+        </li>
+        <!-- COMMENT (user-authored) -->
+        <li class="relative">
+          <span class="absolute -left-[18px] top-1.5 w-3 h-3 rounded-full bg-accent-400 ring-4 ring-base-light dark:ring-base"></span>
+          <div class="rounded-lg border border-line-light dark:border-line bg-raised-light dark:bg-raised p-3">
+            <div class="flex items-baseline gap-2">
+              <div class="w-5 h-5 -ml-0.5 rounded-full bg-accent-500/20 text-accent-300 grid place-items-center text-[9.5px] font-mono font-semibold">AK</div>
+              <span class="text-[12px] font-semibold">Ajinkya</span>
+              <span class="text-[10.5px] font-mono text-ink3">08:55</span>
+            </div>
+            <div class="mt-1.5 text-[12.5px] leading-relaxed">Aditi (mutual) confirmed Latika is leaning <em>experienced</em> over <em>cheap</em>. Highlight Cubeit pricing work.</div>
+            <div class="mt-2 flex items-center gap-1.5">
+              <button class="h-5 px-1.5 rounded border border-line-light dark:border-line bg-sunken-light dark:bg-sunken text-[10.5px]">👍 1</button>
+              <button class="h-5 px-1.5 rounded border border-line-light dark:border-line bg-sunken-light dark:bg-sunken text-[10.5px]">🔥 1</button>
+            </div>
+          </div>
+        </li>
+      </ol>
+
+      <!-- YESTERDAY -->
+      <div class="mt-5 text-[10.5px] font-mono uppercase tracking-[0.16em] text-ink3">Yesterday · 23 May</div>
+      <ol class="mt-3 relative pl-5 space-y-3 before:absolute before:left-[7px] before:top-2 before:bottom-2 before:w-px before:bg-line-light dark:before:bg-line">
+        <li class="relative">
+          <span class="absolute -left-[18px] top-1.5 w-3 h-3 rounded-full bg-accent-400 ring-4 ring-base-light dark:ring-base"></span>
+          <div class="rounded-lg border border-line-light dark:border-line bg-raised-light dark:bg-raised p-3">
+            <div class="flex items-baseline gap-2">
+              <div class="w-5 h-5 -ml-0.5 rounded-full bg-accent-500/20 text-accent-300 grid place-items-center text-[9.5px] font-mono font-semibold">AK</div>
+              <span class="text-[12px] font-semibold">Ajinkya</span>
+              <span class="text-[10.5px] font-mono text-ink3">19:14</span>
+            </div>
+            <div class="mt-1.5 text-[12.5px] leading-relaxed">Called <strong>Latika</strong> — voicemail. Retry Thu morning before standup.</div>
+          </div>
+        </li>
+        <li class="relative">
+          <span class="absolute -left-[18px] top-1.5 w-3 h-3 rounded-full bg-saved ring-4 ring-base-light dark:ring-base"></span>
+          <div class="text-[12.5px]">Card created from LinkedIn URL</div>
+          <div class="text-[11px] font-mono text-ink3">14:02</div>
+        </li>
+        <li class="relative">
+          <span class="absolute -left-[18px] top-1.5 w-3 h-3 rounded-full bg-applied ring-4 ring-base-light dark:ring-base"></span>
+          <div class="text-[12.5px]">5 brains queued</div>
+          <div class="text-[11px] font-mono text-ink3">14:02</div>
+        </li>
+      </ol>
+
+      <!-- earlier -->
+      <div class="mt-5 text-[10.5px] font-mono uppercase tracking-[0.16em] text-ink3">Earlier this week</div>
+      <ol class="mt-3 relative pl-5 space-y-3 before:absolute before:left-[7px] before:top-2 before:bottom-2 before:w-px before:bg-line-light dark:before:bg-line">
+        <li class="relative">
+          <span class="absolute -left-[18px] top-1.5 w-3 h-3 rounded-full bg-ink3 ring-4 ring-base-light dark:ring-base"></span>
+          <div class="text-[12.5px]">Resume v3 saved</div>
+          <div class="text-[11px] font-mono text-ink3">Wed · 17:40</div>
+        </li>
+        <li class="relative">
+          <span class="absolute -left-[18px] top-1.5 w-3 h-3 rounded-full bg-ink3 ring-4 ring-base-light dark:ring-base"></span>
+          <div class="text-[12.5px]">Aditi K marked as mutual</div>
+          <div class="text-[11px] font-mono text-ink3">Wed · 11:08</div>
+        </li>
+      </ol>
+    </div>
+
+    <!-- Composer -->
+    <div class="shrink-0 px-5 pt-3 pb-5 border-t border-line-light dark:border-line bg-base-light dark:bg-base">
+      <div class="rounded-xl border border-line-light dark:border-line bg-raised-light dark:bg-raised">
+        <div class="flex items-start gap-2.5 p-3">
+          <div class="w-6 h-6 rounded-full bg-accent-500/20 text-accent-300 grid place-items-center text-[10px] font-mono font-semibold shrink-0">AK</div>
+          <textarea rows="2" placeholder="Add a note… (Markdown supported)" class="flex-1 bg-transparent text-[13px] placeholder:text-ink3 outline-none resize-none"></textarea>
+        </div>
+        <div class="px-3 py-1.5 flex items-center justify-between border-t border-line-light dark:border-line">
+          <div class="flex items-center gap-3 text-ink3">
+            <button class="h-6 w-6 grid place-items-center hover:text-ink"><span class="font-bold text-[11px]">B</span></button>
+            <button class="h-6 w-6 grid place-items-center hover:text-ink"><span class="italic text-[11px]">i</span></button>
+            <button class="h-6 w-6 grid place-items-center hover:text-ink"><svg class="w-3.5 h-3.5" viewBox="0 0 16 16" fill="none" stroke="currentColor" stroke-width="1.8"><path d="M8 2v12M2 8h12"/></svg></button>
+            <span class="text-[10.5px] font-mono ml-1">@mention · #tag</span>
+          </div>
+          <button class="h-7 px-2.5 rounded-md bg-accent-500 text-white text-[12px] font-medium inline-flex items-center gap-1.5">
+            Comment
+            <kbd class="px-1 h-4 rounded bg-white/15 text-[9.5px] font-mono">⌘↵</kbd>
+          </button>
+        </div>
+      </div>
+    </div>
+  </aside>
+</section>
+
+<script>
+  document.getElementById('theme-toggle').addEventListener('click', () => {
+    document.documentElement.classList.toggle('dark');
+  });
+  // Anchor jump-nav: highlight current section
+  const anchors = document.querySelectorAll('.brain-anchor');
+  const sections = ['jd','company','persona','resume','outreach'].map(id => document.getElementById(id));
+  const obs = new IntersectionObserver((entries) => {
+    entries.forEach(e => {
+      if (!e.isIntersecting) return;
+      const id = e.target.id;
+      anchors.forEach(a => {
+        const active = a.getAttribute('href') === '#' + id;
+        a.classList.toggle('text-ink-light', active);
+        a.classList.toggle('dark:text-ink', active);
+        a.classList.toggle('text-ink2', !active);
+        // underline marker
+        let bar = a.querySelector('.bar');
+        if (active) {
+          if (!a.querySelector('.bar')) {
+            const s = document.createElement('span');
+            s.className = 'bar absolute inset-x-0 bottom-0 h-0.5 bg-accent-500';
+            a.classList.add('relative');
+            a.appendChild(s);
+          }
+        } else {
+          a.querySelector('.bar')?.remove();
+        }
+      });
+    });
+  }, { rootMargin: '-100px 0px -60% 0px', threshold: 0 });
+  sections.forEach(s => s && obs.observe(s));
+</script>
+</body>
+</html>

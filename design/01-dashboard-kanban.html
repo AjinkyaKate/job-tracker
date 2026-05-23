@@ -1,0 +1,765 @@
+<!doctype html>
+<html lang="en" class="dark">
+<head>
+<meta charset="utf-8" />
+<meta name="viewport" content="width=device-width, initial-scale=1" />
+<title>Job Tracker — Pipeline</title>
+<script src="https://cdn.tailwindcss.com"></script>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&family=JetBrains+Mono:wght@400;500;600&display=swap" rel="stylesheet">
+<script>
+  tailwind.config = {
+    darkMode: 'class',
+    theme: {
+      extend: {
+        fontFamily: {
+          sans: ['Inter', 'ui-sans-serif', 'system-ui', 'sans-serif'],
+          mono: ['"JetBrains Mono"', 'ui-monospace', 'monospace'],
+        },
+        colors: {
+          base:   { light: '#fafaf9', DEFAULT: '#0b0b0e' },
+          raised: { light: '#ffffff', DEFAULT: '#131318' },
+          sunken: { light: '#f1f0ee', DEFAULT: '#08080b' },
+          line:   { light: '#e6e4e0', DEFAULT: '#26262e' },
+          line2:  { light: '#d8d6d1', DEFAULT: '#32323c' },
+          ink:    { light: '#0f0f12', DEFAULT: '#f4f3ef' },
+          ink2:   { light: '#55554f', DEFAULT: '#a7a6a1' },
+          ink3:   { light: '#85847d', DEFAULT: '#6c6c72' },
+          accent: { 100:'#e9deff',300:'#b896ff',400:'#9a6bff',500:'#7e44ff',600:'#6a2ef0',700:'#5520c4' },
+          saved:    '#9aa0a6',
+          applied:  '#4b8df8',
+          replied:  '#f5a524',
+          interview:'#22c55e',
+          offer:    '#10b981',
+          rejected: '#ef4444',
+          backlog:  '#6b7280',
+        },
+        boxShadow: {
+          'pop': '0 8px 24px -8px rgba(0,0,0,0.55), 0 2px 6px -1px rgba(0,0,0,0.35)',
+          'pop-light': '0 8px 24px -8px rgba(15,15,18,0.12), 0 2px 6px -1px rgba(15,15,18,0.06)',
+          'card': '0 1px 0 rgba(255,255,255,0.02) inset',
+        },
+      }
+    }
+  };
+</script>
+<style>
+  html, body { height: 100%; }
+  body { font-family: 'Inter', system-ui, sans-serif; font-feature-settings: 'ss01','cv11','cv02'; }
+  .tabular { font-variant-numeric: tabular-nums; }
+  /* hide scrollbar on the kanban while keeping scroll */
+  .nice-scroll::-webkit-scrollbar { height: 10px; width: 10px; }
+  .nice-scroll::-webkit-scrollbar-thumb { background: rgba(255,255,255,0.06); border-radius: 999px; }
+  .nice-scroll::-webkit-scrollbar-track { background: transparent; }
+  html:not(.dark) .nice-scroll::-webkit-scrollbar-thumb { background: rgba(15,15,18,0.08); }
+  /* dragging state */
+  .card.dragging { opacity: 0.3; }
+  .col.drop-over .col-body { background: rgba(126, 68, 255, 0.06); outline: 1px dashed rgba(126, 68, 255, 0.45); outline-offset: -4px; border-radius: 12px; }
+  /* drag ghost styles handled inline */
+  .placeholder { height: 4px; background: rgb(126 68 255 / 0.8); border-radius: 999px; margin: 4px 0; }
+  /* focus ring */
+  .ring-accent { box-shadow: 0 0 0 2px rgb(126 68 255 / 0.35); }
+  /* prevent text-select during drag */
+  .dragging-active * { user-select: none !important; }
+  /* sparkline-ish */
+  .spark path { fill: none; stroke: currentColor; stroke-width: 1.4; stroke-linecap: round; stroke-linejoin: round; }
+  /* hide native scroll glow */
+  textarea, input, select { font-family: inherit; }
+  /* status-color shorthand via data-status */
+  [data-status="saved"]     { --st: theme('colors.saved'); }
+  [data-status="applied"]   { --st: theme('colors.applied'); }
+  [data-status="replied"]   { --st: theme('colors.replied'); }
+  [data-status="interview"] { --st: theme('colors.interview'); }
+  [data-status="offer"]     { --st: theme('colors.offer'); }
+  [data-status="rejected"]  { --st: theme('colors.rejected'); }
+  [data-status="backlog"]   { --st: theme('colors.backlog'); }
+  .dot { background: var(--st); }
+  .tint { background: color-mix(in oklab, var(--st) 14%, transparent); color: var(--st); }
+  .tint-strong { background: color-mix(in oklab, var(--st) 22%, transparent); color: var(--st); }
+  .col-accent { background: var(--st); }
+  .ring-st { box-shadow: 0 0 0 2px color-mix(in oklab, var(--st) 30%, transparent); }
+  /* hidden helpers */
+  .hidden-x { display: none !important; }
+</style>
+</head>
+<body class="bg-base-light dark:bg-base text-ink-light dark:text-ink antialiased min-h-screen flex flex-col overflow-hidden">
+
+<!-- ============ TOP BAR ============ -->
+<header class="shrink-0 border-b border-line-light dark:border-line bg-base-light/85 dark:bg-base/85 backdrop-blur">
+  <div class="px-6 h-12 flex items-center gap-4">
+    <!-- left -->
+    <div class="flex items-center gap-2.5">
+      <div class="w-6 h-6 rounded-md bg-accent-500 grid place-items-center">
+        <svg viewBox="0 0 20 20" class="w-3.5 h-3.5 text-white" fill="none" stroke="currentColor" stroke-width="2.4"><path d="M4 11l4 4 8-9"/></svg>
+      </div>
+      <span class="text-[13px] font-semibold tracking-tight">Job Tracker</span>
+      <span class="text-ink3 dark:text-ink3 text-[12px]">·</span>
+      <span class="text-ink2 dark:text-ink2 text-[12px]">Ajinkya Kate</span>
+    </div>
+    <!-- breadcrumb tabs -->
+    <nav class="flex items-center gap-1 ml-4 text-[12.5px]">
+      <a class="px-2.5 h-7 rounded-md inline-flex items-center bg-sunken-light dark:bg-sunken font-medium" href="#">Pipeline</a>
+      <a class="px-2.5 h-7 rounded-md inline-flex items-center text-ink2 hover:text-ink hover:bg-sunken-light dark:hover:bg-sunken" href="#">Today</a>
+      <a class="px-2.5 h-7 rounded-md inline-flex items-center text-ink2 hover:text-ink hover:bg-sunken-light dark:hover:bg-sunken" href="#">Resume Studio</a>
+      <a class="px-2.5 h-7 rounded-md inline-flex items-center text-ink2 hover:text-ink hover:bg-sunken-light dark:hover:bg-sunken" href="#">Settings</a>
+    </nav>
+    <!-- search -->
+    <div class="flex-1 flex justify-center">
+      <div class="relative w-[420px] max-w-full">
+        <svg class="absolute left-3 top-1/2 -translate-y-1/2 w-3.5 h-3.5 text-ink3" viewBox="0 0 16 16" fill="none" stroke="currentColor" stroke-width="2"><circle cx="7" cy="7" r="5"/><path d="M14 14l-3-3"/></svg>
+        <input id="search" type="text" placeholder="Search jobs, companies, contacts…" class="w-full h-8 pl-8 pr-14 rounded-md bg-raised-light dark:bg-raised border border-line-light dark:border-line text-[12.5px] placeholder:text-ink3 focus:outline-none focus:ring-2 focus:ring-accent-500/40 focus:border-accent-500/50" />
+        <kbd class="absolute right-2 top-1/2 -translate-y-1/2 px-1.5 h-5 rounded border border-line-light dark:border-line bg-sunken-light dark:bg-sunken text-[10px] font-mono text-ink3 inline-flex items-center">/</kbd>
+      </div>
+    </div>
+    <!-- right -->
+    <div class="flex items-center gap-2">
+      <button class="h-7 px-2 rounded-md text-ink2 hover:text-ink hover:bg-sunken-light dark:hover:bg-sunken text-[12px] font-medium inline-flex items-center gap-1.5">
+        <svg class="w-3.5 h-3.5" viewBox="0 0 16 16" fill="none" stroke="currentColor" stroke-width="1.8"><path d="M3 8l3 3 7-7"/></svg>
+        Saved view
+      </button>
+      <button id="theme-toggle" class="h-7 w-7 grid place-items-center rounded-md text-ink2 hover:text-ink hover:bg-sunken-light dark:hover:bg-sunken">
+        <svg class="w-3.5 h-3.5 dark:hidden" viewBox="0 0 16 16" fill="currentColor"><path d="M6 1A6 6 0 008 13a6 6 0 005.9-5A4.5 4.5 0 116 1z"/></svg>
+        <svg class="w-3.5 h-3.5 hidden dark:block" viewBox="0 0 16 16" fill="currentColor"><path d="M8 4a4 4 0 100 8 4 4 0 000-8zM8 0v2M8 14v2M16 8h-2M2 8H0M13.7 2.3l-1.4 1.4M3.7 12.3l-1.4 1.4M13.7 13.7l-1.4-1.4M3.7 3.7L2.3 2.3"/></svg>
+      </button>
+      <div class="w-7 h-7 rounded-full bg-accent-500/20 text-accent-300 grid place-items-center text-[11px] font-mono font-semibold">AK</div>
+    </div>
+  </div>
+</header>
+
+<!-- ============ HEADER STRIP ============ -->
+<section class="shrink-0 px-6 pt-5 pb-3">
+  <div class="flex items-end justify-between gap-6">
+    <div>
+      <div class="flex items-center gap-3">
+        <h1 class="text-[26px] font-semibold tracking-[-0.02em]">Pipeline</h1>
+        <span class="px-1.5 h-5 inline-flex items-center rounded bg-sunken-light dark:bg-sunken text-[11px] font-mono text-ink2 tabular">22 active</span>
+      </div>
+      <div class="mt-1 text-[12.5px] text-ink2 dark:text-ink2 font-mono">Sunday · 24 May 2026 · week 21</div>
+    </div>
+    <!-- stat cards -->
+    <div class="grid grid-cols-5 gap-2 w-[640px]">
+      <button class="text-left rounded-xl border border-rejected/30 bg-rejected/8 dark:bg-rejected/10 px-3 py-2.5 hover:bg-rejected/12 transition">
+        <div class="text-[10px] font-mono uppercase tracking-[0.14em] text-rejected">Due today</div>
+        <div class="mt-1 flex items-baseline gap-1.5">
+          <span class="text-[22px] tabular font-semibold leading-none">4</span>
+          <span class="text-[11px] font-mono text-rejected/80">overdue 2</span>
+        </div>
+      </button>
+      <button class="text-left rounded-xl border border-line-light dark:border-line bg-raised-light dark:bg-raised px-3 py-2.5 hover:border-line2-light dark:hover:border-line2 transition">
+        <div class="text-[10px] font-mono uppercase tracking-[0.14em] text-ink3">Upcoming · 7d</div>
+        <div class="mt-1 flex items-baseline gap-1.5">
+          <span class="text-[22px] tabular font-semibold leading-none">11</span>
+          <svg class="spark text-applied w-9 h-3 -mb-0.5" viewBox="0 0 36 12" preserveAspectRatio="none"><path d="M0 10 L6 6 L12 8 L18 4 L24 5 L30 2 L36 4"/></svg>
+        </div>
+      </button>
+      <button class="text-left rounded-xl border border-line-light dark:border-line bg-raised-light dark:bg-raised px-3 py-2.5 hover:border-line2-light dark:hover:border-line2 transition">
+        <div class="text-[10px] font-mono uppercase tracking-[0.14em] text-ink3">Active total</div>
+        <div class="mt-1 flex items-baseline gap-1.5">
+          <span class="text-[22px] tabular font-semibold leading-none">22</span>
+          <span class="text-[11px] font-mono text-ink3">+3 wk</span>
+        </div>
+      </button>
+      <button class="text-left rounded-xl border border-line-light dark:border-line bg-raised-light dark:bg-raised px-3 py-2.5 hover:border-line2-light dark:hover:border-line2 transition">
+        <div class="text-[10px] font-mono uppercase tracking-[0.14em] text-ink3">Reply rate</div>
+        <div class="mt-1 flex items-baseline gap-1.5">
+          <span class="text-[22px] tabular font-semibold leading-none">12.4%</span>
+          <span class="text-[11px] font-mono text-interview">↑ 1.8</span>
+        </div>
+      </button>
+      <button class="text-left rounded-xl border border-offer/30 bg-offer/8 dark:bg-offer/10 px-3 py-2.5 hover:bg-offer/12 transition">
+        <div class="text-[10px] font-mono uppercase tracking-[0.14em] text-offer">Offers</div>
+        <div class="mt-1 flex items-baseline gap-1.5">
+          <span class="text-[22px] tabular font-semibold leading-none">1</span>
+          <span class="text-[11px] font-mono text-offer/80">verbal · 1</span>
+        </div>
+      </button>
+    </div>
+  </div>
+</section>
+
+<!-- ============ FILTER BAR ============ -->
+<section class="shrink-0 px-6 pb-3">
+  <div class="flex items-center justify-between gap-3">
+    <div class="flex items-center gap-1.5 flex-wrap">
+      <button data-filter="fit-70" class="filter-chip inline-flex items-center gap-1.5 h-7 px-2.5 rounded-full border border-line-light dark:border-line bg-raised-light dark:bg-raised text-[12px]">
+        Fit ≥ 70
+      </button>
+      <button data-filter="warm" class="filter-chip inline-flex items-center gap-1.5 h-7 px-2.5 rounded-full border border-line-light dark:border-line bg-raised-light dark:bg-raised text-[12px]">
+        <svg class="w-3 h-3" viewBox="0 0 16 16" fill="currentColor"><path d="M8 1.3l1.9 3.9 4.3.6-3.1 3 .7 4.3L8 11l-3.8 2.1.7-4.3-3.1-3 4.3-.6z"/></svg>
+        Warm contact
+      </button>
+      <button data-filter="b2bsaas" class="filter-chip inline-flex items-center gap-1.5 h-7 px-2.5 rounded-full border border-line-light dark:border-line bg-raised-light dark:bg-raised text-[12px]">
+        B2B SaaS
+      </button>
+      <button data-filter="active7" class="filter-chip inline-flex items-center gap-1.5 h-7 px-2.5 rounded-full border border-line-light dark:border-line bg-raised-light dark:bg-raised text-[12px]">
+        Active 7d
+      </button>
+      <button data-filter="overdue" class="filter-chip inline-flex items-center gap-1.5 h-7 px-2.5 rounded-full border border-line-light dark:border-line bg-raised-light dark:bg-raised text-[12px]">
+        Overdue
+      </button>
+      <span class="mx-1 h-4 w-px bg-line-light dark:bg-line"></span>
+      <button class="inline-flex items-center gap-1.5 h-7 px-2.5 rounded-full border border-dashed border-line2-light dark:border-line2 text-ink3 text-[12px]">+ Filter</button>
+    </div>
+    <div class="flex items-center gap-2 text-[12px] text-ink3">
+      <span id="filter-summary" class="font-mono">22 jobs · all stages</span>
+      <span class="h-4 w-px bg-line-light dark:bg-line"></span>
+      <button class="inline-flex items-center gap-1.5 h-7 px-2 rounded-md text-ink2 hover:text-ink hover:bg-sunken-light dark:hover:bg-sunken">
+        <svg class="w-3.5 h-3.5" viewBox="0 0 16 16" fill="none" stroke="currentColor" stroke-width="1.8"><path d="M2 4h12M4 8h8M6 12h4"/></svg>
+        Sort: next action
+      </button>
+      <span class="h-4 w-px bg-line-light dark:bg-line"></span>
+      <!-- view toggle -->
+      <div class="inline-flex p-0.5 rounded-md bg-sunken-light dark:bg-sunken border border-line-light dark:border-line" role="tablist">
+        <button id="view-kanban" class="view-btn h-6 px-2 rounded inline-flex items-center gap-1.5 text-[11.5px] font-medium bg-raised-light dark:bg-base text-ink-light dark:text-ink shadow-pop-light dark:shadow-pop">
+          <svg class="w-3.5 h-3.5" viewBox="0 0 16 16" fill="none" stroke="currentColor" stroke-width="1.7"><rect x="2" y="3" width="3.5" height="10" rx="1"/><rect x="6.5" y="3" width="3.5" height="7" rx="1"/><rect x="11" y="3" width="3.5" height="5" rx="1"/></svg>
+          Board
+        </button>
+        <button id="view-list" class="view-btn h-6 px-2 rounded inline-flex items-center gap-1.5 text-[11.5px] font-medium text-ink2">
+          <svg class="w-3.5 h-3.5" viewBox="0 0 16 16" fill="none" stroke="currentColor" stroke-width="1.7"><path d="M2 4h12M2 8h12M2 12h12"/></svg>
+          List
+        </button>
+      </div>
+    </div>
+  </div>
+</section>
+
+<!-- ============ KANBAN ============ -->
+<section id="board" class="flex-1 min-h-0 nice-scroll overflow-x-auto overflow-y-hidden pb-6">
+  <div class="h-full inline-flex gap-3 px-6 pt-2 min-w-max">
+    <!-- columns inserted by JS -->
+  </div>
+</section>
+
+<!-- ============ LIST VIEW ============ -->
+<section id="list-view" class="hidden flex-1 min-h-0 px-6 pb-6 pt-1">
+  <div class="h-full flex flex-col rounded-xl border border-line-light dark:border-line bg-raised-light dark:bg-raised overflow-hidden">
+    <!-- column headers -->
+    <div class="shrink-0 grid items-center gap-3 px-4 h-9 border-b border-line-light dark:border-line bg-sunken-light/60 dark:bg-sunken/60 text-[10.5px] font-mono uppercase tracking-[0.14em] text-ink3"
+         style="grid-template-columns: 28px minmax(280px,2.4fr) 110px 64px minmax(180px,1.2fr) minmax(180px,1.4fr) 80px 48px;">
+      <span></span>
+      <button class="text-left hover:text-ink2 inline-flex items-center gap-1">Role · Company <svg class="w-2.5 h-2.5" viewBox="0 0 8 8" fill="currentColor"><path d="M4 2l2 3H2z"/></svg></button>
+      <button class="text-left hover:text-ink2">Status</button>
+      <button class="text-left hover:text-ink2">Fit</button>
+      <button class="text-left hover:text-ink2 inline-flex items-center gap-1">Next action <svg class="w-2.5 h-2.5 text-accent-400" viewBox="0 0 8 8" fill="currentColor"><path d="M4 6L2 3h4z"/></svg></button>
+      <span>Latest activity</span>
+      <span>Warm-in</span>
+      <span class="text-right pr-1">Evts</span>
+    </div>
+    <!-- rows scroller -->
+    <div id="list-body" class="flex-1 overflow-y-auto nice-scroll divide-y divide-line-light dark:divide-line">
+      <!-- rows inserted by JS, grouped by status -->
+    </div>
+  </div>
+</section>
+
+<!-- ============ FAB ============ -->
+<button id="fab" class="fixed bottom-6 right-6 h-11 pl-3 pr-4 rounded-full bg-accent-500 text-white text-[13px] font-medium inline-flex items-center gap-2 shadow-pop hover:bg-accent-400 transition">
+  <span class="w-6 h-6 rounded-full bg-white/15 grid place-items-center">
+    <svg class="w-3.5 h-3.5" viewBox="0 0 16 16" fill="none" stroke="currentColor" stroke-width="2.4"><path d="M8 2v12M2 8h12"/></svg>
+  </span>
+  Add job
+  <kbd class="ml-1 px-1.5 h-5 rounded bg-white/15 text-white/90 text-[10px] font-mono inline-flex items-center">N</kbd>
+</button>
+
+<!-- ============ MODAL · Add Job (preview) ============ -->
+<div id="modal" class="fixed inset-0 z-50 hidden">
+  <div class="absolute inset-0 bg-black/55 backdrop-blur-sm" data-close></div>
+  <div class="absolute left-1/2 top-1/2 -translate-x-1/2 -translate-y-1/2 w-[560px] max-w-[95vw] rounded-2xl border border-line-light dark:border-line bg-raised-light dark:bg-raised shadow-pop-light dark:shadow-pop overflow-hidden">
+    <div class="px-5 py-3.5 flex items-center justify-between border-b border-line-light dark:border-line">
+      <div class="flex items-center gap-2">
+        <span class="text-[13px] font-semibold">Add job</span>
+        <span class="text-[11px] font-mono text-ink3">→ Saved column</span>
+      </div>
+      <button data-close class="w-7 h-7 grid place-items-center rounded-md text-ink2 hover:text-ink hover:bg-sunken-light dark:hover:bg-sunken">×</button>
+    </div>
+    <div class="p-5">
+      <div class="inline-flex p-0.5 rounded-md bg-sunken-light dark:bg-sunken border border-line-light dark:border-line">
+        <button class="h-7 px-3 rounded text-[12px] font-medium bg-raised-light dark:bg-base">Paste URL</button>
+        <button class="h-7 px-3 rounded text-[12px] font-medium text-ink2">Paste JD</button>
+        <button class="h-7 px-3 rounded text-[12px] font-medium text-ink2">Manual</button>
+      </div>
+      <label class="block mt-4">
+        <span class="text-[12px] font-medium text-ink2">LinkedIn / job board URL</span>
+        <input type="text" placeholder="https://linkedin.com/jobs/view/…" class="mt-1.5 w-full h-10 px-3 rounded-md bg-base-light dark:bg-base border border-line-light dark:border-line text-[13px] placeholder:text-ink3 focus:outline-none focus:ring-2 focus:ring-accent-500/40"/>
+      </label>
+      <div class="mt-4 rounded-lg border border-dashed border-line-light dark:border-line bg-sunken-light dark:bg-sunken px-3 py-2.5 text-[12px] text-ink2 flex items-center gap-2">
+        <svg class="w-4 h-4 text-accent-400" viewBox="0 0 16 16" fill="currentColor"><circle cx="8" cy="8" r="7" fill="none" stroke="currentColor" stroke-width="1.4"/><path d="M8 4v4M8 11h0" stroke="currentColor" stroke-width="1.4"/></svg>
+        We'll run 5 brains in ~12s. You can edit any field before saving.
+      </div>
+      <div class="mt-5 flex items-center justify-end gap-2">
+        <button data-close class="h-9 px-3.5 rounded-md text-[13px] text-ink2 hover:text-ink">Cancel</button>
+        <button class="h-9 px-3.5 rounded-md border border-line-light dark:border-line text-[13px]">Paste &amp; analyze later</button>
+        <button class="h-9 px-3.5 rounded-md bg-accent-500 text-white text-[13px] font-medium">Analyze</button>
+      </div>
+    </div>
+  </div>
+</div>
+
+<!-- ============ TOAST ============ -->
+<div id="toast" class="fixed bottom-6 left-1/2 -translate-x-1/2 z-50 opacity-0 pointer-events-none transition translate-y-3">
+  <div class="flex items-center gap-3 rounded-lg border border-line2-light dark:border-line2 bg-raised-light dark:bg-raised shadow-pop-light dark:shadow-pop px-3.5 py-2.5">
+    <svg class="w-4 h-4 text-interview" viewBox="0 0 16 16" fill="currentColor"><path d="M8 1.5a6.5 6.5 0 100 13 6.5 6.5 0 000-13zm3.2 4.8L7 10.6 4.8 8.4l1-1L7 8.6l3.2-3.3 1 1z"/></svg>
+    <div id="toast-msg" class="text-[13px]">Moved.</div>
+    <button class="text-[11px] font-mono text-ink3 hover:text-ink">Undo ⌘Z</button>
+  </div>
+</div>
+
+<!-- ============ JOB DATA + RENDERER ============ -->
+<script>
+  // Status order = column order
+  const STATUSES = [
+    { key: 'saved',     label: 'Saved',     color: '#9aa0a6' },
+    { key: 'applied',   label: 'Applied',   color: '#4b8df8' },
+    { key: 'replied',   label: 'Replied',   color: '#f5a524' },
+    { key: 'interview', label: 'Interview', color: '#22c55e' },
+    { key: 'offer',     label: 'Offer',     color: '#10b981' },
+    { key: 'rejected',  label: 'Rejected',  color: '#ef4444' },
+    { key: 'backlog',   label: 'Backlog',   color: '#6b7280' },
+  ];
+
+  // Realistic-ish jobs across Pune/India B2B SaaS world.
+  // Avoid copying any company's own UI — just using company names as data.
+  const JOBS = [
+    // SAVED
+    { id:'j01', co:'Postman',     ini:'PM', role:'Senior PM · API platform',         loc:'Bangalore',    fit:74, status:'saved',   next:'Send DM Tue',     activity:'Saved from LinkedIn',                     warm:2,  tags:['b2bsaas','active7'], events:5 },
+    { id:'j02', co:'Hasura',      ini:'HG', role:'Lead Product Manager · GraphQL',   loc:'Bangalore',    fit:81, status:'saved',   next:'Connect note',     activity:'Founder posted 2d ago',                   warm:0,  tags:['b2bsaas','active7'], events:2, hot:true },
+    { id:'j03', co:'Atlan',       ini:'AT', role:'Senior PM · Data catalog',         loc:'Remote · IN',  fit:88, status:'saved',   next:'Connect note',     activity:'Mutual: Aditi K.',                        warm:3,  tags:['b2bsaas','warm','active7'], events:1 },
+    { id:'j04', co:'Mindtickle',  ini:'MT', role:'Group PM · Revenue intelligence',  loc:'Pune',         fit:69, status:'saved',   next:'Refer via Sumant', activity:'Re-opened req',                           warm:1,  tags:['b2bsaas','warm'], events:3 },
+    { id:'j05', co:'Freshworks',  ini:'FW', role:'Principal PM · Freshservice',      loc:'Chennai',      fit:42, status:'saved',   next:'Send DM',          activity:'Overdue · going cold',                    warm:0,  tags:['b2bsaas'],         events:0, overdue:4 },
+
+    // APPLIED
+    { id:'j10', co:'Razorpay',    ini:'RP', role:'Senior PM · Pricing & Packaging',  loc:'Bangalore',    fit:78, status:'applied', next:'Follow-up Tue',    activity:'Latika opened DM 09:08',                  warm:2,  tags:['b2bsaas','warm','active7'], events:14 },
+    { id:'j11', co:'Netcore',     ini:'NT', role:'Group PM · Customer engagement',   loc:'Mumbai',       fit:66, status:'applied', next:'Recruiter call',   activity:'ATS: under review',                       warm:0,  tags:['b2bsaas','active7'], events:6 },
+    { id:'j12', co:'Wingify',     ini:'WG', role:'Senior PM · Experimentation',      loc:'Delhi · Rem.', fit:71, status:'applied', next:'Wait · 7d SLA',    activity:'Application confirmed',                   warm:0,  tags:['b2bsaas'], events:3 },
+    { id:'j13', co:'Chargebee',   ini:'CB', role:'Senior PM · Billing',              loc:'Chennai',      fit:84, status:'applied', next:'Nudge recruiter',  activity:'No reply · 5d',                           warm:1,  tags:['b2bsaas','warm'], events:8, overdue:2 },
+
+    // REPLIED
+    { id:'j20', co:'BrowserStack',ini:'BS', role:'Senior PM · Live testing',         loc:'Mumbai',       fit:73, status:'replied', next:'Reply by 6pm',     activity:'Recruiter: "Phone screen times?"',        warm:0,  tags:['b2bsaas','active7'], events:4, urgent:true },
+    { id:'j21', co:'Whatfix',     ini:'WX', role:'Lead PM · DAP core',               loc:'Bangalore',    fit:77, status:'replied', next:'Send portfolio',   activity:'HM liked profile · Aditi mutual',         warm:2,  tags:['b2bsaas','warm','active7'], events:9 },
+    { id:'j22', co:'LeadSquared', ini:'LS', role:'Senior PM · Sales execution',      loc:'Bangalore',    fit:58, status:'replied', next:'Reply with avail.',activity:'Recruiter ping · 1d',                     warm:0,  tags:['b2bsaas'], events:2 },
+
+    // INTERVIEW
+    { id:'j30', co:'Zoho',        ini:'ZH', role:'Lead PM · Growth',                  loc:'Chennai',      fit:82, status:'interview', next:'R2 · Thu 4pm',  activity:'R1 cleared · feedback strong',            warm:1,  tags:['b2bsaas','warm','active7'], events:18 },
+    { id:'j31', co:'Darwinbox',   ini:'DB', role:'Senior PM · Core HR',              loc:'Hyderabad',    fit:71, status:'interview', next:'Case study due Fri', activity:'Case prompt received',                  warm:0,  tags:['b2bsaas','active7'], events:11 },
+
+    // OFFER
+    { id:'j40', co:'Capillary',   ini:'CP', role:'Senior PM · Loyalty cloud',        loc:'Bangalore',    fit:79, status:'offer',   next:'Decide by Wed',   activity:'Verbal offer · ₹42L + 0.06%',             warm:1,  tags:['b2bsaas','warm','active7'], events:23, hot:true },
+
+    // REJECTED
+    { id:'j50', co:'Eka',         ini:'EK', role:'Senior PM · Commodities',          loc:'Bangalore',    fit:48, status:'rejected', next:'—',              activity:'"Not the right fit at this time."',       warm:0,  tags:['b2bsaas'], events:3 },
+    { id:'j51', co:'Aurigo',      ini:'AU', role:'Senior PM · CapEx PMS',            loc:'Bangalore',    fit:36, status:'rejected', next:'—',              activity:'Auto-reject 24h',                         warm:0,  tags:[], events:1 },
+
+    // BACKLOG
+    { id:'j60', co:'Skit',        ini:'SK', role:'Senior PM · Voice AI',             loc:'Bangalore',    fit:62, status:'backlog', next:'Revisit Jun',     activity:'Funding signal weak',                     warm:0,  tags:[], events:2 },
+    { id:'j61', co:'CleverTap',   ini:'CT', role:'Senior PM · Personalization',      loc:'Mumbai',       fit:64, status:'backlog', next:'—',                activity:'Snoozed 2w',                              warm:0,  tags:['b2bsaas'], events:1 },
+    { id:'j62', co:'Eightfold',   ini:'8F', role:'Senior PM · Talent intelligence',  loc:'Remote',       fit:55, status:'backlog', next:'—',                activity:'Saved for later',                         warm:0,  tags:[], events:0 },
+  ];
+
+  const $board = document.querySelector('#board > div');
+
+  // ---- Rendering ----
+  function fitColor(n) {
+    if (n >= 80) return 'interview';
+    if (n >= 65) return 'applied';
+    if (n >= 45) return 'replied';
+    return 'rejected';
+  }
+  function fmtNext(j) {
+    if (j.overdue) return { text: `Overdue · ${j.overdue}d`, tone: 'rejected' };
+    if (j.urgent)  return { text: j.next, tone: 'replied' };
+    return { text: j.next, tone: 'ink3' };
+  }
+
+  function jobCard(j) {
+    const fc = fitColor(j.fit);
+    const next = fmtNext(j);
+    return `
+      <article class="card group rounded-lg border border-line-light dark:border-line bg-raised-light dark:bg-raised hover:border-line2-light dark:hover:border-line2 hover:shadow-pop-light dark:hover:shadow-pop transition cursor-grab active:cursor-grabbing"
+               data-id="${j.id}" data-status="${j.status}" draggable="true"
+               data-fit="${j.fit}" data-warm="${j.warm}" data-tags="${(j.tags||[]).join(',')}" data-overdue="${j.overdue ? 1 : 0}">
+        <div class="p-3">
+          <div class="flex items-start gap-2.5">
+            <div class="w-7 h-7 rounded text-[10.5px] font-mono font-semibold grid place-items-center shrink-0 tint-strong" data-status="${j.status}" style="--st: ${STATUSES.find(s=>s.key===j.status).color}">${j.ini}</div>
+            <div class="min-w-0 flex-1">
+              <div class="text-[13px] font-semibold leading-tight truncate" title="${j.role}">${j.role}</div>
+              <div class="text-[12px] text-ink2 dark:text-ink2 truncate">${j.co} · ${j.loc}</div>
+            </div>
+            <div class="relative w-8 h-8 shrink-0">
+              <svg viewBox="0 0 36 36" class="w-8 h-8 -rotate-90">
+                <circle cx="18" cy="18" r="15.5" fill="none" stroke="currentColor" class="text-line-light dark:text-line" stroke-width="3"/>
+                <circle cx="18" cy="18" r="15.5" fill="none" stroke="currentColor" class="text-${fc}" stroke-width="3" stroke-dasharray="${j.fit} 100" stroke-linecap="round"/>
+              </svg>
+              <div class="absolute inset-0 grid place-items-center text-[10px] font-mono tabular font-semibold">${j.fit}</div>
+            </div>
+          </div>
+
+          <div class="mt-2.5 text-[12px] text-ink2 dark:text-ink2 line-clamp-1">${j.activity}</div>
+
+          <div class="mt-2.5 flex items-center justify-between gap-2">
+            <div class="flex items-center gap-1.5 text-[11px] font-mono">
+              ${ next.tone === 'rejected'
+                  ? `<svg class="w-3 h-3 text-rejected" viewBox="0 0 16 16" fill="currentColor"><path d="M8 1l7 13H1L8 1zm-.8 5h1.6v4H7.2V6zM8 11.4a.9.9 0 100 1.8.9.9 0 000-1.8z"/></svg><span class="text-rejected">${next.text}</span>`
+                  : next.tone === 'replied'
+                  ? `<svg class="w-3 h-3 text-replied" viewBox="0 0 16 16" fill="none" stroke="currentColor" stroke-width="2"><circle cx="8" cy="8" r="6"/><path d="M8 5v3l2 1"/></svg><span class="text-replied">${next.text}</span>`
+                  : `<svg class="w-3 h-3 text-ink3" viewBox="0 0 16 16" fill="none" stroke="currentColor" stroke-width="1.8"><rect x="2" y="3" width="12" height="11" rx="1.5"/><path d="M2 6h12M5 1v4M11 1v4"/></svg><span class="text-ink3">${next.text}</span>`
+              }
+            </div>
+            <div class="flex items-center gap-1.5">
+              ${ j.warm ? `<span class="inline-flex items-center gap-1 px-1.5 h-5 rounded bg-accent-500/12 text-accent-300 dark:text-accent-300 text-[10.5px] font-mono"><svg class="w-3 h-3" viewBox="0 0 16 16" fill="currentColor"><path d="M8 1.3l1.9 3.9 4.3.6-3.1 3 .7 4.3L8 11l-3.8 2.1.7-4.3-3.1-3 4.3-.6z"/></svg>${j.warm}</span>` : '' }
+              ${ j.hot ? `<span class="px-1.5 h-5 inline-flex items-center rounded bg-replied/15 text-replied text-[10.5px] font-mono">HOT</span>` : '' }
+              <span class="px-1.5 h-5 inline-flex items-center rounded bg-sunken-light dark:bg-sunken text-[10.5px] font-mono text-ink3 tabular">${j.events}</span>
+            </div>
+          </div>
+        </div>
+      </article>
+    `;
+  }
+
+  function emptyState(label) {
+    return `
+      <div class="empty rounded-lg border border-dashed border-line-light dark:border-line px-3 py-6 text-center">
+        <div class="text-[12px] font-medium text-ink2">No jobs in ${label}</div>
+        <div class="text-[10.5px] font-mono text-ink3 mt-1">Drop a card here</div>
+      </div>
+    `;
+  }
+
+  function column(s) {
+    const jobs = JOBS.filter(j => j.status === s.key);
+    return `
+      <div class="col flex flex-col w-[300px] shrink-0" data-status="${s.key}" style="--st: ${s.color}">
+        <header class="px-2 mb-1.5 flex items-center gap-2">
+          <span class="w-2 h-2 rounded-full dot"></span>
+          <span class="text-[12.5px] font-semibold">${s.label}</span>
+          <span class="px-1.5 h-5 inline-flex items-center rounded bg-sunken-light dark:bg-sunken text-[11px] font-mono text-ink2 tabular col-count">${jobs.length}</span>
+          <span class="flex-1"></span>
+          <button class="h-6 w-6 grid place-items-center rounded text-ink3 hover:text-ink hover:bg-sunken-light dark:hover:bg-sunken">
+            <svg class="w-3.5 h-3.5" viewBox="0 0 16 16" fill="none" stroke="currentColor" stroke-width="2"><path d="M8 3v10M3 8h10"/></svg>
+          </button>
+          <button class="h-6 w-6 grid place-items-center rounded text-ink3 hover:text-ink hover:bg-sunken-light dark:hover:bg-sunken">
+            <svg class="w-3.5 h-3.5" viewBox="0 0 16 16" fill="currentColor"><circle cx="3.5" cy="8" r="1.2"/><circle cx="8" cy="8" r="1.2"/><circle cx="12.5" cy="8" r="1.2"/></svg>
+          </button>
+        </header>
+        <div class="col-body flex-1 min-h-0 overflow-y-auto nice-scroll rounded-xl bg-sunken-light/40 dark:bg-sunken/40 border border-transparent p-2 space-y-2"
+             data-drop="${s.key}">
+          ${ jobs.length ? jobs.map(jobCard).join('') : emptyState(s.label) }
+        </div>
+      </div>
+    `;
+  }
+
+  function render() {
+    $board.innerHTML = STATUSES.map(column).join('');
+    wireDrag();
+    renderList();
+    applyFilters();
+  }
+
+  // ---- LIST VIEW ----
+  function listRow(j) {
+    const fc = fitColor(j.fit);
+    const next = fmtNext(j);
+    const stColor = STATUSES.find(s=>s.key===j.status).color;
+    return `
+      <div class="row group grid items-center gap-3 px-4 h-12 hover:bg-sunken-light/70 dark:hover:bg-sunken/70 cursor-pointer"
+           data-id="${j.id}" data-status="${j.status}"
+           data-fit="${j.fit}" data-warm="${j.warm}" data-tags="${(j.tags||[]).join(',')}" data-overdue="${j.overdue ? 1 : 0}"
+           style="grid-template-columns: 28px minmax(280px,2.4fr) 110px 64px minmax(180px,1.2fr) minmax(180px,1.4fr) 80px 48px;">
+        <div class="w-7 h-7 rounded text-[10.5px] font-mono font-semibold grid place-items-center tint-strong" data-status="${j.status}" style="--st: ${stColor}">${j.ini}</div>
+        <div class="min-w-0">
+          <div class="text-[13px] font-semibold leading-tight truncate">${j.role}</div>
+          <div class="text-[11.5px] text-ink2 truncate">${j.co} · ${j.loc}</div>
+        </div>
+        <div>
+          <span class="inline-flex items-center gap-1.5 px-1.5 h-5 rounded tint text-[11px] font-medium" data-status="${j.status}" style="--st: ${stColor}"><span class="w-1.5 h-1.5 rounded-full dot"></span>${STATUSES.find(s=>s.key===j.status).label}</span>
+          ${ j.hot ? `<span class="ml-1 px-1.5 h-5 inline-flex items-center rounded bg-replied/15 text-replied text-[10px] font-mono">HOT</span>` : '' }
+        </div>
+        <div class="flex items-center gap-1.5">
+          <div class="relative w-6 h-6">
+            <svg viewBox="0 0 36 36" class="w-6 h-6 -rotate-90"><circle cx="18" cy="18" r="15.5" fill="none" stroke="currentColor" class="text-line-light dark:text-line" stroke-width="4"/><circle cx="18" cy="18" r="15.5" fill="none" stroke="currentColor" class="text-${fc}" stroke-width="4" stroke-dasharray="${j.fit} 100" stroke-linecap="round"/></svg>
+          </div>
+          <span class="text-[12px] font-mono tabular font-semibold">${j.fit}</span>
+        </div>
+        <div class="flex items-center gap-1.5 text-[12px] font-mono min-w-0">
+          ${ next.tone === 'rejected'
+              ? `<svg class="w-3 h-3 text-rejected shrink-0" viewBox="0 0 16 16" fill="currentColor"><path d="M8 1l7 13H1L8 1zm-.8 5h1.6v4H7.2V6zM8 11.4a.9.9 0 100 1.8.9.9 0 000-1.8z"/></svg><span class="text-rejected truncate">${next.text}</span>`
+              : next.tone === 'replied'
+              ? `<svg class="w-3 h-3 text-replied shrink-0" viewBox="0 0 16 16" fill="none" stroke="currentColor" stroke-width="2"><circle cx="8" cy="8" r="6"/><path d="M8 5v3l2 1"/></svg><span class="text-replied truncate">${next.text}</span>`
+              : `<svg class="w-3 h-3 text-ink3 shrink-0" viewBox="0 0 16 16" fill="none" stroke="currentColor" stroke-width="1.8"><rect x="2" y="3" width="12" height="11" rx="1.5"/><path d="M2 6h12M5 1v4M11 1v4"/></svg><span class="text-ink2 truncate">${next.text}</span>`
+          }
+        </div>
+        <div class="text-[12px] text-ink2 truncate">${j.activity}</div>
+        <div>
+          ${ j.warm ? `<span class="inline-flex items-center gap-1 px-1.5 h-5 rounded bg-accent-500/12 text-accent-300 text-[10.5px] font-mono"><svg class="w-3 h-3" viewBox="0 0 16 16" fill="currentColor"><path d="M8 1.3l1.9 3.9 4.3.6-3.1 3 .7 4.3L8 11l-3.8 2.1.7-4.3-3.1-3 4.3-.6z"/></svg>${j.warm}</span>` : `<span class="text-[11px] font-mono text-ink3">—</span>` }
+        </div>
+        <div class="text-right pr-1 text-[11.5px] font-mono tabular text-ink3">${j.events}</div>
+      </div>
+    `;
+  }
+
+  function listGroupHeader(s, count) {
+    return `
+      <div class="sticky top-0 z-10 flex items-center gap-2 px-4 h-8 bg-raised-light/95 dark:bg-raised/95 backdrop-blur border-b border-line-light dark:border-line" data-group="${s.key}">
+        <span class="w-1.5 h-1.5 rounded-full" style="background: ${s.color}"></span>
+        <span class="text-[11.5px] font-semibold">${s.label}</span>
+        <span class="px-1.5 h-4.5 inline-flex items-center rounded bg-sunken-light dark:bg-sunken text-[10px] font-mono text-ink2 tabular group-count">${count}</span>
+      </div>
+    `;
+  }
+
+  function renderList() {
+    const body = document.getElementById('list-body');
+    let html = '';
+    STATUSES.forEach(s => {
+      const jobs = JOBS.filter(j => j.status === s.key);
+      if (!jobs.length) return;
+      html += `<div class="list-group" data-status="${s.key}">`;
+      html += listGroupHeader(s, jobs.length);
+      html += jobs.map(listRow).join('');
+      html += `</div>`;
+    });
+    body.innerHTML = html;
+    // wire row clicks
+    body.querySelectorAll('.row').forEach(r => {
+      r.addEventListener('click', () => openDetail(r.dataset.id));
+    });
+  }
+
+  // ---- VIEW TOGGLE ----
+  function setView(v) {
+    const board = document.getElementById('board');
+    const list = document.getElementById('list-view');
+    const bBtn = document.getElementById('view-kanban');
+    const lBtn = document.getElementById('view-list');
+    if (v === 'list') {
+      board.classList.add('hidden');
+      list.classList.remove('hidden');
+      list.classList.add('flex');
+      lBtn.classList.add('bg-raised-light','dark:bg-base','text-ink-light','dark:text-ink','shadow-pop-light','dark:shadow-pop');
+      lBtn.classList.remove('text-ink2');
+      bBtn.classList.remove('bg-raised-light','dark:bg-base','text-ink-light','dark:text-ink','shadow-pop-light','dark:shadow-pop');
+      bBtn.classList.add('text-ink2');
+    } else {
+      board.classList.remove('hidden');
+      list.classList.add('hidden');
+      list.classList.remove('flex');
+      bBtn.classList.add('bg-raised-light','dark:bg-base','text-ink-light','dark:text-ink','shadow-pop-light','dark:shadow-pop');
+      bBtn.classList.remove('text-ink2');
+      lBtn.classList.remove('bg-raised-light','dark:bg-base','text-ink-light','dark:text-ink','shadow-pop-light','dark:shadow-pop');
+      lBtn.classList.add('text-ink2');
+    }
+    applyFilters();
+  }
+  document.getElementById('view-kanban').addEventListener('click', () => setView('board'));
+  document.getElementById('view-list').addEventListener('click', () => setView('list'));
+
+  // ---- Drag & drop ----
+  let draggingEl = null;
+  let placeholder = null;
+  function wireDrag() {
+    document.querySelectorAll('.card').forEach(card => {
+      card.addEventListener('dragstart', (e) => {
+        draggingEl = card;
+        card.classList.add('dragging');
+        document.body.classList.add('dragging-active');
+        e.dataTransfer.effectAllowed = 'move';
+        e.dataTransfer.setData('text/plain', card.dataset.id);
+        placeholder = document.createElement('div');
+        placeholder.className = 'placeholder';
+      });
+      card.addEventListener('dragend', () => {
+        card.classList.remove('dragging');
+        document.body.classList.remove('dragging-active');
+        placeholder?.remove();
+        document.querySelectorAll('.col.drop-over').forEach(c => c.classList.remove('drop-over'));
+        draggingEl = null;
+      });
+      card.addEventListener('click', () => openDetail(card.dataset.id));
+    });
+
+    document.querySelectorAll('.col-body').forEach(body => {
+      const col = body.closest('.col');
+      body.addEventListener('dragover', (e) => {
+        e.preventDefault();
+        col.classList.add('drop-over');
+        // remove empty-state in target column
+        const empty = body.querySelector('.empty');
+        if (empty) empty.style.opacity = 0.3;
+        // insert placeholder between cards
+        const after = getCardAfter(body, e.clientY);
+        if (!placeholder) return;
+        if (after == null) body.appendChild(placeholder);
+        else body.insertBefore(placeholder, after);
+      });
+      body.addEventListener('dragleave', (e) => {
+        if (!body.contains(e.relatedTarget)) col.classList.remove('drop-over');
+      });
+      body.addEventListener('drop', (e) => {
+        e.preventDefault();
+        col.classList.remove('drop-over');
+        const newStatus = body.dataset.drop;
+        const id = e.dataTransfer.getData('text/plain');
+        const job = JOBS.find(j => j.id === id);
+        const oldStatus = job.status;
+        // Move in DOM
+        if (placeholder) {
+          body.insertBefore(draggingEl, placeholder);
+          placeholder.remove();
+        } else {
+          body.appendChild(draggingEl);
+        }
+        // Update model + chip color
+        job.status = newStatus;
+        draggingEl.dataset.status = newStatus;
+        const newColor = STATUSES.find(s=>s.key===newStatus).color;
+        const initialsBox = draggingEl.querySelector('[data-status]');
+        if (initialsBox) { initialsBox.dataset.status = newStatus; initialsBox.style.setProperty('--st', newColor); }
+        // Update counts + empty states
+        refreshColumnsMeta();
+        if (oldStatus !== newStatus) {
+          toast(`Moved ${job.co} → ${STATUSES.find(s=>s.key===newStatus).label}`);
+        }
+      });
+    });
+  }
+  function getCardAfter(container, y) {
+    const cards = [...container.querySelectorAll('.card:not(.dragging)')];
+    return cards.find(c => {
+      const r = c.getBoundingClientRect();
+      return y < r.top + r.height/2;
+    });
+  }
+  function refreshColumnsMeta() {
+    document.querySelectorAll('.col').forEach(col => {
+      const body = col.querySelector('.col-body');
+      const cards = body.querySelectorAll('.card');
+      col.querySelector('.col-count').textContent = cards.length;
+      // empty state handling
+      const empty = body.querySelector('.empty');
+      if (cards.length === 0 && !empty) {
+        body.insertAdjacentHTML('beforeend', emptyState(col.querySelector('header span:nth-child(2)').textContent));
+      } else if (cards.length > 0 && empty) {
+        empty.remove();
+      }
+    });
+    updateFilterSummary();
+  }
+
+  // ---- Filters + search ----
+  const activeFilters = new Set();
+  function rowVisible(el) {
+    const q = (document.getElementById('search').value || '').toLowerCase().trim();
+    const tags = (el.dataset.tags || '').split(',');
+    const fit = Number(el.dataset.fit);
+    const warm = Number(el.dataset.warm);
+    const overdue = el.dataset.overdue === '1';
+    if (activeFilters.has('fit-70') && fit < 70) return false;
+    if (activeFilters.has('warm') && warm < 1) return false;
+    if (activeFilters.has('b2bsaas') && !tags.includes('b2bsaas')) return false;
+    if (activeFilters.has('active7') && !tags.includes('active7')) return false;
+    if (activeFilters.has('overdue') && !overdue) return false;
+    if (q && !el.innerText.toLowerCase().includes(q)) return false;
+    return true;
+  }
+  function applyFilters() {
+    document.querySelectorAll('.card').forEach(card => {
+      card.classList.toggle('hidden-x', !rowVisible(card));
+    });
+    document.querySelectorAll('#list-body .row').forEach(row => {
+      row.classList.toggle('hidden-x', !rowVisible(row));
+    });
+    // counts after filter (board)
+    document.querySelectorAll('.col').forEach(col => {
+      const total = col.querySelectorAll('.card').length;
+      const shown = col.querySelectorAll('.card:not(.hidden-x)').length;
+      const count = col.querySelector('.col-count');
+      count.textContent = (shown === total) ? total : `${shown}/${total}`;
+    });
+    // counts after filter (list groups) — hide groups with no visible rows
+    document.querySelectorAll('.list-group').forEach(g => {
+      const total = g.querySelectorAll('.row').length;
+      const shown = g.querySelectorAll('.row:not(.hidden-x)').length;
+      const c = g.querySelector('.group-count');
+      if (c) c.textContent = (shown === total) ? total : `${shown}/${total}`;
+      g.classList.toggle('hidden-x', shown === 0);
+    });
+    updateFilterSummary();
+  }
+  function updateFilterSummary() {
+    const total = document.querySelectorAll('.card').length;
+    const shown = document.querySelectorAll('.card:not(.hidden-x)').length;
+    const summary = document.getElementById('filter-summary');
+    const fparts = [];
+    if (activeFilters.has('fit-70')) fparts.push('fit≥70');
+    if (activeFilters.has('warm')) fparts.push('warm');
+    if (activeFilters.has('b2bsaas')) fparts.push('B2B SaaS');
+    if (activeFilters.has('active7')) fparts.push('7d');
+    if (activeFilters.has('overdue')) fparts.push('overdue');
+    summary.textContent = (shown === total)
+      ? `${total} jobs · all stages`
+      : `${shown}/${total} jobs · ${fparts.join(' · ') || 'search'}`;
+  }
+  document.querySelectorAll('.filter-chip').forEach(btn => {
+    btn.addEventListener('click', () => {
+      const f = btn.dataset.filter;
+      if (activeFilters.has(f)) {
+        activeFilters.delete(f);
+        btn.classList.remove('!border-accent-500/40','!bg-accent-500/10','!text-accent-300');
+      } else {
+        activeFilters.add(f);
+        btn.classList.add('!border-accent-500/40','!bg-accent-500/10','!text-accent-300');
+      }
+      applyFilters();
+    });
+  });
+  document.getElementById('search').addEventListener('input', applyFilters);
+
+  // ---- Modal ----
+  const modal = document.getElementById('modal');
+  function openModal() { modal.classList.remove('hidden'); }
+  function closeModal() { modal.classList.add('hidden'); }
+  document.getElementById('fab').addEventListener('click', openModal);
+  modal.querySelectorAll('[data-close]').forEach(el => el.addEventListener('click', closeModal));
+
+  // ---- Toast ----
+  let toastTimer = null;
+  function toast(msg) {
+    document.getElementById('toast-msg').textContent = msg;
+    const t = document.getElementById('toast');
+    t.classList.remove('opacity-0','translate-y-3');
+    t.classList.add('opacity-100','translate-y-0');
+    clearTimeout(toastTimer);
+    toastTimer = setTimeout(() => {
+      t.classList.add('opacity-0','translate-y-3');
+      t.classList.remove('opacity-100','translate-y-0');
+    }, 2400);
+  }
+
+  // ---- Detail (preview drawer; full screen comes in Screen 2) ----
+  function openDetail(id) {
+    const j = JOBS.find(x => x.id === id);
+    if (!j) return;
+    toast(`${j.co} · ${j.role} — full detail view is Screen 2`);
+  }
+
+  // ---- Keyboard ----
+  document.addEventListener('keydown', (e) => {
+    if (e.target.tagName === 'INPUT' || e.target.tagName === 'TEXTAREA') {
+      if (e.key === 'Escape') e.target.blur();
+      return;
+    }
+    if (e.key === '/') { e.preventDefault(); document.getElementById('search').focus(); }
+    if (e.key.toLowerCase() === 'n') { e.preventDefault(); openModal(); }
+    if (e.key === 'Escape') closeModal();
+  });
+
+  // ---- Theme ----
+  document.getElementById('theme-toggle').addEventListener('click', () => {
+    document.documentElement.classList.toggle('dark');
+  });
+
+  render();
+</script>
+</body>
+</html>

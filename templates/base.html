@@ -1,0 +1,111 @@
+<!doctype html>
+<html lang="en" class="dark">
+<head>
+<meta charset="utf-8" />
+<meta name="viewport" content="width=device-width, initial-scale=1" />
+<title>{% block title %}Job Tracker{% endblock %}</title>
+<link rel="icon" href="data:image/svg+xml,<svg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 100 100'><text y='.9em' font-size='90'>%F0%9F%93%8B</text></svg>">
+<script src="https://cdn.tailwindcss.com?plugins=forms"></script>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&family=JetBrains+Mono:wght@400;500;600&display=swap" rel="stylesheet">
+<script>
+  tailwind.config = {
+    darkMode: 'class',
+    theme: {
+      extend: {
+        fontFamily: {
+          sans: ['Inter', 'ui-sans-serif', 'system-ui', 'sans-serif'],
+          mono: ['"JetBrains Mono"', 'ui-monospace', 'monospace'],
+        },
+        colors: {
+          base:   { light: '#fafaf9', DEFAULT: '#0b0b0e' },
+          raised: { light: '#ffffff', DEFAULT: '#131318' },
+          sunken: { light: '#f1f0ee', DEFAULT: '#08080b' },
+          line:   { light: '#e6e4e0', DEFAULT: '#26262e' },
+          line2:  { light: '#d8d6d1', DEFAULT: '#32323c' },
+          ink:    { light: '#0f0f12', DEFAULT: '#f4f3ef' },
+          ink2:   { light: '#55554f', DEFAULT: '#a7a6a1' },
+          ink3:   { light: '#85847d', DEFAULT: '#6c6c72' },
+          accent: { 50:'#f5f0ff',100:'#e9deff',200:'#d4bdff',300:'#b896ff',400:'#9a6bff',500:'#7e44ff',600:'#6a2ef0',700:'#5520c4',800:'#42189b',900:'#311271' },
+          saved:    '#9aa0a6',
+          applied:  '#4b8df8',
+          replied:  '#f5a524',
+          interview:'#22c55e',
+          offer:    '#10b981',
+          rejected: '#ef4444',
+          backlog:  '#6b7280',
+        },
+        boxShadow: {
+          'pop': '0 1px 0 rgba(255,255,255,0.04) inset, 0 8px 24px -8px rgba(0,0,0,0.5), 0 2px 6px -1px rgba(0,0,0,0.35)',
+          'pop-light': '0 1px 0 rgba(255,255,255,0.8) inset, 0 8px 24px -8px rgba(15,15,18,0.10), 0 2px 6px -1px rgba(15,15,18,0.06)',
+        },
+        borderRadius: { 'xs': '4px' },
+      }
+    }
+  };
+</script>
+<style>
+  html { font-feature-settings: 'ss01','cv11','cv02'; }
+  body { font-family: 'Inter', system-ui, sans-serif; }
+  .tabular { font-variant-numeric: tabular-nums; }
+  .skeleton {
+    background: linear-gradient(90deg, transparent 0, rgba(255,255,255,0.06) 40%, transparent 80%);
+    background-size: 200% 100%;
+    animation: sheen 1.6s linear infinite;
+  }
+  @keyframes sheen { from { background-position: 200% 0 } to { background-position: -200% 0 } }
+</style>
+{% block extra_head %}{% endblock %}
+</head>
+<body class="bg-base-light text-ink-light dark:bg-base dark:text-ink antialiased min-h-screen">
+
+{% block topbar %}
+<header class="sticky top-0 z-40 border-b border-line-light dark:border-line bg-base-light/80 dark:bg-base/80 backdrop-blur">
+  <div class="max-w-[1280px] mx-auto px-6 md:px-8 h-14 flex items-center justify-between">
+    <div class="flex items-center gap-3">
+      <a href="/" class="flex items-center gap-3">
+        <div class="w-7 h-7 rounded-md bg-accent-500 flex items-center justify-center">
+          <svg viewBox="0 0 20 20" class="w-4 h-4 text-white" fill="none" stroke="currentColor" stroke-width="2.2"><path d="M4 11l4 4 8-9"/></svg>
+        </div>
+        <div class="text-[15px] font-semibold tracking-tight">Job Tracker</div>
+      </a>
+      {% block topbar_breadcrumb %}{% endblock %}
+    </div>
+    <div class="flex items-center gap-2">
+      {% block topbar_actions %}{% endblock %}
+      <button id="theme-toggle" class="h-8 px-3 rounded-md border border-line-light dark:border-line bg-raised-light dark:bg-raised text-[12px] font-medium hover:bg-sunken-light dark:hover:bg-sunken transition">
+        <span class="dark:hidden">☾ Dark</span>
+        <span class="hidden dark:inline">☀ Light</span>
+      </button>
+    </div>
+  </div>
+</header>
+{% endblock %}
+
+<main class="max-w-[1280px] mx-auto px-6 md:px-8 py-6 md:py-8">
+  {% block content %}{% endblock %}
+</main>
+
+<script>
+  // Theme toggle with localStorage persistence
+  (function() {
+    const root = document.documentElement;
+    const stored = localStorage.getItem('jt-theme');
+    if (stored === 'light') root.classList.remove('dark');
+    else if (stored === 'dark') root.classList.add('dark');
+    // else: respect default (dark)
+
+    const btn = document.getElementById('theme-toggle');
+    if (btn) {
+      btn.addEventListener('click', () => {
+        root.classList.toggle('dark');
+        localStorage.setItem('jt-theme', root.classList.contains('dark') ? 'dark' : 'light');
+      });
+    }
+  })();
+</script>
+
+{% block extra_scripts %}{% endblock %}
+</body>
+</html>
