@@ -13,7 +13,7 @@ except ImportError:
     pass
 
 import markdown as md_lib
-from fastapi import Depends, FastAPI, HTTPException, Request, status
+from fastapi import Body, Depends, FastAPI, HTTPException, Request, status
 from fastapi.responses import HTMLResponse, JSONResponse, RedirectResponse
 from fastapi.security import HTTPBasic, HTTPBasicCredentials
 from fastapi.templating import Jinja2Templates
@@ -112,91 +112,142 @@ def _parse_draft(body):
     return label, message
 
 
+PIPELINE_STATUSES = [
+    {"key": "saved",     "label": "Saved",     "color": "#9aa0a6"},
+    {"key": "applied",   "label": "Applied",   "color": "#4b8df8"},
+    {"key": "replied",   "label": "Replied",   "color": "#f5a524"},
+    {"key": "interview", "label": "Interview", "color": "#22c55e"},
+    {"key": "offer",     "label": "Offer",     "color": "#10b981"},
+    {"key": "rejected",  "label": "Rejected",  "color": "#ef4444"},
+    {"key": "backlog",   "label": "Backlog",   "color": "#6b7280"},
+]
+
+
+def _enrich_job(job_dict, today, contacts_by_job, drafts_by_job):
+    """Add kanban-ready computed fields to a job dict."""
+    company = job_dict.get("company") or "?"
+    # Initials: take first letter of first two words (cap at 2 chars)
+    words = [w for w in company.split() if w[0].isalnum()]
+    if len(words) >= 2:
+        ini = (words[0][0] + words[1][0]).upper()
+    else:
+        ini = company[:2].upper()
+
+    pursue = job_dict.get("worth_pursuing")
+    fit = 78 if pursue == "yes" else (50 if pursue == "unsure" else 22)
+
+    next_at = job_dict.get("next_action_at")
+    is_backlog = pursue == "no"
+    is_overdue = bool(next_at and next_at < today and not is_backlog)
+    days_overdue = 0
+    if is_overdue:
+        try:
+            d1 = datetime.strptime(next_at, "%Y-%m-%d").date()
+            d2 = datetime.fromisoformat(today).date()
+            days_overdue = (d2 - d1).days
+        except Exception:
+            pass
+
+    contacts = contacts_by_job.get(job_dict["id"], [])
+    drafts = drafts_by_job.get(job_dict["id"], 0)
+
+    job_dict["ini"] = ini
+    job_dict["fit"] = fit
+    job_dict["contacts"] = contacts
+    job_dict["contact_count"] = len(contacts)
+    job_dict["warm_count"] = len(contacts)  # placeholder; real metric in Phase 3
+    job_dict["is_overdue"] = is_overdue
+    job_dict["days_overdue"] = days_overdue
+    job_dict["draft_count"] = drafts
+    # Activity preview: prefer next_action_note (so card carries something useful)
+    job_dict["activity_preview"] = (
+        job_dict.get("next_action_note")
+        or job_dict.get("notes", "")[:80]
+        or ""
+    )[:120]
+    return job_dict
+
+
 @app.get("/", response_class=HTMLResponse)
 def homepage(request: Request):
     tracker.init_db()
     today = datetime.now().date().isoformat()
 
     with get_connection() as conn:
-        due = conn.execute(
+        jobs_rows = conn.execute("SELECT * FROM jobs ORDER BY id").fetchall()
+        contacts_rows = conn.execute("SELECT * FROM contacts ORDER BY job_id, id").fetchall()
+        drafts_rows = conn.execute(
             """
-            SELECT * FROM jobs
-            WHERE next_action_at IS NOT NULL
-              AND next_action_at <= ?
-              AND (worth_pursuing IS NULL OR worth_pursuing != 'no')
-            ORDER BY next_action_at
-            """,
-            (today,),
-        ).fetchall()
-
-        upcoming = conn.execute(
-            """
-            SELECT * FROM jobs
-            WHERE next_action_at IS NOT NULL
-              AND next_action_at > ?
-              AND (worth_pursuing IS NULL OR worth_pursuing != 'no')
-            ORDER BY next_action_at
-            LIMIT 5
-            """,
-            (today,),
-        ).fetchall()
-
-        jobs = conn.execute(
-            """
-            SELECT * FROM jobs
-            ORDER BY
-                CASE worth_pursuing
-                    WHEN 'yes' THEN 0
-                    WHEN 'unsure' THEN 1
-                    ELSE 2
-                END,
-                id
+            SELECT job_id, COUNT(*) AS n FROM events
+            WHERE event_type = 'note'
+              AND (body LIKE 'SUGGESTED%' OR body LIKE 'OPTIONAL%')
+            GROUP BY job_id
             """
         ).fetchall()
-
-        contacts = conn.execute(
-            "SELECT * FROM contacts ORDER BY job_id, id"
-        ).fetchall()
-
-        backlog_count = conn.execute(
-            "SELECT COUNT(*) AS n FROM jobs WHERE worth_pursuing = 'no'"
-        ).fetchone()["n"]
-
-        drafts_pending = conn.execute(
-            """
-            SELECT COUNT(*) AS n FROM events e
-            JOIN jobs j ON j.id = e.job_id
-            WHERE e.event_type = 'note'
-              AND (e.body LIKE 'SUGGESTED%' OR e.body LIKE 'OPTIONAL%')
-              AND (j.worth_pursuing IS NULL OR j.worth_pursuing != 'no')
-            """
-        ).fetchone()["n"]
 
     contacts_by_job = {}
-    for c in contacts:
+    for c in contacts_rows:
         contacts_by_job.setdefault(c["job_id"], []).append(dict(c))
+    drafts_by_job = {r["job_id"]: r["n"] for r in drafts_rows}
 
-    jobs_with_contacts = []
+    jobs = [_enrich_job(dict(j), today, contacts_by_job, drafts_by_job) for j in jobs_rows]
+
+    # Stats
+    status_counts = {s["key"]: 0 for s in PIPELINE_STATUSES}
+    overdue_count = 0
+    drafts_pending = 0
+    due_today_count = 0
+    upcoming_count = 0
+    offer_count = 0
     for j in jobs:
-        d = dict(j)
-        d["contacts"] = contacts_by_job.get(j["id"], [])
-        d["is_overdue"] = (
-            d.get("next_action_at") is not None
-            and d["next_action_at"] < today
-            and d.get("worth_pursuing") != "no"
-        )
-        jobs_with_contacts.append(d)
+        status_counts[j["status"]] = status_counts.get(j["status"], 0) + 1
+        if j["is_overdue"]:
+            overdue_count += 1
+        if j.get("draft_count") and j.get("worth_pursuing") != "no":
+            drafts_pending += j["draft_count"]
+        next_at = j.get("next_action_at")
+        if next_at and j.get("worth_pursuing") != "no":
+            if next_at <= today:
+                due_today_count += 1
+            else:
+                # Upcoming = within 7 days
+                try:
+                    d1 = datetime.strptime(next_at, "%Y-%m-%d").date()
+                    d2 = datetime.fromisoformat(today).date()
+                    if (d1 - d2).days <= 7:
+                        upcoming_count += 1
+                except Exception:
+                    pass
+        if j["status"] == "offer":
+            offer_count += 1
+
+    backlog_count = status_counts.get("backlog", 0)
+    total_active = sum(c for s, c in status_counts.items() if s != "backlog")
+
+    # Group jobs by status (preserve PIPELINE_STATUSES order)
+    by_status = {s["key"]: [] for s in PIPELINE_STATUSES}
+    for j in jobs:
+        if j["status"] in by_status:
+            by_status[j["status"]].append(j)
+        else:
+            # Unknown status falls into Saved
+            by_status["saved"].append(j)
 
     return TEMPLATES.TemplateResponse(
         "index.html",
         {
             "request": request,
             "today": today,
-            "due": _rows_to_dicts(due),
-            "upcoming": _rows_to_dicts(upcoming),
-            "jobs": jobs_with_contacts,
+            "jobs": jobs,
+            "by_status": by_status,
+            "statuses": PIPELINE_STATUSES,
+            "status_counts": status_counts,
+            "overdue_count": overdue_count,
+            "due_today_count": due_today_count,
+            "upcoming_count": upcoming_count,
+            "offer_count": offer_count,
             "backlog_count": backlog_count,
-            "total_active": len(jobs_with_contacts) - backlog_count,
+            "total_active": total_active,
             "drafts_pending": drafts_pending,
         },
     )
@@ -292,6 +343,62 @@ def job_resume(job_id: int, request: Request):
             "pdf_filename": pdf_filename,
         },
     )
+
+
+# ─────────────────────────────────────────────────────────────────────────────
+# Job mutations (used by kanban drag-and-drop + future Add Job modal)
+# ─────────────────────────────────────────────────────────────────────────────
+
+
+@app.post("/jobs/{job_id}/status")
+def update_job_status(job_id: int, payload: dict = Body(...)):
+    """Change a job's status — used by drag-and-drop in the kanban view.
+
+    Body: {"status": "applied"}.
+    Side effects: updates jobs.status + jobs.last_activity_at, appends a
+    status_change event to the events table.
+    """
+    new_status = (payload or {}).get("status")
+    if not new_status or not isinstance(new_status, str):
+        return JSONResponse(
+            status_code=400,
+            content={"error": "missing_status", "message": "Body must be {\"status\": \"<new>\"}."},
+        )
+    new_status = new_status.strip()
+
+    tracker.init_db()
+    now = datetime.now().isoformat(timespec="seconds")
+
+    with get_connection() as conn:
+        job = conn.execute(
+            "SELECT id, status FROM jobs WHERE id = ?", (job_id,)
+        ).fetchone()
+        if not job:
+            return JSONResponse(
+                status_code=404,
+                content={"error": "not_found", "message": f"Job #{job_id} not found"},
+            )
+        old_status = job["status"]
+        if old_status == new_status:
+            return {"ok": True, "id": job_id, "status": new_status, "changed": False}
+
+        conn.execute(
+            "UPDATE jobs SET status = ?, last_activity_at = ? WHERE id = ?",
+            (new_status, now, job_id),
+        )
+        conn.execute(
+            "INSERT INTO events (job_id, event_type, body, occurred_at, recorded_at) "
+            "VALUES (?, ?, ?, ?, ?)",
+            (job_id, "status_change", f"{old_status} -> {new_status}", now, now),
+        )
+
+    return {
+        "ok": True,
+        "id": job_id,
+        "from": old_status,
+        "to": new_status,
+        "changed": True,
+    }
 
 
 # ─────────────────────────────────────────────────────────────────────────────

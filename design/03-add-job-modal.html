@@ -1,0 +1,532 @@
+<!doctype html>
+<html lang="en" class="dark">
+<head>
+<meta charset="utf-8" />
+<meta name="viewport" content="width=device-width, initial-scale=1" />
+<title>Job Tracker — Add Job</title>
+<script src="https://cdn.tailwindcss.com"></script>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&family=JetBrains+Mono:wght@400;500;600&display=swap" rel="stylesheet">
+<script>
+  tailwind.config = {
+    darkMode: 'class',
+    theme: {
+      extend: {
+        fontFamily: {
+          sans: ['Inter','ui-sans-serif','system-ui','sans-serif'],
+          mono: ['"JetBrains Mono"','ui-monospace','monospace'],
+        },
+        colors: {
+          base:   { light: '#fafaf9', DEFAULT: '#0b0b0e' },
+          raised: { light: '#ffffff', DEFAULT: '#131318' },
+          sunken: { light: '#f1f0ee', DEFAULT: '#08080b' },
+          line:   { light: '#e6e4e0', DEFAULT: '#26262e' },
+          line2:  { light: '#d8d6d1', DEFAULT: '#32323c' },
+          ink:    { light: '#0f0f12', DEFAULT: '#f4f3ef' },
+          ink2:   { light: '#55554f', DEFAULT: '#a7a6a1' },
+          ink3:   { light: '#85847d', DEFAULT: '#6c6c72' },
+          accent: { 100:'#e9deff',300:'#b896ff',400:'#9a6bff',500:'#7e44ff',600:'#6a2ef0' },
+          saved:'#9aa0a6', applied:'#4b8df8', replied:'#f5a524',
+          interview:'#22c55e', offer:'#10b981', rejected:'#ef4444', backlog:'#6b7280',
+        },
+        boxShadow: {
+          'pop': '0 20px 60px -20px rgba(0,0,0,0.7), 0 4px 12px -2px rgba(0,0,0,0.4)',
+          'pop-light': '0 20px 60px -20px rgba(15,15,18,0.25), 0 4px 12px -2px rgba(15,15,18,0.08)',
+        },
+      }
+    }
+  };
+</script>
+<style>
+  html, body { height: 100%; }
+  body { font-family: 'Inter', system-ui, sans-serif; font-feature-settings: 'ss01','cv11','cv02'; }
+  .tabular { font-variant-numeric: tabular-nums; }
+  .nice-scroll::-webkit-scrollbar { width: 8px; height: 8px; }
+  .nice-scroll::-webkit-scrollbar-thumb { background: rgba(255,255,255,0.06); border-radius: 999px; }
+  html:not(.dark) .nice-scroll::-webkit-scrollbar-thumb { background: rgba(15,15,18,0.08); }
+  /* shimmering progress bar */
+  .progress { position: relative; overflow: hidden; }
+  .progress::after {
+    content: '';
+    position: absolute; inset: 0;
+    background: linear-gradient(90deg, transparent, rgba(126,68,255,0.55), transparent);
+    transform: translateX(-100%);
+    animation: slide 1.6s ease-in-out infinite;
+  }
+  @keyframes slide { to { transform: translateX(100%); } }
+  /* dotted backdrop to imply the pipeline behind */
+  .backdrop-dots {
+    background-image: radial-gradient(currentColor 1px, transparent 1px);
+    background-size: 18px 18px;
+  }
+  /* editable-field underline on hover */
+  .editable { border-radius: 4px; padding: 1px 4px; margin: -1px -4px; transition: background .1s; }
+  .editable:hover { background: rgba(126,68,255,0.06); outline: 1px dashed rgba(126,68,255,0.4); outline-offset: 0; }
+  /* confidence dot rings */
+  .conf-high { background: #22c55e; }
+  .conf-med  { background: #f5a524; }
+  .conf-low  { background: #ef4444; }
+  /* fade-in for analyzed state */
+  .fade-in { animation: fade .25s ease-out both; }
+  @keyframes fade { from { opacity: 0; transform: translateY(4px); } to { opacity: 1; transform: none; } }
+  details > summary { list-style: none; }
+  details > summary::-webkit-details-marker { display: none; }
+</style>
+</head>
+<body class="bg-base-light dark:bg-base text-ink-light dark:text-ink antialiased min-h-screen overflow-hidden">
+
+<!-- ============ DIMMED PIPELINE BACKDROP ============ -->
+<div class="absolute inset-0 -z-0">
+  <!-- minimal pipeline silhouette to imply context -->
+  <div class="absolute inset-0 backdrop-dots text-line-light dark:text-line opacity-50"></div>
+  <div class="absolute inset-x-0 top-0 h-12 border-b border-line-light dark:border-line bg-base-light/85 dark:bg-base/85 backdrop-blur flex items-center px-6 gap-2.5">
+    <div class="w-6 h-6 rounded-md bg-accent-500 grid place-items-center">
+      <svg viewBox="0 0 20 20" class="w-3.5 h-3.5 text-white" fill="none" stroke="currentColor" stroke-width="2.4"><path d="M4 11l4 4 8-9"/></svg>
+    </div>
+    <span class="text-[13px] font-semibold tracking-tight">Job Tracker</span>
+    <span class="text-ink3 text-[12px]">·</span>
+    <span class="text-ink2 text-[12px]">Pipeline</span>
+  </div>
+  <!-- Faint kanban hint -->
+  <div class="absolute inset-x-0 top-20 px-6 flex gap-3 opacity-40">
+    <div class="w-[260px] h-[420px] rounded-xl bg-sunken-light dark:bg-sunken border border-line-light dark:border-line"></div>
+    <div class="w-[260px] h-[420px] rounded-xl bg-sunken-light dark:bg-sunken border border-line-light dark:border-line"></div>
+    <div class="w-[260px] h-[420px] rounded-xl bg-sunken-light dark:bg-sunken border border-line-light dark:border-line"></div>
+    <div class="w-[260px] h-[420px] rounded-xl bg-sunken-light dark:bg-sunken border border-line-light dark:border-line"></div>
+  </div>
+</div>
+
+<!-- ============ MODAL BACKDROP ============ -->
+<div class="fixed inset-0 z-10 bg-black/55 backdrop-blur-sm"></div>
+
+<!-- ============ MODAL ============ -->
+<section class="fixed left-1/2 top-1/2 -translate-x-1/2 -translate-y-1/2 z-20 w-[720px] max-w-[95vw] max-h-[92vh] rounded-2xl border border-line-light dark:border-line bg-raised-light dark:bg-raised shadow-pop-light dark:shadow-pop overflow-hidden flex flex-col">
+  <!-- header -->
+  <header class="shrink-0 px-5 py-3.5 border-b border-line-light dark:border-line flex items-center gap-3">
+    <div class="w-7 h-7 rounded-md bg-accent-500/15 text-accent-300 grid place-items-center">
+      <svg class="w-3.5 h-3.5" viewBox="0 0 16 16" fill="none" stroke="currentColor" stroke-width="2.2"><path d="M8 2v12M2 8h12"/></svg>
+    </div>
+    <div class="flex-1">
+      <div class="text-[14px] font-semibold leading-tight">Add a job</div>
+      <div class="text-[11.5px] text-ink3 font-mono">lands in Saved → drag to Applied when you send</div>
+    </div>
+    <kbd class="px-1.5 h-5 rounded border border-line-light dark:border-line bg-sunken-light dark:bg-sunken text-[10.5px] font-mono text-ink3 inline-flex items-center">Esc</kbd>
+    <button class="w-7 h-7 grid place-items-center rounded-md text-ink2 hover:text-ink hover:bg-sunken-light dark:hover:bg-sunken">
+      <svg class="w-3.5 h-3.5" viewBox="0 0 16 16" fill="none" stroke="currentColor" stroke-width="2"><path d="M4 4l8 8M12 4l-8 8"/></svg>
+    </button>
+  </header>
+
+  <!-- TABS -->
+  <div class="shrink-0 px-5 pt-4 pb-3 border-b border-line-light dark:border-line bg-base-light/60 dark:bg-base/40">
+    <div class="inline-flex p-0.5 rounded-md bg-sunken-light dark:bg-sunken border border-line-light dark:border-line" role="tablist">
+      <button data-tab="url" class="tab-btn h-8 px-3 rounded text-[12.5px] font-medium inline-flex items-center gap-1.5 bg-raised-light dark:bg-base shadow-pop-light dark:shadow-pop">
+        <svg class="w-3.5 h-3.5" viewBox="0 0 16 16" fill="none" stroke="currentColor" stroke-width="1.8"><path d="M6.5 9.5l3-3M5 8H3.5a2.5 2.5 0 010-5h2A2.5 2.5 0 018 5.5M11 8h1.5a2.5 2.5 0 010 5h-2A2.5 2.5 0 018 10.5"/></svg>
+        Paste URL
+      </button>
+      <button data-tab="jd" class="tab-btn h-8 px-3 rounded text-[12.5px] font-medium inline-flex items-center gap-1.5 text-ink2">
+        <svg class="w-3.5 h-3.5" viewBox="0 0 16 16" fill="none" stroke="currentColor" stroke-width="1.8"><rect x="2.5" y="2" width="11" height="12" rx="1.5"/><path d="M5 5h6M5 8h6M5 11h4"/></svg>
+        Paste JD
+      </button>
+      <button data-tab="manual" class="tab-btn h-8 px-3 rounded text-[12.5px] font-medium inline-flex items-center gap-1.5 text-ink2">
+        <svg class="w-3.5 h-3.5" viewBox="0 0 16 16" fill="none" stroke="currentColor" stroke-width="1.8"><path d="M3 11l8-8 2 2-8 8H3v-2zM10 4l2 2"/></svg>
+        Manual entry
+      </button>
+    </div>
+  </div>
+
+  <!-- BODY (scrolls) -->
+  <div class="flex-1 min-h-0 overflow-y-auto nice-scroll">
+
+    <!-- ============ TAB: PASTE URL ============ -->
+    <div data-pane="url" class="tab-pane p-6">
+      <!-- STATE A: empty input -->
+      <div data-state="empty" class="state space-y-4">
+        <label class="block">
+          <div class="flex items-baseline justify-between">
+            <span class="text-[12px] font-medium">LinkedIn / job board URL</span>
+            <span class="text-[10.5px] font-mono text-ink3">supports linkedin · naukri · careers pages</span>
+          </div>
+          <div class="relative mt-1.5">
+            <svg class="absolute left-3 top-1/2 -translate-y-1/2 w-4 h-4 text-ink3" viewBox="0 0 16 16" fill="none" stroke="currentColor" stroke-width="1.8"><path d="M6.5 9.5l3-3M5 8H3.5a2.5 2.5 0 010-5h2A2.5 2.5 0 018 5.5M11 8h1.5a2.5 2.5 0 010 5h-2A2.5 2.5 0 018 10.5"/></svg>
+            <input id="url-input" type="text" value="https://www.linkedin.com/jobs/view/3984172201/" class="w-full h-11 pl-10 pr-3 rounded-lg bg-base-light dark:bg-base border border-line-light dark:border-line text-[13.5px] font-mono placeholder:text-ink3 focus:outline-none focus:ring-2 focus:ring-accent-500/40 focus:border-accent-500/50"/>
+          </div>
+        </label>
+        <!-- Quick chips of recent paste sources -->
+        <div class="flex items-center gap-2">
+          <span class="text-[11px] font-mono text-ink3">Recent:</span>
+          <button class="h-6 px-2 rounded-md text-[11.5px] bg-sunken-light dark:bg-sunken text-ink2 inline-flex items-center gap-1.5"><span class="w-1.5 h-1.5 rounded-full bg-applied"></span>linkedin.com</button>
+          <button class="h-6 px-2 rounded-md text-[11.5px] bg-sunken-light dark:bg-sunken text-ink2 inline-flex items-center gap-1.5"><span class="w-1.5 h-1.5 rounded-full bg-replied"></span>naukri.com</button>
+          <button class="h-6 px-2 rounded-md text-[11.5px] bg-sunken-light dark:bg-sunken text-ink2 inline-flex items-center gap-1.5"><span class="w-1.5 h-1.5 rounded-full bg-interview"></span>careers.razorpay</button>
+        </div>
+        <!-- helper -->
+        <div class="rounded-lg border border-line-light dark:border-line bg-base-light dark:bg-base p-3 flex items-start gap-2.5">
+          <svg class="w-4 h-4 mt-0.5 text-accent-400 shrink-0" viewBox="0 0 16 16" fill="currentColor"><circle cx="8" cy="8" r="6.8" fill="none" stroke="currentColor" stroke-width="1.4"/><path d="M8 4v4M8 11h0" stroke="currentColor" stroke-width="1.4"/></svg>
+          <div class="text-[12.5px] text-ink2 leading-relaxed">
+            We'll fetch the page, then run 5 brains in parallel — JD, Company, Persona, Resume, Outreach. Usually <span class="font-mono text-ink dark:text-ink">~12s</span>. You can edit any field before saving.
+          </div>
+        </div>
+        <!-- brains preview -->
+        <div class="grid grid-cols-5 gap-2">
+          <div class="rounded-md border border-line-light dark:border-line bg-base-light dark:bg-base px-2.5 py-2 text-[11px] flex items-center gap-1.5"><span class="w-1.5 h-1.5 rounded-full bg-applied"></span>JD</div>
+          <div class="rounded-md border border-line-light dark:border-line bg-base-light dark:bg-base px-2.5 py-2 text-[11px] flex items-center gap-1.5"><span class="w-1.5 h-1.5 rounded-full bg-interview"></span>Company</div>
+          <div class="rounded-md border border-line-light dark:border-line bg-base-light dark:bg-base px-2.5 py-2 text-[11px] flex items-center gap-1.5"><span class="w-1.5 h-1.5 rounded-full bg-replied"></span>Persona</div>
+          <div class="rounded-md border border-line-light dark:border-line bg-base-light dark:bg-base px-2.5 py-2 text-[11px] flex items-center gap-1.5"><span class="w-1.5 h-1.5 rounded-full bg-accent-400"></span>Resume</div>
+          <div class="rounded-md border border-line-light dark:border-line bg-base-light dark:bg-base px-2.5 py-2 text-[11px] flex items-center gap-1.5"><span class="w-1.5 h-1.5 rounded-full bg-offer"></span>Outreach</div>
+        </div>
+      </div>
+
+      <!-- STATE B: loading -->
+      <div data-state="loading" class="state hidden space-y-4">
+        <div class="rounded-lg border border-line-light dark:border-line bg-base-light dark:bg-base p-4">
+          <div class="flex items-center gap-2.5">
+            <div class="w-7 h-7 rounded bg-accent-500/15 text-accent-300 grid place-items-center text-[10px] font-mono font-bold animate-pulse">RP</div>
+            <div class="flex-1 min-w-0">
+              <div class="text-[13px] font-medium truncate">Analyzing <span class="font-mono">linkedin.com/jobs/3984172201</span></div>
+              <div class="text-[11.5px] text-ink3 font-mono">est. 12s remaining</div>
+            </div>
+            <button class="h-7 px-2.5 rounded-md text-[12px] text-ink2 hover:text-ink hover:bg-sunken-light dark:hover:bg-sunken">Cancel</button>
+          </div>
+          <div class="mt-3 h-1.5 rounded-full bg-sunken-light dark:bg-sunken overflow-hidden progress"></div>
+        </div>
+        <!-- per-brain progress -->
+        <div class="grid grid-cols-5 gap-2 text-[11.5px]">
+          <div class="rounded-md border border-line-light dark:border-line bg-base-light dark:bg-base px-2.5 py-2 flex items-center gap-1.5"><span class="w-2 h-2 rounded-full bg-interview"></span><span>JD</span><span class="ml-auto font-mono text-ink3">2.1s</span></div>
+          <div class="rounded-md border border-line-light dark:border-line bg-base-light dark:bg-base px-2.5 py-2 flex items-center gap-1.5"><span class="w-2 h-2 rounded-full bg-interview"></span><span>Company</span><span class="ml-auto font-mono text-ink3">3.4s</span></div>
+          <div class="rounded-md border border-line-light dark:border-line bg-base-light dark:bg-base px-2.5 py-2 flex items-center gap-1.5"><span class="w-2 h-2 rounded-full bg-replied animate-pulse"></span><span>Persona</span><span class="ml-auto font-mono text-ink3">running…</span></div>
+          <div class="rounded-md border border-line-light dark:border-line bg-base-light dark:bg-base px-2.5 py-2 flex items-center gap-1.5"><span class="w-2 h-2 rounded-full bg-ink3"></span><span class="text-ink2">Resume</span><span class="ml-auto font-mono text-ink3">queued</span></div>
+          <div class="rounded-md border border-line-light dark:border-line bg-base-light dark:bg-base px-2.5 py-2 flex items-center gap-1.5"><span class="w-2 h-2 rounded-full bg-ink3"></span><span class="text-ink2">Outreach</span><span class="ml-auto font-mono text-ink3">queued</span></div>
+        </div>
+        <!-- skeleton rows -->
+        <div class="rounded-xl border border-line-light dark:border-line bg-base-light dark:bg-base p-4 space-y-3">
+          <div class="grid grid-cols-3 gap-3">
+            <div><div class="h-2.5 w-12 rounded bg-sunken-light dark:bg-sunken"></div><div class="mt-2 h-4 w-3/4 rounded bg-sunken-light dark:bg-sunken"></div></div>
+            <div><div class="h-2.5 w-10 rounded bg-sunken-light dark:bg-sunken"></div><div class="mt-2 h-4 w-1/2 rounded bg-sunken-light dark:bg-sunken"></div></div>
+            <div><div class="h-2.5 w-12 rounded bg-sunken-light dark:bg-sunken"></div><div class="mt-2 h-4 w-2/3 rounded bg-sunken-light dark:bg-sunken"></div></div>
+          </div>
+          <div class="h-2.5 w-full rounded bg-sunken-light dark:bg-sunken"></div>
+          <div class="h-2.5 w-5/6 rounded bg-sunken-light dark:bg-sunken"></div>
+          <div class="h-2.5 w-3/4 rounded bg-sunken-light dark:bg-sunken"></div>
+        </div>
+      </div>
+
+      <!-- STATE C: analyzed preview -->
+      <div data-state="analyzed" class="state hidden space-y-4 fade-in">
+        <!-- preview header -->
+        <div class="rounded-xl border border-line-light dark:border-line bg-base-light dark:bg-base p-4 flex items-start gap-4">
+          <div class="w-12 h-12 rounded-lg bg-applied/15 text-applied grid place-items-center text-[16px] font-mono font-bold shrink-0">RP</div>
+          <div class="flex-1 min-w-0">
+            <div class="flex items-center gap-2 flex-wrap">
+              <div class="text-[15px] font-semibold leading-tight">Senior Product Manager · Pricing &amp; Packaging</div>
+              <span class="inline-flex items-center gap-1.5 px-1.5 h-5 rounded bg-interview/15 text-interview text-[10.5px] font-mono">
+                <svg class="w-2.5 h-2.5" viewBox="0 0 16 16" fill="currentColor"><path d="M3 8l3 3 7-7"/></svg>
+                Extracted
+              </span>
+            </div>
+            <div class="text-[12px] text-ink2 mt-0.5">Razorpay · Bangalore · Hybrid · ₹38–48L</div>
+          </div>
+          <div class="flex flex-col items-end">
+            <div class="relative w-12 h-12">
+              <svg viewBox="0 0 36 36" class="w-12 h-12 -rotate-90"><circle cx="18" cy="18" r="15.5" fill="none" stroke="currentColor" class="text-line-light dark:text-line" stroke-width="3"/><circle cx="18" cy="18" r="15.5" fill="none" stroke="currentColor" class="text-applied" stroke-width="3" stroke-dasharray="78 100" stroke-linecap="round"/></svg>
+              <div class="absolute inset-0 grid place-items-center text-[12px] font-mono tabular font-semibold">78</div>
+            </div>
+            <span class="text-[10px] font-mono text-ink3 uppercase tracking-[0.12em] mt-0.5">fit</span>
+          </div>
+        </div>
+
+        <!-- Editable fields with confidence -->
+        <div class="rounded-xl border border-line-light dark:border-line bg-base-light dark:bg-base divide-y divide-line-light dark:divide-line">
+          <div class="px-4 py-3 flex items-center gap-3">
+            <span class="text-[11px] font-mono text-ink3 uppercase tracking-[0.14em] w-24 shrink-0">Title</span>
+            <span class="editable text-[13px] font-medium flex-1 cursor-text" contenteditable="true">Senior Product Manager — Pricing &amp; Packaging</span>
+            <span class="inline-flex items-center gap-1.5 text-[10.5px] font-mono text-ink3"><span class="w-1.5 h-1.5 rounded-full conf-high"></span>96%</span>
+          </div>
+          <div class="px-4 py-3 flex items-center gap-3">
+            <span class="text-[11px] font-mono text-ink3 uppercase tracking-[0.14em] w-24 shrink-0">Company</span>
+            <span class="editable text-[13px] font-medium flex-1 cursor-text" contenteditable="true">Razorpay</span>
+            <span class="inline-flex items-center gap-1.5 text-[10.5px] font-mono text-ink3"><span class="w-1.5 h-1.5 rounded-full conf-high"></span>99%</span>
+          </div>
+          <div class="px-4 py-3 flex items-center gap-3">
+            <span class="text-[11px] font-mono text-ink3 uppercase tracking-[0.14em] w-24 shrink-0">Location</span>
+            <span class="editable text-[13px] flex-1 cursor-text" contenteditable="true">Bangalore · Hybrid (3d/wk)</span>
+            <span class="inline-flex items-center gap-1.5 text-[10.5px] font-mono text-ink3"><span class="w-1.5 h-1.5 rounded-full conf-high"></span>92%</span>
+          </div>
+          <div class="px-4 py-3 flex items-center gap-3">
+            <span class="text-[11px] font-mono text-ink3 uppercase tracking-[0.14em] w-24 shrink-0">Level / YoE</span>
+            <span class="editable text-[13px] flex-1 font-mono cursor-text" contenteditable="true">Senior · 5–8 yrs</span>
+            <span class="inline-flex items-center gap-1.5 text-[10.5px] font-mono text-ink3"><span class="w-1.5 h-1.5 rounded-full conf-high"></span>88%</span>
+          </div>
+          <div class="px-4 py-3 flex items-center gap-3">
+            <span class="text-[11px] font-mono text-ink3 uppercase tracking-[0.14em] w-24 shrink-0">Comp</span>
+            <span class="editable text-[13px] flex-1 font-mono cursor-text" contenteditable="true">₹38–48L base + ESOPs (signal · P75)</span>
+            <span class="inline-flex items-center gap-1.5 text-[10.5px] font-mono text-ink3"><span class="w-1.5 h-1.5 rounded-full conf-med"></span>61% · inferred</span>
+          </div>
+          <div class="px-4 py-3 flex items-center gap-3">
+            <span class="text-[11px] font-mono text-ink3 uppercase tracking-[0.14em] w-24 shrink-0">Posted</span>
+            <span class="editable text-[13px] flex-1 cursor-text" contenteditable="true">21 May 2026 · 3d ago · 1.2k applicants</span>
+            <span class="inline-flex items-center gap-1.5 text-[10.5px] font-mono text-ink3"><span class="w-1.5 h-1.5 rounded-full conf-high"></span>94%</span>
+          </div>
+          <div class="px-4 py-3 flex items-start gap-3">
+            <span class="text-[11px] font-mono text-ink3 uppercase tracking-[0.14em] w-24 shrink-0 pt-0.5">Skills</span>
+            <div class="flex-1 flex flex-wrap gap-1.5">
+              <span class="px-2 h-6 inline-flex items-center rounded bg-applied/15 text-applied text-[11.5px] font-medium">SQL <button class="ml-1 text-applied/70 hover:text-applied">×</button></span>
+              <span class="px-2 h-6 inline-flex items-center rounded bg-applied/15 text-applied text-[11.5px] font-medium">Pricing strategy <button class="ml-1 text-applied/70 hover:text-applied">×</button></span>
+              <span class="px-2 h-6 inline-flex items-center rounded bg-applied/15 text-applied text-[11.5px] font-medium">PLG metrics <button class="ml-1 text-applied/70 hover:text-applied">×</button></span>
+              <span class="px-2 h-6 inline-flex items-center rounded bg-sunken-light dark:bg-sunken text-ink2 text-[11.5px]">Stakeholder mgmt <button class="ml-1 text-ink3 hover:text-ink">×</button></span>
+              <span class="px-2 h-6 inline-flex items-center rounded bg-sunken-light dark:bg-sunken text-ink2 text-[11.5px]">Roadmapping <button class="ml-1 text-ink3 hover:text-ink">×</button></span>
+              <button class="px-2 h-6 inline-flex items-center rounded border border-dashed border-line2-light dark:border-line2 text-ink3 text-[11.5px]">+ Add</button>
+            </div>
+            <span class="inline-flex items-center gap-1.5 text-[10.5px] font-mono text-ink3 pt-0.5"><span class="w-1.5 h-1.5 rounded-full conf-high"></span>89%</span>
+          </div>
+          <div class="px-4 py-3 flex items-center gap-3">
+            <span class="text-[11px] font-mono text-ink3 uppercase tracking-[0.14em] w-24 shrink-0">Hiring team</span>
+            <div class="flex-1 flex items-center gap-3">
+              <div class="flex items-center gap-2">
+                <div class="w-6 h-6 rounded-full bg-applied/20 text-applied grid place-items-center text-[10px] font-mono font-semibold">LM</div>
+                <span class="text-[12.5px]">Latika M. <span class="text-ink3">· HM</span></span>
+                <span class="inline-flex items-center gap-1 text-[10.5px] font-mono text-accent-300"><svg class="w-2.5 h-2.5" viewBox="0 0 16 16" fill="currentColor"><path d="M8 1.3l1.9 3.9 4.3.6-3.1 3 .7 4.3L8 11l-3.8 2.1.7-4.3-3.1-3 4.3-.6z"/></svg>2 mutuals</span>
+              </div>
+              <span class="h-3 w-px bg-line-light dark:bg-line"></span>
+              <div class="flex items-center gap-2">
+                <div class="w-6 h-6 rounded-full bg-replied/20 text-replied grid place-items-center text-[10px] font-mono font-semibold">AT</div>
+                <span class="text-[12.5px]">Athar T. <span class="text-ink3">· Recruiter</span></span>
+              </div>
+            </div>
+            <span class="inline-flex items-center gap-1.5 text-[10.5px] font-mono text-ink3"><span class="w-1.5 h-1.5 rounded-full conf-high"></span>2 found</span>
+          </div>
+          <!-- Tags + status -->
+          <div class="px-4 py-3 flex items-center gap-3">
+            <span class="text-[11px] font-mono text-ink3 uppercase tracking-[0.14em] w-24 shrink-0">Tags</span>
+            <div class="flex-1 flex flex-wrap gap-1.5">
+              <span class="px-1.5 h-5 inline-flex items-center rounded bg-sunken-light dark:bg-sunken text-[11px] font-mono">B2B SaaS</span>
+              <span class="px-1.5 h-5 inline-flex items-center rounded bg-sunken-light dark:bg-sunken text-[11px] font-mono">Payments</span>
+              <span class="px-1.5 h-5 inline-flex items-center rounded bg-sunken-light dark:bg-sunken text-[11px] font-mono">Monetization</span>
+              <button class="px-1.5 h-5 inline-flex items-center rounded border border-dashed border-line2-light dark:border-line2 text-ink3 text-[11px] font-mono">+</button>
+            </div>
+            <select class="h-7 px-2 rounded-md border border-line-light dark:border-line bg-raised-light dark:bg-raised text-[12px]">
+              <option>Pursue · Saved</option>
+              <option>Apply now · Applied</option>
+              <option>Backlog</option>
+            </select>
+          </div>
+        </div>
+
+        <!-- Resume + Outreach previews -->
+        <div class="grid grid-cols-2 gap-3">
+          <div class="rounded-xl border border-line-light dark:border-line bg-base-light dark:bg-base p-3.5">
+            <div class="flex items-center gap-2">
+              <span class="w-5 h-5 rounded grid place-items-center bg-accent-500/15 text-accent-300 text-[10px] font-mono font-bold">RS</span>
+              <span class="text-[12.5px] font-semibold">Resume Brain</span>
+              <span class="ml-auto px-1.5 h-4.5 inline-flex items-center rounded bg-accent-500/15 text-accent-300 text-[10px] font-mono">5 tweaks ready</span>
+            </div>
+            <div class="mt-2 text-[12px] text-ink2 leading-relaxed">Tailored bullets focusing on <span class="font-medium text-ink-light dark:text-ink">Cubeit pricing experiments</span> + SQL cohort work. Surfaces 3 buried keywords.</div>
+            <button class="mt-2.5 h-7 px-2.5 rounded-md border border-line-light dark:border-line text-[12px] font-medium">Preview in Studio →</button>
+          </div>
+          <div class="rounded-xl border border-line-light dark:border-line bg-base-light dark:bg-base p-3.5">
+            <div class="flex items-center gap-2">
+              <span class="w-5 h-5 rounded grid place-items-center bg-offer/15 text-offer text-[10px] font-mono font-bold">OU</span>
+              <span class="text-[12.5px] font-semibold">Outreach Brain</span>
+              <span class="ml-auto px-1.5 h-4.5 inline-flex items-center rounded bg-offer/15 text-offer text-[10px] font-mono">3 drafts</span>
+            </div>
+            <div class="mt-2 text-[12px] text-ink2 leading-relaxed">Connect note (198 chars) + post-accept follow-up + fallback cold to <span class="font-medium text-ink-light dark:text-ink">Athar T.</span></div>
+            <button class="mt-2.5 h-7 px-2.5 rounded-md border border-line-light dark:border-line text-[12px] font-medium">Preview drafts →</button>
+          </div>
+        </div>
+
+        <!-- Conflict / dedupe warning -->
+        <div class="rounded-lg border border-replied/30 bg-replied/8 dark:bg-replied/10 px-3.5 py-2.5 flex items-start gap-2.5">
+          <svg class="w-4 h-4 mt-0.5 text-replied shrink-0" viewBox="0 0 16 16" fill="currentColor"><path d="M8 1l7 13H1L8 1zm-.8 5h1.6v4H7.2V6zM8 11.4a.9.9 0 100 1.8.9.9 0 000-1.8z"/></svg>
+          <div class="flex-1 text-[12.5px] leading-relaxed">
+            <span class="font-medium">Possible duplicate:</span>
+            <span class="text-ink2">"Senior PM · Pricing" at Razorpay was added on 18 May (currently in <span class="px-1 rounded bg-applied/15 text-applied font-mono">Applied</span>).</span>
+          </div>
+          <button class="h-7 px-2.5 rounded-md border border-line-light dark:border-line text-[12px] font-medium">Open existing</button>
+          <button class="h-7 px-2.5 rounded-md text-[12px] text-ink2 hover:text-ink">Add anyway</button>
+        </div>
+      </div>
+    </div>
+
+    <!-- ============ TAB: PASTE JD ============ -->
+    <div data-pane="jd" class="tab-pane hidden p-6 space-y-4">
+      <div class="grid grid-cols-2 gap-3">
+        <label class="block">
+          <span class="text-[12px] font-medium">Company <span class="text-ink3 font-normal font-mono">· optional</span></span>
+          <input type="text" placeholder="e.g. Razorpay" class="mt-1.5 w-full h-9 px-3 rounded-md bg-base-light dark:bg-base border border-line-light dark:border-line text-[13px] placeholder:text-ink3 focus:outline-none focus:ring-2 focus:ring-accent-500/40"/>
+        </label>
+        <label class="block">
+          <span class="text-[12px] font-medium">Role title <span class="text-ink3 font-normal font-mono">· optional</span></span>
+          <input type="text" placeholder="e.g. Senior Product Manager" class="mt-1.5 w-full h-9 px-3 rounded-md bg-base-light dark:bg-base border border-line-light dark:border-line text-[13px] placeholder:text-ink3 focus:outline-none focus:ring-2 focus:ring-accent-500/40"/>
+        </label>
+      </div>
+      <label class="block">
+        <div class="flex items-baseline justify-between">
+          <span class="text-[12px] font-medium">Paste the full JD</span>
+          <span class="text-[10.5px] font-mono text-ink3"><span id="jd-count">0</span> / 12,000 chars</span>
+        </div>
+        <textarea id="jd-text" rows="10" placeholder="Paste the full job description here. We'll extract structured fields, build chips for required skills, infer level &amp; YoE, and surface signals." class="mt-1.5 w-full px-3.5 py-3 rounded-lg bg-base-light dark:bg-base border border-line-light dark:border-line text-[13px] leading-relaxed placeholder:text-ink3 font-mono focus:outline-none focus:ring-2 focus:ring-accent-500/40"></textarea>
+      </label>
+      <!-- helper -->
+      <div class="rounded-lg border border-line-light dark:border-line bg-base-light dark:bg-base p-3 flex items-center gap-2.5">
+        <svg class="w-4 h-4 text-accent-400" viewBox="0 0 16 16" fill="currentColor"><circle cx="8" cy="8" r="6.8" fill="none" stroke="currentColor" stroke-width="1.4"/><path d="M8 4v4M8 11h0" stroke="currentColor" stroke-width="1.4"/></svg>
+        <div class="text-[12.5px] text-ink2">Persona Brain is <span class="text-ink dark:text-ink font-medium">disabled</span> for pasted JDs — we can't see hiring-team contacts without a URL.</div>
+      </div>
+    </div>
+
+    <!-- ============ TAB: MANUAL ============ -->
+    <div data-pane="manual" class="tab-pane hidden p-6">
+      <div class="grid grid-cols-2 gap-4">
+        <label class="block">
+          <span class="text-[12px] font-medium">Company <span class="text-rejected">*</span></span>
+          <input type="text" placeholder="Postman" class="mt-1.5 w-full h-9 px-3 rounded-md bg-base-light dark:bg-base border border-line-light dark:border-line text-[13px] placeholder:text-ink3 focus:outline-none focus:ring-2 focus:ring-accent-500/40"/>
+        </label>
+        <label class="block">
+          <span class="text-[12px] font-medium">Role title <span class="text-rejected">*</span></span>
+          <input type="text" placeholder="Senior PM · API platform" class="mt-1.5 w-full h-9 px-3 rounded-md bg-base-light dark:bg-base border border-line-light dark:border-line text-[13px] placeholder:text-ink3 focus:outline-none focus:ring-2 focus:ring-accent-500/40"/>
+        </label>
+        <label class="block">
+          <span class="text-[12px] font-medium">Location</span>
+          <input type="text" placeholder="Bangalore · Hybrid" class="mt-1.5 w-full h-9 px-3 rounded-md bg-base-light dark:bg-base border border-line-light dark:border-line text-[13px] placeholder:text-ink3 focus:outline-none focus:ring-2 focus:ring-accent-500/40"/>
+        </label>
+        <label class="block">
+          <span class="text-[12px] font-medium">Comp</span>
+          <input type="text" placeholder="₹38–48L + ESOPs" class="mt-1.5 w-full h-9 px-3 rounded-md bg-base-light dark:bg-base border border-line-light dark:border-line text-[13px] placeholder:text-ink3 focus:outline-none focus:ring-2 focus:ring-accent-500/40"/>
+        </label>
+        <label class="block">
+          <span class="text-[12px] font-medium">Level</span>
+          <select class="mt-1.5 w-full h-9 px-3 rounded-md bg-base-light dark:bg-base border border-line-light dark:border-line text-[13px]">
+            <option>Senior</option><option>Lead</option><option>Principal</option><option>Group</option><option>Director</option>
+          </select>
+        </label>
+        <label class="block">
+          <span class="text-[12px] font-medium">Initial status</span>
+          <select class="mt-1.5 w-full h-9 px-3 rounded-md bg-base-light dark:bg-base border border-line-light dark:border-line text-[13px]">
+            <option>Saved</option><option>Applied</option><option>Replied</option><option>Backlog</option>
+          </select>
+        </label>
+        <label class="block col-span-2">
+          <span class="text-[12px] font-medium">Notes <span class="text-ink3 font-normal font-mono">· markdown</span></span>
+          <textarea rows="4" placeholder="Where you found it, why it caught your eye, anyone who referred you…" class="mt-1.5 w-full px-3 py-2 rounded-md bg-base-light dark:bg-base border border-line-light dark:border-line text-[13px] placeholder:text-ink3 focus:outline-none focus:ring-2 focus:ring-accent-500/40"></textarea>
+        </label>
+        <label class="block col-span-2">
+          <span class="text-[12px] font-medium">Tags</span>
+          <div class="mt-1.5 flex flex-wrap items-center gap-1.5 rounded-md bg-base-light dark:bg-base border border-line-light dark:border-line px-2 py-1.5">
+            <span class="px-1.5 h-5 inline-flex items-center rounded bg-sunken-light dark:bg-sunken text-[11px] font-mono">B2B SaaS<button class="ml-1 text-ink3">×</button></span>
+            <span class="px-1.5 h-5 inline-flex items-center rounded bg-sunken-light dark:bg-sunken text-[11px] font-mono">DevTools<button class="ml-1 text-ink3">×</button></span>
+            <input type="text" placeholder="Add a tag…" class="flex-1 min-w-[120px] bg-transparent text-[12.5px] outline-none placeholder:text-ink3"/>
+          </div>
+        </label>
+      </div>
+      <div class="mt-4 rounded-lg border border-dashed border-line2-light dark:border-line2 bg-sunken-light dark:bg-sunken px-3.5 py-2.5 flex items-center gap-2.5">
+        <svg class="w-4 h-4 text-ink3" viewBox="0 0 16 16" fill="none" stroke="currentColor" stroke-width="1.6"><path d="M3 8h10M8 3v10"/></svg>
+        <span class="text-[12.5px] text-ink2">No brains will run on manual entries. Add a JD or URL later to enrich.</span>
+      </div>
+    </div>
+
+  </div>
+
+  <!-- FOOTER -->
+  <footer class="shrink-0 px-5 py-3.5 border-t border-line-light dark:border-line flex items-center justify-between gap-3">
+    <div class="text-[11.5px] text-ink3 font-mono flex items-center gap-3" id="footer-meta">
+      <span>Saves to <span class="inline-flex items-center gap-1.5"><span class="w-1.5 h-1.5 rounded-full bg-saved"></span><span class="text-ink2">Saved</span></span></span>
+      <span>·</span>
+      <span>Brains: <span class="text-ink2">5 ready</span></span>
+    </div>
+    <div class="flex items-center gap-2">
+      <button id="cancel-btn" class="h-9 px-3.5 rounded-md text-[13px] text-ink2 hover:text-ink hover:bg-sunken-light dark:hover:bg-sunken">Cancel</button>
+      <button id="save-only" class="h-9 px-3.5 rounded-md border border-line-light dark:border-line text-[13px] font-medium">Save without analyzing</button>
+      <button id="primary-btn" class="h-9 px-3.5 rounded-md bg-accent-500 hover:bg-accent-400 text-white text-[13px] font-medium inline-flex items-center gap-2">
+        <svg class="w-3.5 h-3.5" viewBox="0 0 16 16" fill="none" stroke="currentColor" stroke-width="2"><path d="M2 8l3 3L14 4"/></svg>
+        <span id="primary-label">Analyze</span>
+        <kbd class="px-1.5 h-5 rounded bg-white/15 text-white/90 text-[10px] font-mono inline-flex items-center">⌘↵</kbd>
+      </button>
+    </div>
+  </footer>
+</section>
+
+<!-- ============ FLOW CONTROL ============ -->
+<script>
+  // tab switcher
+  function setTab(name) {
+    document.querySelectorAll('.tab-btn').forEach(b => {
+      const active = b.dataset.tab === name;
+      b.classList.toggle('bg-raised-light', active);
+      b.classList.toggle('dark:bg-base', active);
+      b.classList.toggle('shadow-pop-light', active);
+      b.classList.toggle('dark:shadow-pop', active);
+      b.classList.toggle('text-ink2', !active);
+    });
+    document.querySelectorAll('.tab-pane').forEach(p => {
+      p.classList.toggle('hidden', p.dataset.pane !== name);
+    });
+    // adjust primary CTA depending on tab
+    const label = document.getElementById('primary-label');
+    if (name === 'manual') label.textContent = 'Add to pipeline';
+    else label.textContent = 'Analyze';
+  }
+  document.querySelectorAll('.tab-btn').forEach(b => {
+    b.addEventListener('click', () => setTab(b.dataset.tab));
+  });
+
+  // state switcher (only used inside URL tab to demonstrate flow)
+  function setState(pane, state) {
+    const root = document.querySelector(`[data-pane="${pane}"]`);
+    if (!root) return;
+    root.querySelectorAll('.state').forEach(s => s.classList.toggle('hidden', s.dataset.state !== state));
+  }
+
+  // Primary button: progress through states on URL tab
+  let currentUrlState = 'empty';
+  document.getElementById('primary-btn').addEventListener('click', () => {
+    const activeTab = document.querySelector('.tab-btn.bg-raised-light, .tab-btn.dark\\:bg-base');
+    const name = document.querySelector('.tab-pane:not(.hidden)').dataset.pane;
+    if (name !== 'url') { /* in jd/manual, would directly submit */ flashSuccess(); return; }
+    if (currentUrlState === 'empty') {
+      currentUrlState = 'loading';
+      setState('url', 'loading');
+      document.getElementById('primary-label').textContent = 'Analyzing…';
+      document.getElementById('primary-btn').disabled = true;
+      setTimeout(() => {
+        currentUrlState = 'analyzed';
+        setState('url', 'analyzed');
+        document.getElementById('primary-btn').disabled = false;
+        document.getElementById('primary-label').textContent = 'Add to pipeline';
+      }, 1800);
+    } else if (currentUrlState === 'analyzed') {
+      flashSuccess();
+    }
+  });
+
+  function flashSuccess() {
+    const btn = document.getElementById('primary-btn');
+    btn.classList.add('!bg-interview','!ring-2','!ring-interview/40');
+    document.getElementById('primary-label').textContent = 'Added · Razorpay';
+    setTimeout(() => {
+      btn.classList.remove('!bg-interview','!ring-2','!ring-interview/40');
+      document.getElementById('primary-label').textContent = 'Analyze';
+      currentUrlState = 'empty';
+      setState('url', 'empty');
+    }, 1800);
+  }
+
+  // JD char counter
+  const jd = document.getElementById('jd-text');
+  jd && jd.addEventListener('input', () => {
+    document.getElementById('jd-count').textContent = jd.value.length.toLocaleString();
+  });
+
+  // Escape closes the modal visually
+  document.addEventListener('keydown', (e) => {
+    if (e.key === 'Escape') {
+      // For prototype, just toast — clicking 'cancel' would route back to pipeline.
+    }
+    if ((e.metaKey || e.ctrlKey) && e.key === 'Enter') {
+      document.getElementById('primary-btn').click();
+    }
+  });
+
+  document.getElementById('theme-toggle')?.addEventListener('click', () => {
+    document.documentElement.classList.toggle('dark');
+  });
+</script>
+</body>
+</html>

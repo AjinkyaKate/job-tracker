@@ -1,0 +1,578 @@
+<!doctype html>
+<html lang="en" class="dark">
+<head>
+<meta charset="utf-8" />
+<meta name="viewport" content="width=device-width, initial-scale=1" />
+<title>Job Tracker — Today</title>
+<script src="https://cdn.tailwindcss.com"></script>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&family=JetBrains+Mono:wght@400;500;600&display=swap" rel="stylesheet">
+<script>
+  tailwind.config = {
+    darkMode: 'class',
+    theme: {
+      extend: {
+        fontFamily: {
+          sans: ['Inter','ui-sans-serif','system-ui','sans-serif'],
+          mono: ['"JetBrains Mono"','ui-monospace','monospace'],
+        },
+        colors: {
+          base:   { light: '#fafaf9', DEFAULT: '#0b0b0e' },
+          raised: { light: '#ffffff', DEFAULT: '#131318' },
+          sunken: { light: '#f1f0ee', DEFAULT: '#08080b' },
+          line:   { light: '#e6e4e0', DEFAULT: '#26262e' },
+          line2:  { light: '#d8d6d1', DEFAULT: '#32323c' },
+          ink:    { light: '#0f0f12', DEFAULT: '#f4f3ef' },
+          ink2:   { light: '#55554f', DEFAULT: '#a7a6a1' },
+          ink3:   { light: '#85847d', DEFAULT: '#6c6c72' },
+          accent: { 100:'#e9deff',300:'#b896ff',400:'#9a6bff',500:'#7e44ff',600:'#6a2ef0' },
+          saved:'#9aa0a6', applied:'#4b8df8', replied:'#f5a524',
+          interview:'#22c55e', offer:'#10b981', rejected:'#ef4444', backlog:'#6b7280',
+        },
+        boxShadow: {
+          'pop': '0 20px 40px -16px rgba(0,0,0,0.6), 0 4px 10px -2px rgba(0,0,0,0.35)',
+          'pop-light': '0 20px 40px -16px rgba(15,15,18,0.15), 0 4px 10px -2px rgba(15,15,18,0.06)',
+          'phone': '0 40px 100px -20px rgba(0,0,0,0.7), 0 12px 36px -8px rgba(0,0,0,0.5), 0 0 0 1px rgba(255,255,255,0.04) inset',
+          'phone-light': '0 40px 100px -20px rgba(15,15,18,0.25), 0 12px 36px -8px rgba(15,15,18,0.15)',
+        },
+      }
+    }
+  };
+</script>
+<style>
+  html, body { height: 100%; }
+  body { font-family: 'Inter', system-ui, sans-serif; font-feature-settings: 'ss01','cv11','cv02'; }
+  .tabular { font-variant-numeric: tabular-nums; }
+  .nice-scroll::-webkit-scrollbar { width: 6px; }
+  .nice-scroll::-webkit-scrollbar-thumb { background: rgba(255,255,255,0.06); border-radius: 999px; }
+  html:not(.dark) .nice-scroll::-webkit-scrollbar-thumb { background: rgba(15,15,18,0.08); }
+
+  /* phone bezel + screen */
+  .phone {
+    width: 390px;
+    height: 844px;
+    border-radius: 56px;
+    padding: 12px;
+    background: linear-gradient(180deg, #232329, #0d0d11);
+    position: relative;
+  }
+  html:not(.dark) .phone { background: linear-gradient(180deg, #d8d6d1, #b8b6b1); }
+  .phone-screen {
+    width: 100%; height: 100%;
+    border-radius: 44px;
+    overflow: hidden;
+    position: relative;
+    background: theme('colors.base.DEFAULT');
+  }
+  html:not(.dark) .phone-screen { background: theme('colors.base.light'); }
+  /* dynamic island */
+  .island {
+    position: absolute;
+    top: 9px;
+    left: 50%;
+    transform: translateX(-50%);
+    width: 122px;
+    height: 33px;
+    border-radius: 999px;
+    background: #000;
+    z-index: 30;
+  }
+
+  /* status bar */
+  .status-bar {
+    height: 50px;
+    padding: 14px 26px 0 26px;
+    display: flex; align-items: center; justify-content: space-between;
+    font-family: 'Inter', sans-serif;
+    font-weight: 600;
+    font-size: 15px;
+    position: relative;
+    z-index: 20;
+  }
+  .status-time { letter-spacing: -0.01em; }
+  .status-right { display:flex; align-items:center; gap: 6px; }
+
+  /* swipeable action card */
+  .swipe-wrap { position: relative; overflow: hidden; border-radius: 14px; }
+  .swipe-back {
+    position: absolute;
+    inset: 0;
+    display: flex;
+    align-items: center;
+    justify-content: flex-end;
+    padding-right: 18px;
+    background: linear-gradient(90deg, transparent 30%, #22c55e 80%);
+    color: white;
+    font-weight: 600;
+    font-size: 13px;
+    gap: 8px;
+  }
+  .swipe-front {
+    position: relative;
+    transition: transform .2s ease;
+    will-change: transform;
+  }
+  .swipe-front[data-revealed="1"] { transform: translateX(-110px); }
+
+  /* progress ring shorthand */
+  .ring-arc {
+    background: conic-gradient(var(--c) calc(var(--v)*1%), rgba(255,255,255,0.08) 0);
+    -webkit-mask: radial-gradient(transparent 62%, black 64%);
+            mask: radial-gradient(transparent 62%, black 64%);
+  }
+
+  /* desktop frame fits viewport */
+  .stage {
+    min-height: 100vh;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    background:
+      radial-gradient(60% 50% at 50% 0%, rgba(126,68,255,0.06), transparent 60%),
+      theme('colors.base.DEFAULT');
+  }
+  html:not(.dark) .stage {
+    background:
+      radial-gradient(60% 50% at 50% 0%, rgba(126,68,255,0.06), transparent 60%),
+      theme('colors.base.light');
+  }
+  /* on small screens, drop the phone chrome and go full-bleed */
+  @media (max-width: 480px) {
+    .phone { width: 100vw; height: 100vh; border-radius: 0; padding: 0; background: transparent; box-shadow: none !important; }
+    .phone-screen { border-radius: 0; }
+    .island { display: none; }
+    .status-bar { display: none; }
+    .stage { background: theme('colors.base.DEFAULT'); padding: 0; }
+    .annotation-rail { display: none; }
+  }
+  /* annotation rail beside phone (desktop only) */
+  .annotation-rail { width: 280px; }
+</style>
+</head>
+<body class="text-ink-light dark:text-ink antialiased">
+
+<div class="stage px-8 py-10">
+  <div class="flex items-start gap-10">
+
+    <!-- ============ ANNOTATION RAIL ============ -->
+    <aside class="annotation-rail mt-12 space-y-6">
+      <div>
+        <div class="text-[10.5px] font-mono uppercase tracking-[0.16em] text-ink3 dark:text-ink3">Screen 4 / 6</div>
+        <div class="mt-1 text-[22px] font-semibold tracking-[-0.015em] text-ink-light dark:text-ink">Today · mobile briefing</div>
+        <p class="mt-2 text-[13px] leading-relaxed text-ink2 dark:text-ink2">
+          Opens on the user's phone first thing in the morning. Tight queue of 3–5 actions you can finish from the couch, with copy-to-send drafts inline.
+        </p>
+      </div>
+      <div class="space-y-3">
+        <div class="text-[10.5px] font-mono uppercase tracking-[0.16em] text-ink3 dark:text-ink3">Interactions</div>
+        <div class="flex items-start gap-2.5">
+          <span class="w-1.5 h-1.5 rounded-full bg-accent-400 mt-1.5 shrink-0"></span>
+          <div class="text-[12.5px] text-ink2 dark:text-ink2 leading-relaxed">Tap <span class="text-ink-light dark:text-ink font-medium">Copy</span> inside an action card to grab the draft / phone number / link.</div>
+        </div>
+        <div class="flex items-start gap-2.5">
+          <span class="w-1.5 h-1.5 rounded-full bg-interview mt-1.5 shrink-0"></span>
+          <div class="text-[12.5px] text-ink2 dark:text-ink2 leading-relaxed">Swipe a card left to reveal <span class="text-interview font-medium">Mark Done</span>. Try clicking the swipe handle on the first card.</div>
+        </div>
+        <div class="flex items-start gap-2.5">
+          <span class="w-1.5 h-1.5 rounded-full bg-replied mt-1.5 shrink-0"></span>
+          <div class="text-[12.5px] text-ink2 dark:text-ink2 leading-relaxed">Going-cold rail at the bottom — oldest first — to nudge or backlog.</div>
+        </div>
+        <div class="flex items-start gap-2.5">
+          <span class="w-1.5 h-1.5 rounded-full bg-applied mt-1.5 shrink-0"></span>
+          <div class="text-[12.5px] text-ink2 dark:text-ink2 leading-relaxed">Same data as desktop — status / fit / activity all sync.</div>
+        </div>
+      </div>
+      <button id="theme-toggle" class="h-8 px-3 rounded-md border border-line-light dark:border-line bg-raised-light dark:bg-raised text-[12px] font-medium inline-flex items-center gap-2 text-ink-light dark:text-ink">
+        <svg class="w-3.5 h-3.5 dark:hidden" viewBox="0 0 16 16" fill="currentColor"><path d="M6 1A6 6 0 008 13a6 6 0 005.9-5A4.5 4.5 0 116 1z"/></svg>
+        <svg class="w-3.5 h-3.5 hidden dark:block" viewBox="0 0 16 16" fill="currentColor"><path d="M8 4a4 4 0 100 8 4 4 0 000-8zM8 0v2M8 14v2M16 8h-2M2 8H0M13.7 2.3l-1.4 1.4M3.7 12.3l-1.4 1.4M13.7 13.7l-1.4-1.4M3.7 3.7L2.3 2.3"/></svg>
+        Toggle theme
+      </button>
+    </aside>
+
+    <!-- ============ PHONE ============ -->
+    <div class="phone shadow-phone-light dark:shadow-phone">
+      <div class="phone-screen bg-base-light dark:bg-base">
+        <div class="island"></div>
+        <!-- status bar -->
+        <div class="status-bar text-ink-light dark:text-ink">
+          <span class="status-time tabular">8:42</span>
+          <div class="status-right">
+            <!-- signal -->
+            <svg width="17" height="11" viewBox="0 0 17 11" fill="currentColor"><rect x="0" y="7" width="3" height="4" rx="0.5"/><rect x="4.5" y="5" width="3" height="6" rx="0.5"/><rect x="9" y="2.5" width="3" height="8.5" rx="0.5"/><rect x="13.5" y="0" width="3" height="11" rx="0.5" opacity="0.4"/></svg>
+            <!-- wifi -->
+            <svg width="15" height="11" viewBox="0 0 15 11" fill="currentColor"><path d="M7.5 0C4.6 0 1.95 1.04 0 2.76L1.2 4A9 9 0 017.5 1.6 9 9 0 0113.8 4L15 2.76C13.05 1.04 10.4 0 7.5 0z"/><path d="M7.5 3.6c-2.1 0-4 .77-5.4 2.05L3.3 6.9a5.4 5.4 0 014.2-1.7 5.4 5.4 0 014.2 1.7l1.2-1.25A8 8 0 007.5 3.6z"/><path d="M7.5 6.95a3 3 0 00-2.4 1.15L6.3 9.4a1.6 1.6 0 011.2-.55c.45 0 .87.2 1.2.55l1.2-1.3a3 3 0 00-2.4-1.15z"/></svg>
+            <!-- battery -->
+            <svg width="27" height="11" viewBox="0 0 27 11" fill="none"><rect x="0.5" y="0.5" width="22" height="10" rx="2.5" stroke="currentColor" opacity="0.4"/><rect x="2" y="2" width="17" height="7" rx="1" fill="currentColor"/><rect x="23" y="3.5" width="2" height="4" rx="0.5" fill="currentColor" opacity="0.5"/></svg>
+          </div>
+        </div>
+
+        <!-- scroll content -->
+        <div class="absolute inset-0 pt-[50px] overflow-y-auto nice-scroll pb-[88px]">
+
+          <!-- =========== HEADER =========== -->
+          <header class="px-5 pt-3 pb-5">
+            <div class="flex items-center justify-between">
+              <div>
+                <div class="text-[11px] font-mono uppercase tracking-[0.16em] text-ink3 dark:text-ink3">Sun · 24 May</div>
+                <h1 class="mt-1 text-[26px] leading-[1.1] font-semibold tracking-[-0.015em]">Good morning,<br/>Ajinkya.</h1>
+              </div>
+              <div class="w-10 h-10 rounded-full bg-accent-500/20 text-accent-300 grid place-items-center text-[13px] font-mono font-semibold">AK</div>
+            </div>
+
+            <!-- progress glyph -->
+            <div class="mt-4 rounded-2xl border border-line-light dark:border-line bg-raised-light dark:bg-raised p-4 flex items-center gap-4">
+              <div class="relative w-14 h-14 shrink-0">
+                <div class="absolute inset-0 ring-arc rounded-full" style="--c: theme('colors.accent.500'); --v: 25"></div>
+                <div class="absolute inset-0 grid place-items-center">
+                  <div class="text-[15px] font-mono tabular font-semibold">1<span class="text-ink3 text-[12px]">/4</span></div>
+                </div>
+              </div>
+              <div class="flex-1 min-w-0">
+                <div class="text-[14px] font-semibold leading-tight">Queue for today</div>
+                <div class="text-[12px] text-ink2 dark:text-ink2 mt-0.5">3 follow-ups · 1 call · <span class="text-rejected font-medium">2 overdue</span></div>
+              </div>
+              <button class="h-8 w-8 rounded-full bg-sunken-light dark:bg-sunken grid place-items-center text-ink2">
+                <svg class="w-4 h-4" viewBox="0 0 16 16" fill="currentColor"><circle cx="3.5" cy="8" r="1.4"/><circle cx="8" cy="8" r="1.4"/><circle cx="12.5" cy="8" r="1.4"/></svg>
+              </button>
+            </div>
+
+            <!-- key stat strip -->
+            <div class="mt-3 grid grid-cols-3 gap-2">
+              <div class="rounded-xl border border-line-light dark:border-line bg-raised-light dark:bg-raised px-3 py-2.5">
+                <div class="text-[9.5px] font-mono uppercase tracking-[0.14em] text-ink3">Active</div>
+                <div class="mt-0.5 text-[18px] font-semibold tabular">22</div>
+              </div>
+              <div class="rounded-xl border border-line-light dark:border-line bg-raised-light dark:bg-raised px-3 py-2.5">
+                <div class="text-[9.5px] font-mono uppercase tracking-[0.14em] text-ink3">Reply</div>
+                <div class="mt-0.5 text-[18px] font-semibold tabular text-interview">12.4%</div>
+              </div>
+              <div class="rounded-xl border border-offer/30 bg-offer/10 px-3 py-2.5">
+                <div class="text-[9.5px] font-mono uppercase tracking-[0.14em] text-offer">Offers</div>
+                <div class="mt-0.5 text-[18px] font-semibold tabular text-offer">1</div>
+              </div>
+            </div>
+          </header>
+
+          <!-- =========== ACTION QUEUE =========== -->
+          <section class="px-5">
+            <div class="flex items-baseline justify-between mb-2.5">
+              <h2 class="text-[15px] font-semibold">Your queue</h2>
+              <span class="text-[11px] font-mono text-ink3 dark:text-ink3">sorted by urgency</span>
+            </div>
+
+            <div class="space-y-2.5">
+
+              <!-- CARD 1: CALL (overdue) — swipe enabled -->
+              <div class="swipe-wrap">
+                <div class="swipe-back">
+                  <svg class="w-4 h-4" viewBox="0 0 16 16" fill="none" stroke="currentColor" stroke-width="2.4"><path d="M3 8l3 3 7-7"/></svg>
+                  Mark Done
+                </div>
+                <div class="swipe-front rounded-2xl border border-rejected/30 bg-raised-light dark:bg-raised overflow-hidden" data-swipe>
+                  <div class="px-4 pt-3 flex items-center gap-2.5">
+                    <div class="w-8 h-8 rounded bg-replied/20 text-replied grid place-items-center text-[11px] font-mono font-semibold shrink-0">NT</div>
+                    <div class="min-w-0 flex-1">
+                      <div class="text-[14px] font-semibold leading-tight truncate">Group PM, Payments</div>
+                      <div class="text-[11.5px] text-ink2 dark:text-ink2 truncate">Netcore · <span class="text-rejected font-medium">Overdue 2d</span></div>
+                    </div>
+                    <span class="px-1.5 h-5 inline-flex items-center rounded bg-replied/15 text-replied text-[10.5px] font-mono">Replied</span>
+                  </div>
+
+                  <!-- action body -->
+                  <div class="mx-4 mt-3 rounded-xl bg-base-light dark:bg-base border border-line-light dark:border-line p-3">
+                    <div class="flex items-center gap-2">
+                      <svg class="w-3.5 h-3.5 text-rejected" viewBox="0 0 16 16" fill="currentColor"><path d="M4.5 3a1 1 0 011 .8l.5 2a1 1 0 01-.3 1L4.5 8a8 8 0 003.5 3.5l1.2-1.2a1 1 0 011-.3l2 .5a1 1 0 01.8 1V13a1 1 0 01-1 1A10 10 0 013 4a1 1 0 011-1z"/></svg>
+                      <span class="text-[11px] font-mono uppercase tracking-[0.14em] text-rejected">Call Latika</span>
+                      <span class="ml-auto text-[10.5px] font-mono text-ink3">10 min</span>
+                    </div>
+                    <div class="mt-2 flex items-center gap-2">
+                      <div class="flex-1 text-[15px] font-mono tabular font-semibold tracking-tight">+91 98454 21034</div>
+                      <button class="h-7 px-2.5 rounded-md border border-line-light dark:border-line text-[11.5px] font-medium inline-flex items-center gap-1.5">
+                        <svg class="w-3 h-3" viewBox="0 0 16 16" fill="none" stroke="currentColor" stroke-width="2"><rect x="4" y="4" width="9" height="9" rx="1.5"/><path d="M3 11V3.5A1.5 1.5 0 014.5 2H12"/></svg>
+                        Copy
+                      </button>
+                      <button class="h-7 px-2.5 rounded-md bg-interview text-white text-[11.5px] font-medium inline-flex items-center gap-1.5">
+                        <svg class="w-3 h-3" viewBox="0 0 16 16" fill="currentColor"><path d="M4.5 3a1 1 0 011 .8l.5 2a1 1 0 01-.3 1L4.5 8a8 8 0 003.5 3.5l1.2-1.2a1 1 0 011-.3l2 .5a1 1 0 01.8 1V13a1 1 0 01-1 1A10 10 0 013 4a1 1 0 011-1z"/></svg>
+                        Call
+                      </button>
+                    </div>
+                    <div class="mt-2 text-[12px] text-ink2 dark:text-ink2 leading-relaxed">
+                      Thu was voicemail. Try morning before standup — she's an early starter (per Aditi).
+                    </div>
+                  </div>
+
+                  <div class="px-4 py-2.5 flex items-center justify-between">
+                    <button class="text-[11.5px] font-medium text-accent-300 hover:text-accent-400">Open card →</button>
+                    <button data-toggle-swipe class="text-[11.5px] font-mono text-ink3 inline-flex items-center gap-1">
+                      <svg class="w-3 h-3" viewBox="0 0 16 16" fill="none" stroke="currentColor" stroke-width="1.8"><path d="M11 4l-4 4 4 4"/></svg>
+                      swipe
+                    </button>
+                  </div>
+                </div>
+              </div>
+
+              <!-- CARD 2: SEND DM with draft -->
+              <div class="swipe-wrap">
+                <div class="swipe-back">
+                  <svg class="w-4 h-4" viewBox="0 0 16 16" fill="none" stroke="currentColor" stroke-width="2.4"><path d="M3 8l3 3 7-7"/></svg>
+                  Mark Done
+                </div>
+                <div class="swipe-front rounded-2xl border border-replied/30 bg-raised-light dark:bg-raised overflow-hidden" data-swipe>
+                  <div class="px-4 pt-3 flex items-center gap-2.5">
+                    <div class="w-8 h-8 rounded bg-applied/20 text-applied grid place-items-center text-[11px] font-mono font-semibold shrink-0">RP</div>
+                    <div class="min-w-0 flex-1">
+                      <div class="text-[14px] font-semibold leading-tight truncate">Senior PM · Pricing</div>
+                      <div class="text-[11.5px] text-ink2 dark:text-ink2 truncate">Razorpay · <span class="text-replied font-medium">Due today</span></div>
+                    </div>
+                    <span class="px-1.5 h-5 inline-flex items-center rounded bg-applied/15 text-applied text-[10.5px] font-mono">Applied</span>
+                  </div>
+
+                  <div class="mx-4 mt-3 rounded-xl bg-base-light dark:bg-base border border-line-light dark:border-line p-3">
+                    <div class="flex items-center gap-2">
+                      <svg class="w-3.5 h-3.5 text-replied" viewBox="0 0 16 16" fill="currentColor"><rect x="2" y="3" width="12" height="10" rx="1.5" fill="none" stroke="currentColor" stroke-width="1.4"/><path d="M2.5 4.5l5.5 4 5.5-4" fill="none" stroke="currentColor" stroke-width="1.4"/></svg>
+                      <span class="text-[11px] font-mono uppercase tracking-[0.14em] text-replied">Send LinkedIn DM</span>
+                      <span class="ml-auto text-[10.5px] font-mono text-ink3">→ Latika M.</span>
+                    </div>
+                    <div class="mt-2 text-[12.5px] leading-relaxed">
+                      "Hi Latika — saw the Sr PM role for Pricing &amp; Packaging. I owned billing redesign at Cubeit (3.2× ARPU). Would love 15 min if open."
+                    </div>
+                    <div class="mt-2.5 flex items-center justify-between">
+                      <span class="text-[10.5px] font-mono text-ink3">198 / 200 · warm tone</span>
+                      <div class="flex items-center gap-1.5">
+                        <button class="h-7 w-7 grid place-items-center rounded border border-line-light dark:border-line text-ink2"><svg class="w-3 h-3" viewBox="0 0 16 16" fill="none" stroke="currentColor" stroke-width="1.8"><path d="M13 8a5 5 0 11-1.5-3.5M13 3v3h-3"/></svg></button>
+                        <button class="h-7 px-2.5 rounded-md border border-line-light dark:border-line text-[11.5px] font-medium inline-flex items-center gap-1.5">
+                          <svg class="w-3 h-3" viewBox="0 0 16 16" fill="none" stroke="currentColor" stroke-width="2"><rect x="4" y="4" width="9" height="9" rx="1.5"/><path d="M3 11V3.5A1.5 1.5 0 014.5 2H12"/></svg>
+                          Copy
+                        </button>
+                        <button class="h-7 px-2.5 rounded-md bg-accent-500 text-white text-[11.5px] font-medium inline-flex items-center gap-1.5">
+                          Open LinkedIn
+                          <svg class="w-3 h-3" viewBox="0 0 16 16" fill="none" stroke="currentColor" stroke-width="1.8"><path d="M10 3h3v3M13 3l-6 6"/></svg>
+                        </button>
+                      </div>
+                    </div>
+                  </div>
+                  <div class="px-4 py-2.5 flex items-center justify-between">
+                    <div class="flex items-center gap-1.5 text-[11px] font-mono text-ink3">
+                      <svg class="w-3 h-3 text-accent-400" viewBox="0 0 16 16" fill="currentColor"><path d="M8 1.3l1.9 3.9 4.3.6-3.1 3 .7 4.3L8 11l-3.8 2.1.7-4.3-3.1-3 4.3-.6z"/></svg>
+                      2 mutuals · open to DMs
+                    </div>
+                    <button class="text-[11.5px] font-medium text-accent-300 hover:text-accent-400">Open card →</button>
+                  </div>
+                </div>
+              </div>
+
+              <!-- CARD 3: REPLY to recruiter — urgent today -->
+              <div class="swipe-wrap">
+                <div class="swipe-back">
+                  <svg class="w-4 h-4" viewBox="0 0 16 16" fill="none" stroke="currentColor" stroke-width="2.4"><path d="M3 8l3 3 7-7"/></svg>
+                  Mark Done
+                </div>
+                <div class="swipe-front rounded-2xl border border-line-light dark:border-line bg-raised-light dark:bg-raised overflow-hidden" data-swipe>
+                  <div class="px-4 pt-3 flex items-center gap-2.5">
+                    <div class="w-8 h-8 rounded bg-replied/20 text-replied grid place-items-center text-[11px] font-mono font-semibold shrink-0">BS</div>
+                    <div class="min-w-0 flex-1">
+                      <div class="text-[14px] font-semibold leading-tight truncate">Senior PM · Live testing</div>
+                      <div class="text-[11.5px] text-ink2 dark:text-ink2 truncate">BrowserStack · Reply by 6 pm</div>
+                    </div>
+                    <span class="px-1.5 h-5 inline-flex items-center rounded bg-replied/15 text-replied text-[10.5px] font-mono">Replied</span>
+                  </div>
+
+                  <div class="mx-4 mt-3 rounded-xl bg-base-light dark:bg-base border border-line-light dark:border-line p-3">
+                    <div class="flex items-center gap-2">
+                      <svg class="w-3.5 h-3.5 text-applied" viewBox="0 0 16 16" fill="none" stroke="currentColor" stroke-width="1.8"><path d="M2 4l6 5 6-5M2 12h12"/></svg>
+                      <span class="text-[11px] font-mono uppercase tracking-[0.14em] text-applied">Reply with availability</span>
+                    </div>
+                    <div class="mt-2 rounded-lg bg-sunken-light dark:bg-sunken p-2.5 text-[12.5px] leading-relaxed">
+                      <span class="text-ink3 font-mono text-[10.5px]">recruiter · 1d ago</span><br/>
+                      "Hi Ajinkya — happy to set up a phone screen. What times work this week?"
+                    </div>
+                    <div class="mt-2 flex flex-wrap gap-1.5">
+                      <button class="h-7 px-2.5 rounded-md border border-line-light dark:border-line text-[11.5px] font-medium">Tue 11am</button>
+                      <button class="h-7 px-2.5 rounded-md border border-line-light dark:border-line text-[11.5px] font-medium">Wed 4pm</button>
+                      <button class="h-7 px-2.5 rounded-md border border-line-light dark:border-line text-[11.5px] font-medium">Thu 10am</button>
+                      <button class="h-7 px-2.5 rounded-md bg-accent-500 text-white text-[11.5px] font-medium inline-flex items-center gap-1">
+                        Reply
+                        <svg class="w-3 h-3" viewBox="0 0 16 16" fill="none" stroke="currentColor" stroke-width="2"><path d="M3 8h10M9 4l4 4-4 4"/></svg>
+                      </button>
+                    </div>
+                  </div>
+                  <div class="px-4 py-2.5 flex items-center justify-between">
+                    <span class="text-[11px] font-mono text-ink3">No mutuals · formal tone</span>
+                    <button class="text-[11.5px] font-medium text-accent-300 hover:text-accent-400">Open card →</button>
+                  </div>
+                </div>
+              </div>
+
+              <!-- CARD 4: Case study due -->
+              <div class="swipe-wrap">
+                <div class="swipe-back">
+                  <svg class="w-4 h-4" viewBox="0 0 16 16" fill="none" stroke="currentColor" stroke-width="2.4"><path d="M3 8l3 3 7-7"/></svg>
+                  Mark Done
+                </div>
+                <div class="swipe-front rounded-2xl border border-line-light dark:border-line bg-raised-light dark:bg-raised overflow-hidden" data-swipe>
+                  <div class="px-4 pt-3 flex items-center gap-2.5">
+                    <div class="w-8 h-8 rounded bg-interview/20 text-interview grid place-items-center text-[11px] font-mono font-semibold shrink-0">DB</div>
+                    <div class="min-w-0 flex-1">
+                      <div class="text-[14px] font-semibold leading-tight truncate">Senior PM · Core HR</div>
+                      <div class="text-[11.5px] text-ink2 dark:text-ink2 truncate">Darwinbox · Case due Fri</div>
+                    </div>
+                    <span class="px-1.5 h-5 inline-flex items-center rounded bg-interview/15 text-interview text-[10.5px] font-mono">Interview</span>
+                  </div>
+                  <div class="px-4 pt-3 pb-3 flex items-center gap-2">
+                    <svg class="w-3.5 h-3.5 text-accent-400" viewBox="0 0 16 16" fill="none" stroke="currentColor" stroke-width="1.8"><rect x="2" y="3" width="12" height="11" rx="1.5"/><path d="M2 6h12M5 1v4M11 1v4"/></svg>
+                    <span class="text-[12.5px] flex-1">Block 90 min today to draft case study.</span>
+                    <button class="h-7 px-2.5 rounded-md border border-line-light dark:border-line text-[11.5px] font-medium">Block time</button>
+                  </div>
+                </div>
+              </div>
+
+            </div>
+
+            <!-- finished celebration row -->
+            <div class="mt-4 rounded-xl border border-dashed border-line2-light dark:border-line2 px-3 py-2.5 flex items-center gap-2.5">
+              <div class="w-7 h-7 rounded-full bg-interview/15 text-interview grid place-items-center">
+                <svg class="w-3.5 h-3.5" viewBox="0 0 16 16" fill="none" stroke="currentColor" stroke-width="2.4"><path d="M3 8l3 3 7-7"/></svg>
+              </div>
+              <div class="text-[12.5px] text-ink2 dark:text-ink2">Finish 3 more and you're done by lunch.</div>
+            </div>
+          </section>
+
+          <!-- =========== GOING COLD =========== -->
+          <section class="px-5 mt-6">
+            <div class="flex items-baseline justify-between mb-2">
+              <h2 class="text-[15px] font-semibold">Going cold</h2>
+              <span class="text-[11px] font-mono text-ink3 dark:text-ink3">5d+ no activity · oldest first</span>
+            </div>
+            <div class="rounded-2xl border border-line-light dark:border-line bg-raised-light dark:bg-raised overflow-hidden divide-y divide-line-light dark:divide-line">
+              <!-- row 1 -->
+              <div class="px-3 py-2.5 flex items-center gap-2.5">
+                <div class="w-7 h-7 rounded bg-saved/20 text-saved grid place-items-center text-[10.5px] font-mono font-semibold shrink-0">FK</div>
+                <div class="min-w-0 flex-1">
+                  <div class="text-[13px] font-semibold leading-tight truncate">Principal PM · Freshworks</div>
+                  <div class="text-[11px] text-rejected font-mono">Saved 5 May · 19d silent</div>
+                </div>
+                <button class="h-7 w-7 grid place-items-center rounded-md border border-line-light dark:border-line text-ink2"><svg class="w-3.5 h-3.5" viewBox="0 0 16 16" fill="none" stroke="currentColor" stroke-width="1.6"><path d="M3 8h10M9 4l4 4-4 4"/></svg></button>
+                <button class="h-7 px-2.5 rounded-md border border-line-light dark:border-line text-[11.5px] font-medium">Nudge</button>
+              </div>
+              <!-- row 2 -->
+              <div class="px-3 py-2.5 flex items-center gap-2.5">
+                <div class="w-7 h-7 rounded bg-applied/20 text-applied grid place-items-center text-[10.5px] font-mono font-semibold shrink-0">WG</div>
+                <div class="min-w-0 flex-1">
+                  <div class="text-[13px] font-semibold leading-tight truncate">Senior PM · Wingify</div>
+                  <div class="text-[11px] text-replied font-mono">Applied 8 May · 16d silent</div>
+                </div>
+                <button class="h-7 px-2.5 rounded-md border border-line-light dark:border-line text-[11.5px] font-medium">Nudge</button>
+              </div>
+              <!-- row 3 -->
+              <div class="px-3 py-2.5 flex items-center gap-2.5">
+                <div class="w-7 h-7 rounded bg-applied/20 text-applied grid place-items-center text-[10.5px] font-mono font-semibold shrink-0">CB</div>
+                <div class="min-w-0 flex-1">
+                  <div class="text-[13px] font-semibold leading-tight truncate">Senior PM · Chargebee</div>
+                  <div class="text-[11px] text-replied font-mono">Applied 11 May · 13d silent</div>
+                </div>
+                <button class="h-7 px-2.5 rounded-md border border-line-light dark:border-line text-[11.5px] font-medium">Nudge</button>
+              </div>
+              <!-- row 4 -->
+              <div class="px-3 py-2.5 flex items-center gap-2.5">
+                <div class="w-7 h-7 rounded bg-saved/20 text-saved grid place-items-center text-[10.5px] font-mono font-semibold shrink-0">MT</div>
+                <div class="min-w-0 flex-1">
+                  <div class="text-[13px] font-semibold leading-tight truncate">Group PM · Mindtickle</div>
+                  <div class="text-[11px] text-ink3 font-mono">Saved 14 May · 10d silent</div>
+                </div>
+                <button class="h-7 px-2.5 rounded-md text-[11.5px] font-medium text-ink2">Backlog</button>
+                <button class="h-7 px-2.5 rounded-md border border-line-light dark:border-line text-[11.5px] font-medium">Nudge</button>
+              </div>
+            </div>
+            <button class="mt-2 h-9 w-full rounded-xl border border-dashed border-line-light dark:border-line text-[12.5px] font-medium text-ink2">Show 3 more</button>
+          </section>
+
+          <!-- pull tag -->
+          <div class="mt-8 text-center text-[10.5px] font-mono text-ink3 dark:text-ink3 pb-6">— end of queue · pull to refresh —</div>
+        </div>
+
+        <!-- =========== BOTTOM NAV =========== -->
+        <nav class="absolute bottom-0 inset-x-0 z-20 border-t border-line-light dark:border-line bg-raised-light/95 dark:bg-raised/95 backdrop-blur">
+          <div class="px-4 pt-2 pb-6 flex items-end justify-between">
+            <a class="flex flex-col items-center gap-0.5 text-ink3 text-[10px] font-mono w-14">
+              <svg class="w-5 h-5" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.6"><rect x="3" y="4" width="5" height="16" rx="1.4"/><rect x="9.5" y="4" width="5" height="10" rx="1.4"/><rect x="16" y="4" width="5" height="7" rx="1.4"/></svg>
+              <span>Pipeline</span>
+            </a>
+            <a class="flex flex-col items-center gap-0.5 text-ink-light dark:text-ink text-[10px] font-mono font-semibold w-14">
+              <div class="relative">
+                <svg class="w-5 h-5 text-accent-400" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8"><circle cx="12" cy="12" r="9"/><path d="M12 7v5l3 2"/></svg>
+                <span class="absolute -top-1 -right-1 w-3.5 h-3.5 rounded-full bg-rejected text-white text-[8.5px] font-mono grid place-items-center">2</span>
+              </div>
+              <span>Today</span>
+            </a>
+            <button class="-mt-5 w-12 h-12 rounded-full bg-accent-500 text-white grid place-items-center shadow-pop">
+              <svg class="w-5 h-5" viewBox="0 0 16 16" fill="none" stroke="currentColor" stroke-width="2.4"><path d="M8 2v12M2 8h12"/></svg>
+            </button>
+            <a class="flex flex-col items-center gap-0.5 text-ink3 text-[10px] font-mono w-14">
+              <svg class="w-5 h-5" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.6"><rect x="4" y="3" width="16" height="18" rx="2"/><path d="M8 8h8M8 12h8M8 16h5"/></svg>
+              <span>Resume</span>
+            </a>
+            <a class="flex flex-col items-center gap-0.5 text-ink3 text-[10px] font-mono w-14">
+              <svg class="w-5 h-5" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.6"><circle cx="12" cy="8" r="4"/><path d="M4 21a8 8 0 0116 0"/></svg>
+              <span>Profile</span>
+            </a>
+          </div>
+        </nav>
+
+      </div>
+    </div>
+  </div>
+</div>
+
+<script>
+  // theme toggle
+  document.getElementById('theme-toggle')?.addEventListener('click', () => {
+    document.documentElement.classList.toggle('dark');
+  });
+
+  // demo swipe-reveal: tapping any card body toggles the first card open; the "swipe" pill toggles per-card
+  document.querySelectorAll('[data-toggle-swipe]').forEach(btn => {
+    btn.addEventListener('click', (e) => {
+      e.stopPropagation();
+      const card = btn.closest('.swipe-wrap').querySelector('[data-swipe]');
+      const next = card.dataset.revealed === '1' ? '0' : '1';
+      card.dataset.revealed = next;
+    });
+  });
+  // touch swipe
+  document.querySelectorAll('[data-swipe]').forEach(card => {
+    let startX = null, dx = 0;
+    card.addEventListener('touchstart', (e) => { startX = e.touches[0].clientX; dx = 0; });
+    card.addEventListener('touchmove', (e) => {
+      if (startX == null) return;
+      dx = e.touches[0].clientX - startX;
+      const tx = Math.max(-110, Math.min(0, dx));
+      card.style.transform = `translateX(${tx}px)`;
+    });
+    card.addEventListener('touchend', () => {
+      card.style.transform = '';
+      card.dataset.revealed = dx < -50 ? '1' : '0';
+      startX = null;
+    });
+    // mouse drag too
+    let mStart = null, mdx = 0;
+    card.addEventListener('mousedown', (e) => { if (e.target.closest('button,a')) return; mStart = e.clientX; mdx = 0; });
+    window.addEventListener('mousemove', (e) => {
+      if (mStart == null) return;
+      mdx = e.clientX - mStart;
+      const tx = Math.max(-110, Math.min(0, mdx));
+      card.style.transform = `translateX(${tx}px)`;
+    });
+    window.addEventListener('mouseup', () => {
+      if (mStart == null) return;
+      card.style.transform = '';
+      card.dataset.revealed = mdx < -50 ? '1' : '0';
+      mStart = null;
+    });
+  });
+
+  // animate status time tiny bit (avoid stale 8:42)
+  // intentionally static to keep screenshots stable
+</script>
+</body>
+</html>
