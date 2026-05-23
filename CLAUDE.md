@@ -45,38 +45,80 @@ Format: **[ID] As a seeker, I want X so that Y.**
 - Resume tailoring suggestions ("this JD wants X, your resume doesn't mention X")
 - Multi-user / shareable (if friends want it)
 
-## 4. Scope as session-sized "ships"
+## 4. Scope as session-sized "ships" — REVISED 2026-05-24 after Session 7
 
-Work cadence is **flexible / no fixed schedule** (see [[project-job-tracker]] memory). The risk with that is stalling halfway through a big phase. So we structure work as **ships** — each ship ends in a working, demoable piece. Open the project, pick the next ship, finish it in 1–3 focused sessions, commit, close laptop. Next time, pick the next ship.
+> Original 16-ship plan was set during scope freeze. After 4 ships shipped and 3 new user asks (resume engine, persona analysis, JD/company analysis), revised to a tighter MVP-deploy path with a clearly-separated Phase 2.
 
-### Foundation
-- **Ship 0 — Setup** — Python + venv + git init + GitHub repo + `.env.example`. Run a hello-world `tracker.py`. *(1 session)*
+### ✅ Phase 1 (Sprint 1) — CLI tracker — DONE
+- **Ship 0** ✅ (commits `293dc9a` + `892e846`) — project skeleton, Python + venv + git + GitHub + first hello-world
+- **Ship 1** ✅ (commit `8c1a8ff`) — JSON-backed CLI: `add` + `list`
+- **Ship 2** ✅ (commit `aa33565`) — SQLite swap; `jobs.json` → `tracker.db`
+- **Ship 3** ✅ (commit `e5ea8e5`) — contacts table + multi-contact per job + `contact` command
+- **Ship 4** ✅ (commit `b63a69c`) — status transitions + events table + `next_action_at` + `today` view + `show <job>` + `pursue` + `event` + `status` + `action` commands
 
-### Phase A — CLI core (no AI yet)
-- **Ship 1 — JSON-backed CLI** — `tracker.py add` (manual entry: title/company/JD/status), `tracker.py list`. Saves to `jobs.json`. *(1–2 sessions)*
-- **Ship 2 — SQLite swap** — same CLI, but `tracker.db` replaces JSON. Learn SQL. *(1 session)*
-- **Ship 3 — Contacts** — `tracker.py contact add <job_id>`, tracks HR/recruiter. *(1 session)*
-- **Ship 4 — Status + follow-ups** — status transitions, `tracker.py followups` shows due. *(1 session)*
+**Outcome:** "Never Lose a Thread" anchor delivered in CLI form. Real data live: Presolv360 (active, call Monday) + Shailesh (backlog).
 
-### Phase B — AI does real work (heavy AI scope confirmed)
-- **Ship 5 — JD extraction from pasted text** — `tracker.py add --paste`, opens editor, you paste the JD, Claude returns structured fields, you review and save. *(1–2 sessions)*
-- **Ship 6 — JD extraction from URL** — `tracker.py add --url <url>`, try fetch, fall back to "paste this:" prompt if blocked (LinkedIn often blocks). *(1 session)*
-- **Ship 7 — Resume registry** — `tracker.py resume add <file> --label "PM-senior" --tags pm,saas`. Multiple resumes. *(1 session)*
-- **Ship 8 — AI resume recommendation** — `tracker.py recommend <job_id>` → Claude picks best resume for the JD with reasoning. *(1 session)*
-- **Ship 9 — AI outreach drafts** — `tracker.py draft <job_id> <contact_id>` → Claude drafts a recruiter message tailored to JD + your resume. You edit before sending. *(2 sessions)*
-- **Ship 10 — AI resume tailoring suggestions** — `tracker.py tailor <job_id> <resume_id>` → Claude suggests bullet-point tweaks to highlight what the JD wants. You apply manually. *(2 sessions)*
+### 🟡 Sprint 2 — MVP Web Deployed (in progress)
 
-### Phase C — Web UI
-- **Ship 11 — FastAPI on top of the CLI** — same functions, exposed as HTTP. `/docs` UI works. *(2 sessions)*
-- **Ship 12 — HTMX dashboard** — jobs table, status badges, follow-ups-due panel. *(2 sessions)*
-- **Ship 13 — Add-job form + edit modals** — paste/URL input on the web. *(2 sessions)*
+- **Ship 6 — FastAPI web dashboard** (current ship; multi-phase)
+  - Phase A: install FastAPI + first homepage route showing today + jobs (this turn)
+  - Phase B: job detail page (`/jobs/{id}`) + add-job form
+  - Phase C: HTMX for status updates / next-action edits without page reload
+  - Phase D: status-column "kanban" view with drag-to-change-status (HTMX, no real JS)
+- **Ship 7 — Deploy**
+  - Migrate SQLite → Supabase Postgres (data + schema)
+  - Deploy backend to Railway (`*.up.railway.app` URL)
+  - Phone-accessible. Add HTTP basic auth so it's not world-readable.
 
-### Phase D — Cloud
-- **Ship 14 — Migrate to Supabase Postgres** — same schema, different DB. *(1 session)*
-- **Ship 15 — Deploy backend to Railway** — live URL, env vars, basic auth. *(2 sessions)*
-- **Ship 16 — Email follow-up reminders** — daily cron, email digest. *(2 sessions)*
+**Sprint 2 goal: a real URL Ajinkya opens on his phone Monday to see Presolv360's call-prep card, mark status as he goes, and add new leads.**
 
-**Total: ~25 sessions.** No fixed timeline; success = a working ship every time you open the project.
+### ⏭ Sprint 3 — AI ingestion (Ship 5)
+
+Slot in AFTER Ship 6 is on localhost (so AI features land in the UI right away).
+
+- **Ship 5 — Anthropic API integration**
+  - Requires user-provided API key (`.env`-managed; never committed)
+  - Paste any text (LinkedIn post / email thread / JD) → Claude returns structured fields → user reviews → saves to DB
+  - Endpoint `POST /extract` in the web app
+  - Lessons 09 (HTTP/APIs) + 10 (LLM APIs) land here
+
+### 🔭 Phase 2 — Post-deploy iterations (NEW asks from Session 7)
+
+After MVP is deployed and AI ingestion is live, layer these:
+
+- **Phase 2a — Resume engine**
+  - `resumes` table: store multiple variants (PM, BA, Product Ops) with markdown body + skill tags
+  - `tracker.py resume add` + web UI for resume management
+  - Per-job tagging: which resume was sent
+
+- **Phase 2b — JD analysis brain**
+  - For each job, AI extracts: must-have skills, nice-to-haves, YoE required, level, comp signal, hiring urgency signal (recently posted? actively reposted?)
+  - Auto-classify `worth_pursuing` based on user's profile vs JD requirements
+
+- **Phase 2c — Persona analysis brain**
+  - For a given LinkedIn profile (paste text), AI extracts: role, seniority, mutual connections, signal for warm-DM-vs-formal-tone
+
+- **Phase 2d — Company analysis brain**
+  - Paste a company page or URL, AI returns: what they do, recent news, funding stage, glassdoor sentiment (if pasted), competitor positioning
+
+- **Phase 2e — AI resume tailoring**
+  - Given a job + chosen resume variant, AI suggests bullet-level edits to highlight the JD's keywords
+  - User reviews and applies (or rejects) each suggestion. Never auto-changes.
+
+- **Phase 2f — AI outreach drafts**
+  - For each contact + their conversation thread (events), AI drafts a polite next message
+  - User reviews/edits/sends. Never auto-sends.
+
+### ❌ Won't have (still out of scope)
+
+- Multi-user / SaaS — single-user (Ajinkya) is the entire v1 customer
+- Auto-applying to jobs — reputational risk
+- Mobile native app — web-responsive is enough
+- LinkedIn scraping at scale — fragile and ToS-murky; paste-mode covers the use case
+
+Cadence is flexible / no fixed schedule. Each ship still ends in a working, demoable piece — open, pick the next ship, finish it in 1–3 focused sessions, commit, push.
+
+> Earlier 16-ship plan (Phases A–D) is superseded by this revised plan. Old commits referenced the old numbering; new commits use this scheme.
 
 ## 5. Out of scope (deliberately)
 

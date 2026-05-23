@@ -467,3 +467,42 @@ Business mode exits after this session. Tech mode opens next turn (Ship 0).
 
 ### Exit
 On completion, return to business mode for Phase 2 scoping. Likely Phase 2 anchor: (a) better outreach messages, since that's where the response-rate metric moves.
+
+### Session 7 — 2026-05-24 (user journey + 3 new Phase 2 asks)
+
+User articulated his actual job-hunt workflow and dropped three new feature asks. Captured here; integrated into project `CLAUDE.md` §4 ship plan.
+
+**The user journey (verbatim summary):**
+
+1. Open LinkedIn (app or web)
+2. Search, filter, scroll; for each job, check JD + experience requirements
+3. Click apply link
+4. If hiring team is visible, send a message with a note
+5. If can't message directly, send a connection request first (with a note)
+6. If can message, also try to find their email and reach out there too
+7. Apply → update status on phone → follow up later
+
+This journey is **mostly already serviced** by Ships 0–4 (jobs + contacts + status + events + actions). The missing piece is the *web UI* so steps can be done from his phone. Ship 6 + Ship 7 deliver this.
+
+**Three new feature asks (Phase 2, post-deploy):**
+
+**R6. Company / JD / persona analysis brain.** For any company/job/person, AI extracts a structured analysis:
+- Company: what they do, recent signals, product
+- JD: must-have skills, level, YoE required, urgency cues
+- Person: role, seniority, vibe (formal vs warm DM)
+Triggered manually (paste text/URL/screenshot).
+
+**R7. Multi-resume + AI resume tailoring per job.** Resume engine:
+- Store multiple resume variants (PM, BA, Product Ops, APM, etc.) with markdown body + skill tags
+- Given a JD, AI proposes targeted edits to a chosen variant (not a rewrite — bullet-level tweaks to surface JD keywords)
+- User reviews each suggestion; never auto-applies
+- Goal: "if they want an Associate PM, surface an APM-flavored version of my resume"
+
+**R8. "Multiple brains" composition.** Each analysis (R6's company/JD/persona) is a distinct AI call ("brain"); their outputs assemble into the job card. e.g., open Presolv360's card → see Company Brain output + JD Brain output + Persona Brain output for each contact + Resume Brain recommendation, all in one screen.
+
+**FDE note:** R6–R8 are powerful but heavy. They depend on Ship 5 (Anthropic API integration) AND on Ship 6+7 (web app to surface the structured output) being live first. Trying to build them before deploy = no deploy ever. Plan keeps them as Phase 2.
+
+**For NOW (before Ship 5 API key arrives):** Claude-in-this-chat is the manual stand-in for R6/R7/R8. User pastes data → Claude extracts → Claude runs `tracker.py` commands to update DB. Works but doesn't scale to volume; that's why Ship 5 matters.
+
+### Session 8 — (waiting)
+Once Ship 6 Phase A is on localhost + Ship 7 is deployed, return to validate the live URL against the original Session 6 Phase 1 charter. Then start Sprint 3 (Ship 5 AI).

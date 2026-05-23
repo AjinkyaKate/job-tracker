@@ -18,7 +18,7 @@ When you reopen this folder after a gap and forget a concept, the lesson here is
 | 08 | [`08_state_and_events.md`](08_state_and_events.md) — status as state machine, event log, two timestamps, today view queries ✅ | Ship 4 |
 | 09 | `09_what_is_an_api.md` — HTTP, requests, JSON, status codes | Ship 5 prep |
 | 10 | `10_what_is_an_llm_api.md` — prompts, tokens, structured output, Anthropic SDK | Ship 5 |
-| 11 | `11_what_is_a_backend.md` — server, request/response cycle, FastAPI | Ship 6 |
+| 11 | [`11_what_is_a_backend.md`](11_what_is_a_backend.md) — server, request/response, HTTP, FastAPI, Jinja templates ✅ | Ship 6 |
 | 12 | `12_what_is_a_frontend.md` — HTML, browser, HTMX, why not React (yet) | Ship 6 |
 | 13 | `13_what_is_deployment.md` — hosting, environments, secrets, env vars | Ship 7 |
 | 14 | `14_writing_good_code.md` — naming, function size, comments, structure | cross-cutting |
