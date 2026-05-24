@@ -398,6 +398,25 @@ def get_email_body(msg: dict) -> str:
     return msg.get("snippet", "")
 
 
+def get_raw_html_body(msg: dict) -> str:
+    """Pull RAW HTML body (no whitespace collapse, no truncation).
+
+    Required for downstream HTML parsing (e.g. LinkedIn alert job-card extraction).
+    Different from get_email_body() which optimises for LLM text input.
+    """
+    def walk_html(part):
+        if part.get("mimeType") == "text/html":
+            data = part.get("body", {}).get("data")
+            if data:
+                return _decode_b64(data)
+        for sub in part.get("parts", []):
+            result = walk_html(sub)
+            if result:
+                return result
+        return ""
+    return walk_html(msg.get("payload", {}))
+
+
 def _normalize_company(s: str) -> str:
     """Normalize a company string for fuzzy comparison."""
     if not s:
@@ -728,7 +747,8 @@ def sync_to_tracker(conn: Connection) -> dict:
         # ─── LinkedIn job-alert ingestion (Phase 1 discovery path) ──────
         headers = {h["name"]: h["value"] for h in msg.get("payload", {}).get("headers", [])}
         if linkedin_alerts.is_linkedin_alert(headers):
-            body = get_email_body(msg)
+            # Use raw HTML — alert parser needs structure preserved
+            body = get_raw_html_body(msg)
             jobs_in_alert = linkedin_alerts.parse_alert(body)
             for j in jobs_in_alert:
                 # Dedup on link (canonical URL with no tracking params)
