@@ -204,18 +204,58 @@
   </script>
   {% endif %}
 
+  {# ─── Filter chips ───────────────────────────────────────────────────── #}
+  <div class="mb-3 flex flex-wrap items-center gap-2">
+    <div class="text-[11px] font-mono uppercase tracking-[0.16em] text-ink3 mr-1">Status:</div>
+    {% for chip in status_chips %}
+    <a href="{{ chip.url }}"
+       class="px-3 h-7 rounded-md text-[12.5px] font-medium border transition inline-flex items-center
+         {% if chip.active %}
+           bg-accent-500 border-accent-500 text-white hover:bg-accent-400
+         {% else %}
+           bg-raised border-line text-ink2 hover:border-accent-500/50 hover:text-ink
+         {% endif %}">
+      {{ chip.label }}
+    </a>
+    {% endfor %}
+  </div>
+
+  <div class="mb-5 flex flex-wrap items-center gap-2">
+    <div class="text-[11px] font-mono uppercase tracking-[0.16em] text-ink3 mr-1">Flag:</div>
+    {% for chip in flag_chips %}
+    <a href="{{ chip.url }}"
+       class="px-3 h-7 rounded-md text-[12.5px] font-medium border transition inline-flex items-center
+         {% if chip.active %}
+           bg-replied border-replied text-white hover:opacity-90
+         {% else %}
+           bg-raised border-line text-ink2 hover:border-replied/50 hover:text-ink
+         {% endif %}">
+      {{ chip.label }}
+    </a>
+    {% endfor %}
+    {% if any_filter_active %}
+    <a href="/" class="ml-auto px-3 h-7 rounded-md text-[12.5px] border border-line bg-sunken text-ink3 hover:text-ink hover:border-line2 inline-flex items-center transition">
+      Clear all filters
+    </a>
+    <span class="text-[12px] text-ink3 font-mono">{{ filtered_total }} matched</span>
+    {% endif %}
+  </div>
+
   {# ─── Job cards grouped by status ────────────────────────────────────── #}
   {% for status in statuses %}
     {% set jobs_in_status = by_status[status.key] %}
     {% if jobs_in_status %}
     <div class="mt-6 mb-2 text-[11px] font-mono uppercase tracking-[0.16em] text-ink3 flex items-center gap-2">
       <span data-status="{{ status.key }}" class="w-2 h-2 rounded-full st-dot"></span>
-      {{ status.label }} · {{ status_counts[status.key] }}
+      {{ status.label }} · {{ jobs_in_status|length }}{% if any_filter_active %} <span class="text-ink3">of {{ status_counts[status.key] }}</span>{% endif %}
     </div>
     <div class="space-y-2">
       {% for job in jobs_in_status %}
       <a href="/jobs/{{ job.id }}" class="block group">
-        <div class="flex items-center gap-3 p-3 rounded-lg bg-raised border border-line hover:border-line2 transition">
+        <div class="flex items-center gap-3 p-3 rounded-lg bg-raised border transition
+          {% if job.is_stale_critical %}border-rejected/40 hover:border-rejected/70
+          {% elif job.is_stale %}border-replied/40 hover:border-replied/70
+          {% else %}border-line hover:border-line2{% endif %}">
           <div class="w-10 h-10 rounded-md bg-sunken flex items-center justify-center text-ink2 text-[13px] font-mono font-semibold flex-shrink-0">
             {{ job.ini }}
           </div>
@@ -223,15 +263,31 @@
             <div class="flex items-center gap-2 flex-wrap">
               <div class="text-ink text-[14px] font-medium truncate">{{ job.title }}</div>
               <span data-status="{{ job.status }}" class="st-pill px-2 h-5 rounded text-[10.5px] font-mono uppercase tracking-wider inline-flex items-center">{{ job.status }}</span>
+              {% if job.is_stale_critical %}
+                <span class="px-2 h-5 rounded text-[10.5px] font-mono uppercase tracking-wider inline-flex items-center bg-rejected/15 text-rejected border border-rejected/30">⚡ Follow up · {{ job.applied_days_ago }}d</span>
+              {% elif job.is_stale %}
+                <span class="px-2 h-5 rounded text-[10.5px] font-mono uppercase tracking-wider inline-flex items-center bg-replied/15 text-replied border border-replied/30">Stale · {{ job.applied_days_ago }}d</span>
+              {% endif %}
             </div>
             <div class="text-ink2 text-[12.5px] truncate">
               {{ job.company }}{% if job.location %} · {{ job.location }}{% endif %}
             </div>
             <div class="text-ink3 text-[11px] font-mono mt-0.5 flex items-center gap-3 flex-wrap">
-              <span>fit {{ job.fit }}</span>
-              {% if job.next_action_at %}
-                <span class="{% if job.is_overdue %}text-replied{% endif %}">· next {{ job.next_action_at }}{% if job.is_overdue %} (overdue {{ job.days_overdue }}d){% endif %}</span>
+              {# Activity line — Apply→reply gap is the primary signal per FDE plan. #}
+              {% if job.status == 'applied' and job.applied_days_ago is not none %}
+                <span class="{% if job.is_stale_critical %}text-rejected{% elif job.is_stale %}text-replied{% else %}text-ink2{% endif %}">
+                  Applied {{ job.applied_days_ago }}d ago · {% if job.applied_days_ago == 0 %}today{% else %}awaiting reply{% endif %}
+                </span>
+              {% elif job.status == 'saved' %}
+                <span>Saved · not applied yet</span>
+              {% elif job.status in ('replied', 'interview') and job.applied_days_ago is not none %}
+                <span class="text-interview">In conversation · applied {{ job.applied_days_ago }}d ago</span>
+              {% elif job.status == 'offer' %}
+                <span class="text-offer">Offer 🎉</span>
+              {% elif job.status == 'rejected' %}
+                <span>Closed</span>
               {% endif %}
+              <span>· fit {{ job.fit }}</span>
               {% if job.contact_count %}<span>· ★ {{ job.contact_count }} warm</span>{% endif %}
               {% if job.draft_count %}<span>· {{ job.draft_count }} draft{% if job.draft_count > 1 %}s{% endif %}</span>{% endif %}
               <span class="text-ink3">· #{{ job.id }}</span>
@@ -244,6 +300,13 @@
     </div>
     {% endif %}
   {% endfor %}
+
+  {% if any_filter_active and filtered_total == 0 %}
+  <div class="mt-8 p-8 rounded-lg bg-raised border border-line text-center">
+    <p class="text-ink2 text-sm mb-2">No jobs match these filters.</p>
+    <a href="/" class="inline-block h-9 px-4 rounded-md border border-line bg-sunken hover:border-line2 text-ink2 hover:text-ink text-[13px] font-medium transition">Clear filters</a>
+  </div>
+  {% endif %}
 
   {# Empty state #}
   {% if total_active == 0 and backlog_count == 0 %}

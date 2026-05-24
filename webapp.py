@@ -299,6 +299,30 @@ def _enrich_job(job_dict, today, contacts_by_job, drafts_by_job):
     job_dict["is_overdue"] = is_overdue
     job_dict["days_overdue"] = days_overdue
     job_dict["draft_count"] = drafts
+
+    # Apply→reply gap: how long since user applied. NULL applied_at means we
+    # don't know when (older jobs, jobs that never went through Applied).
+    # 'is_stale' = status is still 'applied' AND >3 days passed without
+    # advancing to Replied/Interview/Offer — the trigger for follow-up.
+    applied_at = job_dict.get("applied_at")
+    applied_days_ago = None
+    is_stale = False
+    is_stale_critical = False  # 7d+: louder visual
+    if applied_at:
+        try:
+            d1 = datetime.strptime(applied_at, "%Y-%m-%d").date()
+            d2 = datetime.fromisoformat(today).date()
+            applied_days_ago = (d2 - d1).days
+            if job_dict["status"] == "applied":
+                if applied_days_ago >= 3:
+                    is_stale = True
+                if applied_days_ago >= 7:
+                    is_stale_critical = True
+        except Exception:
+            pass
+    job_dict["applied_days_ago"] = applied_days_ago
+    job_dict["is_stale"] = is_stale
+    job_dict["is_stale_critical"] = is_stale_critical
     # Activity preview: prefer next_action_note. Use 'or ""' to coerce NULL → "".
     # (.get(k, "") only returns the default when the KEY is missing — not when
     # the value is None, which is the common case for Postgres NULL columns.)
@@ -341,10 +365,37 @@ def _format_relative_time(iso_ts: Optional[str]) -> str:
     return ts.astimezone().strftime("%b %-d, %-I:%M %p")
 
 
+def _build_chip(label, key, qs_param, active_keys, base_query):
+    """Build a filter-chip dict the template can render. URL toggles the chip
+    on/off by adding or removing 'key' from the multi-valued qs_param."""
+    is_active = key in active_keys
+    if is_active:
+        next_keys = [k for k in active_keys if k != key]
+    else:
+        next_keys = active_keys + [key]
+    qs = dict(base_query)
+    if next_keys:
+        qs[qs_param] = ",".join(next_keys)
+    else:
+        qs.pop(qs_param, None)
+    qstr = "&".join(f"{k}={v}" for k, v in qs.items())
+    return {
+        "label": label,
+        "key": key,
+        "active": is_active,
+        "url": "/" + (f"?{qstr}" if qstr else ""),
+    }
+
+
 @app.get("/", response_class=HTMLResponse)
 def homepage(request: Request):
     tracker.init_db()
     today = datetime.now().date().isoformat()
+
+    # Filter state from URL: ?status=applied,saved&flag=stale
+    qp = request.query_params
+    active_statuses = [s for s in (qp.get("status", "").split(",")) if s]
+    active_flags = [f for f in (qp.get("flag", "").split(",")) if f]
 
     with get_connection() as conn:
         jobs_rows = conn.execute("SELECT * FROM jobs ORDER BY id").fetchall()
@@ -397,14 +448,50 @@ def homepage(request: Request):
     backlog_count = status_counts.get("backlog", 0)
     total_active = sum(c for s, c in status_counts.items() if s != "backlog")
 
+    # Count for the "Stale 3d+" chip — must be from the UNFILTERED set,
+    # otherwise the count drops to 0 the moment you toggle on the filter.
+    stale_count = sum(1 for j in jobs if j["is_stale"])
+
+    # Apply filter chips: status (multi) and flag=stale (multi-flags ready).
+    # Empty status list → show all. Empty flags → no extra filter.
+    filtered_jobs = jobs
+    if active_statuses:
+        filtered_jobs = [j for j in filtered_jobs if j["status"] in active_statuses]
+    if "stale" in active_flags:
+        filtered_jobs = [j for j in filtered_jobs if j["is_stale"]]
+
     # Group jobs by status (preserve PIPELINE_STATUSES order)
     by_status = {s["key"]: [] for s in PIPELINE_STATUSES}
-    for j in jobs:
+    for j in filtered_jobs:
         if j["status"] in by_status:
             by_status[j["status"]].append(j)
         else:
             # Unknown status falls into Saved
             by_status["saved"].append(j)
+
+    # Build chip rows for the template
+    base_qs = {}  # keep this empty for now; status/flag get re-added in _build_chip
+    status_chips = [
+        _build_chip(s["label"], s["key"], "status", active_statuses, {})
+        for s in PIPELINE_STATUSES
+    ]
+    # Inject the current 'flag' selection into status-chip URLs so toggling
+    # status doesn't accidentally clear the stale-only filter.
+    if active_flags:
+        flag_qs = "flag=" + ",".join(active_flags)
+        for chip in status_chips:
+            sep = "&" if "?" in chip["url"] else "?"
+            chip["url"] = chip["url"] + sep + flag_qs
+    flag_chips = [
+        _build_chip(f"⚡ Stale 3d+ ({stale_count})", "stale", "flag", active_flags, {})
+    ]
+    if active_statuses:
+        st_qs = "status=" + ",".join(active_statuses)
+        for chip in flag_chips:
+            sep = "&" if "?" in chip["url"] else "?"
+            chip["url"] = chip["url"] + sep + st_qs
+
+    any_filter_active = bool(active_statuses or active_flags)
 
     # Gmail integration status for top-bar Sync button
     gmail_state = {
@@ -439,6 +526,11 @@ def homepage(request: Request):
             "backlog_count": backlog_count,
             "total_active": total_active,
             "drafts_pending": drafts_pending,
+            "stale_count": stale_count,
+            "status_chips": status_chips,
+            "flag_chips": flag_chips,
+            "any_filter_active": any_filter_active,
+            "filtered_total": len(filtered_jobs),
             "gmail": gmail_state,
         },
     )
@@ -574,10 +666,21 @@ def update_job_status(job_id: int, payload: dict = Body(...)):
         if old_status == new_status:
             return {"ok": True, "id": job_id, "status": new_status, "changed": False}
 
-        conn.execute(
-            "UPDATE jobs SET status = ?, last_activity_at = ? WHERE id = ?",
-            (new_status, now, job_id),
-        )
+        # Set applied_at the first time a job lands in 'applied' status (and
+        # only if it hasn't been set before — preserves the original apply
+        # date if a job bounces Applied → Replied → Applied).
+        today = datetime.now().date().isoformat()
+        if new_status == "applied":
+            conn.execute(
+                "UPDATE jobs SET status = ?, last_activity_at = ?, "
+                "applied_at = COALESCE(applied_at, ?) WHERE id = ?",
+                (new_status, now, today, job_id),
+            )
+        else:
+            conn.execute(
+                "UPDATE jobs SET status = ?, last_activity_at = ? WHERE id = ?",
+                (new_status, now, job_id),
+            )
         conn.execute(
             "INSERT INTO events (job_id, event_type, body, occurred_at, recorded_at) "
             "VALUES (?, ?, ?, ?, ?)",
@@ -1294,6 +1397,30 @@ def leads_pursue(lead_id: int):
             (lead_id, "status_change", "lead -> saved (promoted from Leads inbox)", now_iso, now_iso),
         )
     return RedirectResponse(f"/jobs/{lead_id}", status_code=303)
+
+
+@app.post("/leads/{lead_id}/applied")
+def leads_already_applied(lead_id: int):
+    """User opened LinkedIn from the lead, found they already applied earlier.
+    Skips the Saved → Applied dance: status straight to 'applied' + applied_at=today.
+    """
+    tracker.init_db()
+    now_iso = datetime.now().isoformat(timespec="seconds")
+    today = datetime.now().date().isoformat()
+    with get_connection() as conn:
+        conn.execute(
+            "UPDATE jobs SET status = 'applied', worth_pursuing = 'yes', "
+            "applied_at = COALESCE(applied_at, ?), last_activity_at = ? WHERE id = ?",
+            (today, now_iso, lead_id),
+        )
+        conn.execute(
+            "INSERT INTO events (job_id, event_type, body, occurred_at, recorded_at) "
+            "VALUES (?, ?, ?, ?, ?)",
+            (lead_id, "status_change",
+             "lead -> applied (already-applied path from Leads triage)",
+             now_iso, now_iso),
+        )
+    return RedirectResponse("/leads", status_code=303)
 
 
 @app.post("/leads/{lead_id}/dismiss")

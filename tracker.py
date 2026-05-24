@@ -30,6 +30,10 @@ def init_db():
         _ensure_column(conn, "jobs", "comp_range", "TEXT")
         _ensure_column(conn, "jobs", "source", "TEXT")
         _ensure_column(conn, "jobs", "resume_md", "TEXT")
+        # Date of the Saved → Applied transition. Drives the "applied Xd ago"
+        # activity line + the "Stale 3d+ no reply" filter on Pipeline.
+        # NULL for jobs that never went through Applied or pre-date this column.
+        _ensure_column(conn, "jobs", "applied_at", "TEXT")
 
 
 def _require_job(conn, job_id):
