@@ -1314,14 +1314,15 @@ def leads_inbox(request: Request, show: str = "", title: str = "", loc: str = ""
         leads.append(d)
     # Build display chips with active/inactive state + URLs that toggle membership
     def build_chip_state(defs, current_keys, param_name):
+        """Single-select chip behavior (radio-button style):
+        - clicking an inactive chip REPLACES current selection with just that key
+        - clicking the active chip clears the row
+        User asked for this in both Title + Loc rows — selecting two roles at
+        once is rarely what they want at the triage moment."""
         out = []
         for key, label, _kws in defs:
             is_active = key in current_keys
-            # Toggle URL: if active, remove this key; if not, add
-            if is_active:
-                new_keys = [k for k in current_keys if k != key]
-            else:
-                new_keys = current_keys + [key]
+            new_keys = [] if is_active else [key]
             query_parts = []
             if param_name == "title":
                 if new_keys:
