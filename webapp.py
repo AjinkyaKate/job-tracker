@@ -365,14 +365,23 @@ def _format_relative_time(iso_ts: Optional[str]) -> str:
     return ts.astimezone().strftime("%b %-d, %-I:%M %p")
 
 
-def _build_chip(label, key, qs_param, active_keys, base_query):
-    """Build a filter-chip dict the template can render. URL toggles the chip
-    on/off by adding or removing 'key' from the multi-valued qs_param."""
+def _build_chip(label, key, qs_param, active_keys, base_query, single_select=False):
+    """Build a filter-chip dict the template can render.
+
+    single_select=False (default): clicking toggles the key in/out of the
+        multi-valued qs_param. Use for orthogonal flags (e.g. 'stale').
+    single_select=True: clicking an inactive chip REPLACES the qs_param
+        with just this key (radio-button behavior). Clicking the active
+        chip clears the qs_param. Use for mutually-exclusive groups like
+        status, where Applied + Replied at once is rarely what you want."""
     is_active = key in active_keys
-    if is_active:
-        next_keys = [k for k in active_keys if k != key]
+    if single_select:
+        next_keys = [] if is_active else [key]
     else:
-        next_keys = active_keys + [key]
+        if is_active:
+            next_keys = [k for k in active_keys if k != key]
+        else:
+            next_keys = active_keys + [key]
     qs = dict(base_query)
     if next_keys:
         qs[qs_param] = ",".join(next_keys)
@@ -472,7 +481,7 @@ def homepage(request: Request):
     # Build chip rows for the template
     base_qs = {}  # keep this empty for now; status/flag get re-added in _build_chip
     status_chips = [
-        _build_chip(s["label"], s["key"], "status", active_statuses, {})
+        _build_chip(s["label"], s["key"], "status", active_statuses, {}, single_select=True)
         for s in PIPELINE_STATUSES
     ]
     # Inject the current 'flag' selection into status-chip URLs so toggling
