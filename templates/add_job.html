@@ -42,7 +42,7 @@
   </div>
   {% endif %}
 
-  <form method="POST" action="/jobs/new" class="space-y-4">
+  <form method="POST" action="/add-job" class="space-y-4">
     <div>
       <label class="block text-[12px] font-mono uppercase tracking-[0.16em] text-ink3 mb-1.5">LinkedIn URL <span class="text-ink3 normal-case font-sans">(optional)</span></label>
       <input type="url" name="link" value="{{ form.link if form else '' }}"

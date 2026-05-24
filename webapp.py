@@ -711,12 +711,12 @@ Required fields:
 Be conservative — return null for fields the JD doesn't actually mention. Don't invent."""
 
 
-@app.get("/jobs/new", response_class=HTMLResponse)
+@app.get("/add-job", response_class=HTMLResponse)
 def add_job_page(request: Request):
     return TEMPLATES.TemplateResponse("add_job.html", {"request": request})
 
 
-@app.post("/jobs/new", response_class=HTMLResponse)
+@app.post("/add-job", response_class=HTMLResponse)
 def add_job_submit(
     request: Request,
     link: str = Form(""),
