@@ -310,6 +310,18 @@ def _enrich_job(job_dict, today, contacts_by_job, drafts_by_job):
 
 @app.get("/", response_class=HTMLResponse)
 def homepage(request: Request):
+    try:
+        return _homepage_inner(request)
+    except Exception as exc:
+        import traceback
+        return HTMLResponse(
+            f"<h1>Homepage error</h1><pre>{type(exc).__name__}: {exc}\n\n"
+            f"{traceback.format_exc()}</pre>",
+            status_code=500,
+        )
+
+
+def _homepage_inner(request: Request):
     tracker.init_db()
     today = datetime.now().date().isoformat()
 
