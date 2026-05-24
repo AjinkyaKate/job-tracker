@@ -85,6 +85,76 @@ def healthz():
     return {"ok": True}
 
 
+@app.get("/debug/gemini-probe")
+def gemini_probe():
+    """Diagnose why Gemini classification returns None on every email."""
+    import os
+    out = {"GEMINI_API_KEY_set": bool(os.environ.get("GEMINI_API_KEY")),
+           "GEMINI_API_KEY_prefix": (os.environ.get("GEMINI_API_KEY", "")[:8] + "..." if os.environ.get("GEMINI_API_KEY") else None)}
+    try:
+        import email_analyzer
+        out["is_available"] = email_analyzer.is_available()
+        out["genai_module_loaded"] = email_analyzer._GENAI_AVAILABLE
+    except Exception as e:
+        out["import_error"] = f"{type(e).__name__}: {e}"
+        return out
+
+    if not email_analyzer.is_available():
+        out["error"] = "email_analyzer.is_available() returned False"
+        return out
+
+    # Try a simple Gemini call with minimal prompt
+    try:
+        from google import genai
+        from google.genai import types as t
+        client = genai.Client(api_key=os.environ["GEMINI_API_KEY"])
+        # First: list available models to see what we have access to
+        try:
+            models = [m.name for m in client.models.list()][:10]
+            out["available_models_sample"] = models
+        except Exception as e:
+            out["list_models_error"] = f"{type(e).__name__}: {e}"
+        # Try a simple generation
+        try:
+            r = client.models.generate_content(
+                model="gemini-2.5-flash",
+                contents=["Say 'pong' in JSON: {\"reply\": \"pong\"}"],
+                config=t.GenerateContentConfig(
+                    response_mime_type="application/json",
+                    temperature=0.0,
+                ),
+            )
+            out["simple_call_ok"] = True
+            out["simple_call_response"] = r.text[:200] if hasattr(r, 'text') else str(r)[:200]
+        except Exception as e:
+            out["simple_call_error"] = f"{type(e).__name__}: {str(e)[:500]}"
+        # Try the actual analyze_email call
+        try:
+            result = email_analyzer.analyze_email(
+                "Thank you for applying to Global Payments",
+                "no-reply@globalpayments.com",
+                "Hello, Thank you for your interest in the Associate Product Owner position.",
+                [{"id": 32, "company": "Global Payments Inc.", "title": "APO", "status": "saved"}],
+            )
+            out["analyze_email_ok"] = result is not None
+            if result:
+                out["analyze_email_result"] = {
+                    "is_job_related": result.is_job_related,
+                    "matched_job_id": result.matched_job_id,
+                    "event_type": result.event_type,
+                    "target_status": result.target_status,
+                    "summary": result.summary,
+                    "confidence": result.confidence,
+                }
+            else:
+                out["analyze_email_result"] = None
+        except Exception as e:
+            out["analyze_email_error"] = f"{type(e).__name__}: {str(e)[:500]}"
+    except Exception as e:
+        out["outer_error"] = f"{type(e).__name__}: {e}"
+    return out
+
+
 @app.get("/debug/gmail-probe")
 def gmail_probe():
     """Diagnostic: bypass our fetch wrapper and call Gmail directly.
