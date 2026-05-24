@@ -13,8 +13,9 @@ for this role ready → Download" link pointing at /resumes/role/forward-deploye
 
 HEADER = """# Ajinkya Kate
 
+[+91 77588 80580](tel:+917758880580) · [ajinkyakate2001@gmail.com](mailto:ajinkyakate2001@gmail.com) · [LinkedIn](https://linkedin.com/in/ajinkya-kate) · [GitHub](https://github.com/AjinkyaKate)
+
 Pune District, Maharashtra, India · Available immediately · CSPO Certified
-[LinkedIn](https://linkedin.com/in/ajinkya-kate) · [GitHub](https://github.com/AjinkyaKate)
 """
 
 EXPERIENCE = """## Experience
