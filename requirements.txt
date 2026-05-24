@@ -42,10 +42,13 @@ urllib3==2.6.3
 uvicorn==0.32.1
 uvloop==0.22.1
 watchfiles==1.1.1
-websockets==15.0.1
+# websockets pin loosened from ==15.0.1 so pip can pick a version compatible
+# with both uvicorn (>=10) and google-genai's transitive constraints.
+websockets>=13.0,<16.0
 zipp==3.23.1
 # Postgres backend for Render deploy. Pulls in pure-Python psycopg + C-binary.
 psycopg[binary]==3.2.13
 # Google Gemini API for LLM-powered email classification. Free tier (no card),
-# 1500 requests/day. Set GEMINI_API_KEY env var to enable.
-google-genai==0.8.0
+# 1500 requests/day. Set GEMINI_API_KEY env var to enable. Flexible pin so pip
+# can resolve against websockets above.
+google-genai>=0.8.0,<2.0.0
