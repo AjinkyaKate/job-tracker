@@ -1,7 +1,7 @@
 import os
 import re
 import secrets
-from datetime import datetime
+from datetime import datetime, timezone
 from pathlib import Path
 from typing import Optional
 
@@ -308,6 +308,39 @@ def _enrich_job(job_dict, today, contacts_by_job, drafts_by_job):
     return job_dict
 
 
+def _format_relative_time(iso_ts: Optional[str]) -> str:
+    """Convert an ISO timestamp to a friendly relative string.
+
+    Examples: "just now", "5m ago", "2h ago", "Yesterday 9:43 PM", "May 20, 4:12 PM".
+    Returns "" for None / unparseable input.
+    """
+    if not iso_ts:
+        return ""
+    try:
+        ts = datetime.fromisoformat(iso_ts.replace("Z", "+00:00"))
+    except (ValueError, TypeError):
+        return ""
+    # Normalize to UTC-aware for the diff, then render in local clock time
+    if ts.tzinfo is None:
+        ts = ts.replace(tzinfo=timezone.utc)
+    now = datetime.now(timezone.utc)
+    delta = now - ts
+    secs = int(delta.total_seconds())
+    if secs < 30:
+        return "just now"
+    if secs < 60:
+        return f"{secs}s ago"
+    if secs < 3600:
+        return f"{secs // 60}m ago"
+    if secs < 86400:
+        return f"{secs // 3600}h ago"
+    if secs < 172800:
+        return f"Yesterday {ts.astimezone().strftime('%-I:%M %p')}"
+    if secs < 604800:
+        return f"{ts.astimezone().strftime('%a %-I:%M %p')}"
+    return ts.astimezone().strftime("%b %-d, %-I:%M %p")
+
+
 @app.get("/", response_class=HTMLResponse)
 def homepage(request: Request):
     tracker.init_db()
@@ -378,12 +411,17 @@ def homepage(request: Request):
         "configured": gmail_integration.is_configured(),
         "authorized": False,
         "last_sync": None,
+        "last_sync_rel": "",
+        "last_sync_summary": None,
     }
     if gmail_state["configured"]:
         with get_connection() as conn:
             creds = gmail_integration.load_credentials(conn)
             gmail_state["authorized"] = creds is not None
-            gmail_state["last_sync"] = gmail_integration.get_last_sync(conn)
+            last_sync = gmail_integration.get_last_sync(conn)
+            gmail_state["last_sync"] = last_sync
+            gmail_state["last_sync_rel"] = _format_relative_time(last_sync)
+            gmail_state["last_sync_summary"] = gmail_integration.get_last_sync_summary(conn)
 
     return TEMPLATES.TemplateResponse(
         "index.html",

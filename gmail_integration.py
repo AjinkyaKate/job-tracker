@@ -14,6 +14,7 @@ Status: SCAFFOLDING (Phase 3 ship 1/3).
 """
 
 import base64
+import json
 import os
 import re
 from datetime import datetime, timedelta, timezone
@@ -942,11 +943,10 @@ def sync_to_tracker(conn: Connection) -> dict:
         })
 
     _set_sync_state(conn, "last_gmail_sync", now_iso)
-    conn.commit()
 
     duration_s = (datetime.now(timezone.utc) - started).total_seconds()
 
-    return {
+    summary = {
         "ok": True,
         "mode": "regex+gemini" if gemini_available and not gemini_quota_exhausted else (
             "regex+gemini(quota_exhausted)" if gemini_quota_exhausted else "regex"
@@ -962,7 +962,36 @@ def sync_to_tracker(conn: Connection) -> dict:
         "leads_ingested": leads_ingested,
     }
 
+    # Persist a compact summary so the dashboard card can show "what happened
+    # last sync" — leads added, events logged, total emails scanned, status
+    # changes — without re-running the sync.
+    compact = {
+        "ts": now_iso,
+        "leads": leads_ingested,
+        "events": len(logged),
+        "fetched": fetched,
+        "status_changes": len(status_changes),
+        "duration_s": round(duration_s, 2),
+    }
+    _set_sync_state(conn, "last_sync_summary", json.dumps(compact))
+    conn.commit()
+
+    return summary
+
 
 def get_last_sync(conn: Connection) -> Optional[str]:
     """Returns the ISO timestamp of the most recent successful Gmail sync, or None."""
     return _get_sync_state(conn, "last_gmail_sync")
+
+
+def get_last_sync_summary(conn: Connection) -> Optional[dict]:
+    """Returns the compact summary dict (leads, events, fetched, status_changes,
+    duration_s, ts) of the most recent successful sync, or None if never synced
+    (or summary was written by an older code path that pre-dates this field)."""
+    raw = _get_sync_state(conn, "last_sync_summary")
+    if not raw:
+        return None
+    try:
+        return json.loads(raw)
+    except (ValueError, TypeError):
+        return None
