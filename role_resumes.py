@@ -19,7 +19,8 @@ Pune District, Maharashtra, India · Available immediately · CSPO Certified
 
 EXPERIENCE = """## Experience
 
-**Product Owner** · D·engage · Jan 2025 – May 2026 · Remote (London HQ)
+**Product Owner** · D·engage · Jan 2025 – May 2026 · Remote (India)
+
 - Owned end-to-end product delivery for a cross-functional team (engineering, design, QA) shipping marketing-automation features for enterprise clients across banking, retail, and telecom.
 - Drove product discovery — customer interviews, competitor scans, hypothesis-driven prototypes — that fed directly into PRDs and sprint commitments.
 - Shipped AI-powered features inside the engagement platform: LLM-assisted content generation, smart segmentation, personalization journeys — partnering with engineering on model selection, prompt design, and evaluation criteria.
@@ -28,6 +29,7 @@ EXPERIENCE = """## Experience
 - Built quick prototypes (no-code + AI-assisted code) to validate ideas before engineering invested in proper builds.
 
 **Product Analyst** · Denner.in · May 2024 – Dec 2024 · Pune (Hybrid)
+
 - Owned product analytics + competitive research feeding into PM decisions; ran A/B test analysis, funnel deep-dives, and user-research synthesis.
 """
 
