@@ -1,75 +1,25 @@
-import os
-import sqlite3
 import sys
 from datetime import datetime
 
-DB_FILE = os.environ.get("DB_FILE", "tracker.db")
-
-SCHEMA = """
-CREATE TABLE IF NOT EXISTS jobs (
-    id INTEGER PRIMARY KEY AUTOINCREMENT,
-    title TEXT NOT NULL,
-    company TEXT,
-    link TEXT,
-    status TEXT NOT NULL DEFAULT 'saved',
-    notes TEXT,
-    added_at TEXT NOT NULL,
-    next_action_at TEXT,
-    next_action_note TEXT,
-    worth_pursuing TEXT DEFAULT 'unsure',
-    last_activity_at TEXT
-);
-
-CREATE TABLE IF NOT EXISTS contacts (
-    id INTEGER PRIMARY KEY AUTOINCREMENT,
-    job_id INTEGER NOT NULL,
-    name TEXT NOT NULL,
-    role TEXT,
-    email TEXT,
-    phone TEXT,
-    linkedin_url TEXT,
-    notes TEXT,
-    added_at TEXT NOT NULL,
-    FOREIGN KEY (job_id) REFERENCES jobs(id)
-);
-
-CREATE TABLE IF NOT EXISTS events (
-    id INTEGER PRIMARY KEY AUTOINCREMENT,
-    job_id INTEGER NOT NULL,
-    contact_id INTEGER,
-    event_type TEXT NOT NULL,
-    body TEXT,
-    occurred_at TEXT NOT NULL,
-    recorded_at TEXT NOT NULL,
-    FOREIGN KEY (job_id) REFERENCES jobs(id),
-    FOREIGN KEY (contact_id) REFERENCES contacts(id)
-);
-"""
-
-
-def get_connection():
-    conn = sqlite3.connect(DB_FILE)
-    conn.row_factory = sqlite3.Row
-    conn.execute("PRAGMA foreign_keys = ON")
-    return conn
+from db import get_connection, init_schema, insert_returning_id, column_exists
 
 
 def _ensure_column(conn, table, column, type_spec):
-    info = conn.execute(f"PRAGMA table_info({table})").fetchall()
-    exists = any(row["name"] == column for row in info)
-    if not exists:
+    """Add a column if missing. Backend-aware via db.column_exists."""
+    if not column_exists(conn, table, column):
         conn.execute(f"ALTER TABLE {table} ADD COLUMN {column} {type_spec}")
 
 
 def init_db():
     with get_connection() as conn:
-        conn.executescript(SCHEMA)
-        # Idempotent ALTERs for columns introduced in Ship 4
+        init_schema(conn)
+        # Idempotent ALTERs for columns introduced after the initial schema.
+        # New deploys against fresh Postgres land all these columns via the
+        # base schema; ALTERs are only needed for older SQLite databases.
         _ensure_column(conn, "jobs", "next_action_at", "TEXT")
         _ensure_column(conn, "jobs", "next_action_note", "TEXT")
         _ensure_column(conn, "jobs", "worth_pursuing", "TEXT DEFAULT 'unsure'")
         _ensure_column(conn, "jobs", "last_activity_at", "TEXT")
-        # Ship 5 prep — rich JD listing fields (extracted manually or by AI later)
         _ensure_column(conn, "jobs", "jd_raw_text", "TEXT")
         _ensure_column(conn, "jobs", "jd_summary", "TEXT")
         _ensure_column(conn, "jobs", "level", "TEXT")
@@ -79,35 +29,7 @@ def init_db():
         _ensure_column(conn, "jobs", "location", "TEXT")
         _ensure_column(conn, "jobs", "comp_range", "TEXT")
         _ensure_column(conn, "jobs", "source", "TEXT")
-        # Ship 6 Phase B — per-job tailored resume markdown
         _ensure_column(conn, "jobs", "resume_md", "TEXT")
-        # Phase 3 — Gmail integration tables
-        conn.executescript("""
-            CREATE TABLE IF NOT EXISTS oauth_tokens (
-                id INTEGER PRIMARY KEY AUTOINCREMENT,
-                provider TEXT NOT NULL UNIQUE,
-                access_token TEXT,
-                refresh_token TEXT,
-                expires_at TEXT,
-                scopes TEXT,
-                user_email TEXT,
-                created_at TEXT NOT NULL,
-                updated_at TEXT NOT NULL
-            );
-
-            CREATE TABLE IF NOT EXISTS sync_state (
-                key TEXT PRIMARY KEY,
-                value TEXT,
-                updated_at TEXT NOT NULL
-            );
-
-            CREATE TABLE IF NOT EXISTS processed_messages (
-                gmail_message_id TEXT PRIMARY KEY,
-                event_id INTEGER,
-                processed_at TEXT NOT NULL,
-                FOREIGN KEY (event_id) REFERENCES events(id)
-            );
-        """)
 
 
 def _require_job(conn, job_id):
@@ -134,12 +56,12 @@ def add_job():
         sys.exit(1)
 
     with get_connection() as conn:
-        cursor = conn.execute(
+        new_id = insert_returning_id(
+            conn,
             "INSERT INTO jobs (title, company, link, status, notes, added_at, last_activity_at) "
             "VALUES (?, ?, ?, ?, ?, ?, ?)",
             (title, company, link, status, notes, now, now),
         )
-        new_id = cursor.lastrowid
         conn.execute(
             "INSERT INTO events (job_id, event_type, body, occurred_at, recorded_at) "
             "VALUES (?, ?, ?, ?, ?)",
@@ -171,12 +93,12 @@ def add_contact(job_id):
         sys.exit(1)
 
     with get_connection() as conn:
-        cursor = conn.execute(
+        contact_id = insert_returning_id(
+            conn,
             "INSERT INTO contacts (job_id, name, role, email, phone, linkedin_url, notes, added_at) "
             "VALUES (?, ?, ?, ?, ?, ?, ?, ?)",
             (job_id, name, role, email, phone, linkedin_url, notes, now),
         )
-        contact_id = cursor.lastrowid
         conn.execute(
             "INSERT INTO events (job_id, contact_id, event_type, body, occurred_at, recorded_at) "
             "VALUES (?, ?, ?, ?, ?, ?)",

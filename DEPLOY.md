@@ -1,250 +1,208 @@
-# Deploy to Fly.io — step-by-step
+# Deploy to Render (free tier, no credit card) — step-by-step
 
-> Goal: get `https://job-tracker-ajinkya.fly.dev` (or your chosen subdomain) live, protected by HTTP basic auth, accessible from your phone 24/7. ~20–30 min including CLI install.
+> Goal: `https://job-tracker.onrender.com` (or similar) live 24/7, protected by HTTP basic auth, accessible from anywhere on any device. ~20 min including signup.
 >
-> Codebase is already prepped: `Dockerfile`, `.dockerignore`, `fly.toml`, `Procfile`, `requirements.txt`. `webapp.py` reads config from env vars and refuses to start in production without auth (safety guard).
+> Architecture: FastAPI web service + Render-managed PostgreSQL. SQLite (local dev) and Postgres (prod) are both supported by the same codebase via `db.py`, selected by the `DATABASE_URL` env var.
 
 ---
 
-## What you'll need
+## Free-tier reality check
 
-- Your **GitHub login** (`AjinkyaKate`) — easiest sign-in for Fly
-- A **payment method** to verify (Fly asks for one even on free tier; free allowance covers this app)
-- A **strong password** for HTTP basic auth (write it down — you'll need it on phone too)
-- ~20–30 min, with terminal access on your Mac
+Render's free tier has two things you should know about before starting:
 
----
+1. **Web service sleeps after 15 min idle.** First request after sleep takes ~30 seconds to wake. Once awake, it stays warm for 15 min after each request.
+2. **Free Postgres expires after 90 days of inactivity.** Using the tracker daily keeps it alive indefinitely. If you stop using it for 3 months, the DB is deleted.
 
-## Step 1 — Install the Fly CLI (`flyctl`)
-
-In your terminal on the Mac:
-
-```bash
-brew install flyctl
-```
-
-If you don't have Homebrew, use the curl installer instead:
-
-```bash
-curl -L https://fly.io/install.sh | sh
-```
-
-Verify it's installed:
-
-```bash
-flyctl version
-```
-
-You should see something like `flyctl v0.x.xxx`.
+Neither is a deal-breaker for a personal job tracker that you check multiple times a day.
 
 ---
 
-## Step 2 — Sign up + log in
+## Step 1 — Sign up at render.com
 
-```bash
-flyctl auth signup    # opens browser. Sign in with GitHub.
-```
+Open **https://render.com/register** in your browser. Pick **"Sign up with GitHub"** (same `AjinkyaKate` login). Authorize Render to read your repos. You're now on the Render dashboard.
 
-If you already have a Fly account:
-
-```bash
-flyctl auth login
-```
-
-Fly will ask for a payment method during signup. Your usage is well below the free allowance (~$0/month), but the verification step is mandatory.
+**No credit card required.**
 
 ---
 
-## Step 3 — Pick a globally-unique app name
+## Step 2 — Create the Blueprint
 
-Fly app names are globally unique (like usernames). Edit `fly.toml` and change the `app` line if `job-tracker-ajinkya` is taken:
+A Blueprint reads `render.yaml` in your repo and provisions everything in one click.
 
-```toml
-app = "job-tracker-ajinkya"   # change this if Fly says it's taken
-```
+1. Top-right of the dashboard, click **"New +"** → **"Blueprint"**
+2. **"Connect a repository"** → pick `AjinkyaKate/job-tracker`
+3. Render reads `render.yaml` and shows a preview: 1 web service (`job-tracker`) + 1 PostgreSQL database (`job-tracker-db`)
+4. Click **"Apply"**
 
-Then create the app:
-
-```bash
-cd "/Users/ajinkya/Desktop/Ajinkya Kate/job-tracker"
-flyctl apps create job-tracker-ajinkya   # use the same name as fly.toml
-```
-
-If you get `name not available`, pick a new one (e.g. `ajinkya-job-tracker-2026`), update `fly.toml`, and re-run.
-
-Once created, the URL will be `https://<your-app-name>.fly.dev`. Write this down — you'll need it in Step 5 and Step 7.
+Render starts building the web service AND provisioning the database in parallel. The build will likely fail the first time with "Detected production deploy but ADMIN_USERNAME or ADMIN_PASSWORD env var is missing" — that's the safety guard. We fix that in Step 4.
 
 ---
 
-## Step 4 — Create the persistent volume
+## Step 3 — Wait for Postgres to be ready (~1 min)
 
-This is what keeps your `tracker.db` alive between deploys.
+In the dashboard, click on the database service (`job-tracker-db`). Status should change to **"Available"** within ~60 seconds. Note the **Internal Database URL** — looks like `postgresql://job_tracker_user:xxxx@dpg-xxxxx-a/job_tracker_db_xxxx`. This is what `DATABASE_URL` will resolve to inside the web service.
 
-```bash
-flyctl volumes create tracker_data --size 1 --region bom -a job-tracker-ajinkya
-```
-
-(Replace `job-tracker-ajinkya` with your actual app name everywhere below.)
-
-It asks "Do you really want to use single-node SSD?" — answer **yes**. Single-node is correct for a single-user app with SQLite.
+You don't need to copy it — `render.yaml` auto-wires it to the web service.
 
 ---
 
-## Step 5 — Set your secrets
+## Step 4 — Set your secret env vars on the web service
 
-These become env vars inside the running container. **Run this in one command** so Fly batches the deploy.
+In the dashboard, click on the web service (`job-tracker`). Open the **Environment** tab.
 
-```bash
-flyctl secrets set \
-  ADMIN_USERNAME="ajinkya" \
-  ADMIN_PASSWORD="<pick-a-strong-password>" \
-  GOOGLE_CLIENT_ID="783422059264-0aof78coba8cipi11mluoa6288btf4do.apps.googleusercontent.com" \
-  GOOGLE_CLIENT_SECRET="<paste-your-GOCSPX-secret>" \
-  GOOGLE_REDIRECT_URI="https://job-tracker-ajinkya.fly.dev/auth/gmail/callback" \
-  -a job-tracker-ajinkya
-```
+You'll see 5 env vars with **"Required"** badges that need values:
 
-Replace:
-- `<pick-a-strong-password>` with a long random password (save it in a password manager — you'll type it on phone too)
-- `<paste-your-GOCSPX-secret>` with your Google OAuth Client Secret from `.env`
-- The redirect URI domain to match your actual app name
+| Key | Value |
+|---|---|
+| `ADMIN_USERNAME` | `ajinkya` (or whatever you want) |
+| `ADMIN_PASSWORD` | A strong password. **Save it in your password manager.** |
+| `GOOGLE_CLIENT_ID` | `783422059264-0aof78coba8cipi11mluoa6288btf4do.apps.googleusercontent.com` |
+| `GOOGLE_CLIENT_SECRET` | Paste your `GOCSPX-...` from local `.env` |
+| `GOOGLE_REDIRECT_URI` | `https://job-tracker.onrender.com/auth/gmail/callback` (use your actual Render URL once Step 5 confirms it) |
 
-> Fly does NOT print secret values back. They're encrypted at rest. You can re-set any of them later with the same command.
+Click **"Save Changes"**. Render auto-redeploys.
 
 ---
 
-## Step 6 — Update Google Cloud Console
+## Step 5 — Wait for the redeploy
 
-The Gmail OAuth callback URL changed (from `localhost:8000` to your Fly subdomain). You need to whitelist the new URL in Google Cloud Console, or Gmail auth will fail.
+Watch the **Events** tab. The redeploy should finish in ~2 minutes (Render free-tier builds are slower than paid). Status: **Live** (green dot).
 
-1. Open **https://console.cloud.google.com/apis/credentials**
-2. Click your OAuth 2.0 Client ID (the one for `783422059264-...`)
-3. Under **Authorized redirect URIs**, click **+ ADD URI** and add:
-   ```
-   https://job-tracker-ajinkya.fly.dev/auth/gmail/callback
-   ```
-4. Click **Save**
-5. Leave the localhost URI in place too — handy for local dev later.
+If it fails again, paste the log into chat and I'll diagnose.
+
+Once live, your URL is shown on the service overview: `https://job-tracker.onrender.com` (or `job-tracker-xxxx.onrender.com` if `job-tracker` was taken).
 
 ---
 
-## Step 7 — Deploy
+## Step 6 — First visit + auth prompt
 
-```bash
-flyctl deploy -a job-tracker-ajinkya
-```
-
-This builds the Docker image, pushes it, starts the machine, mounts the volume, runs the schema migration. Takes ~2–3 min the first time.
-
-**Watch the log** — if anything fails, it prints why. Common issues are in Troubleshooting below.
-
-When it says `deployed successfully`, the URL is live. Visit:
-
-```
-https://job-tracker-ajinkya.fly.dev
-```
-
-You'll get a browser HTTP-basic-auth prompt. Enter `ADMIN_USERNAME` + `ADMIN_PASSWORD` from Step 5. The dashboard loads — **empty**, because we haven't uploaded your local tracker.db yet. That's Step 8.
+1. Open the URL in your browser
+2. Browser prompts for HTTP basic auth → enter `ADMIN_USERNAME` + `ADMIN_PASSWORD`
+3. You'll see the dashboard. **Empty** — Postgres is fresh. We sync data in Step 7.
 
 ---
 
-## Step 8 — Migrate your local tracker.db to the Fly volume
+## Step 7 — Migrate your local data to Render Postgres
 
-Your Mac's `tracker.db` has 30 real jobs. Upload it.
+Your Mac has 31 jobs in `tracker.db`. We push them to Render's Postgres.
 
-First, **make a local backup** (in case something goes sideways):
+First, **make a local backup** in case anything goes sideways:
 
 ```bash
 cp tracker.db tracker.db.backup-$(date +%Y%m%d)
 ```
 
-Then SSH into the Fly machine and check what's there:
+Then get the **External Database URL** from Render (different from the Internal one — the External one is reachable from your laptop):
+
+1. In Render dashboard → `job-tracker-db` → **Info** tab
+2. Copy the **External Database URL** (looks like `postgresql://job_tracker_user:xxxx@dpg-xxxxx-a.singapore-postgres.render.com/job_tracker_db_xxxx`)
+3. Run the migration locally, pointing at that URL:
 
 ```bash
-flyctl ssh console -a job-tracker-ajinkya
-# inside container:
-ls -la /data
-exit
+cd "/Users/ajinkya/Desktop/Ajinkya Kate/job-tracker"
+.venv/bin/python migrate_to_postgres.py \
+  --source tracker.db \
+  --target "<paste-external-database-url-here>"
 ```
 
-You should see an empty `tracker.db` Fly created when the app first started. Now upload your real DB on top of it via SFTP:
+You'll see:
 
-```bash
-flyctl ssh sftp shell -a job-tracker-ajinkya
-# inside sftp:
-put tracker.db /data/tracker.db
-exit
+```
+✓ Target schema ensured
+Copying tables:
+  jobs                   src=31 -> inserted=31
+  contacts               src=18 -> inserted=18
+  events                 src=N  -> inserted=N
+  ...
+Resetting sequences:
+  jobs                   sequence jobs_id_seq -> 31
+  ...
+Verifying row counts:
+  [OK ] jobs                   source=31 target=31
+  [OK ] contacts               source=18 target=18
+  ...
+✓ Migration complete. All row counts match.
 ```
 
-Restart the app so it picks up the new DB cleanly:
+If any count mismatches, the script exits with code 3 and details. Paste output into chat and I'll diagnose.
 
-```bash
-flyctl apps restart job-tracker-ajinkya
-```
+---
 
-Reload the URL in your browser. You should now see all 30 jobs.
+## Step 8 — Reload the public URL
+
+Refresh `https://job-tracker.onrender.com` in your browser. All 31 jobs visible in the kanban.
 
 ---
 
 ## Step 9 — Verify from phone
 
-1. Open the same `https://job-tracker-ajinkya.fly.dev` on your phone
-2. Browser prompts for username/password → enter the same ones
-3. You should see the full kanban + all 30 jobs
-4. Drag a card to a new column from desktop → refresh phone → status updated
-5. Tap a card on phone → use the new "Move to ..." status buttons → returns to dashboard with card in new column
+1. Open the same URL on your phone (mobile data, *not* WiFi — proves it's reachable from the open internet)
+2. Browser prompts auth → enter the same credentials
+3. You should see the dashboard with all jobs
+4. Tap a card → use the "Move to ..." status buttons → returns to dashboard with card in new column
 
-**You're deployed. Running 24/7.**
+**You're deployed. Running 24/7.** Modulo the 15-min idle sleep — first request after a long pause will be ~30 sec slow, then normal.
 
 ---
 
-## Step 10 — Test Gmail sync end-to-end
+## Step 10 — Update Google Cloud Console for Gmail OAuth
 
-1. On phone or desktop, click the **"Connect Gmail"** button on the dashboard
-2. Should redirect to Google's consent screen
-3. Pick your Gmail account, grant `gmail.readonly`
-4. Redirects back to your dashboard. The Gmail widget should now say "Connected".
-5. Click **"Sync Now"**. Wait ~10s. New events from LinkedIn emails appear under each job's activity feed.
+The Gmail callback URL is now your Render domain, not localhost. Add it to Google Cloud Console's authorized redirects:
 
-If you get an OAuth error: the redirect URI in Google Cloud Console doesn't match `GOOGLE_REDIRECT_URI` in Fly secrets. Both must be the exact same string including trailing path.
+1. Open **https://console.cloud.google.com/apis/credentials**
+2. Click your OAuth 2.0 Client ID
+3. Under **Authorized redirect URIs**, click **"+ ADD URI"** and add:
+   ```
+   https://job-tracker.onrender.com/auth/gmail/callback
+   ```
+   (use your actual Render URL)
+4. Click **Save**
+5. Keep the `http://localhost:8000/auth/gmail/callback` entry too — handy for local dev.
+
+Then on the deployed app, click **"Connect Gmail"** → Google consent → back to dashboard → **"Sync Now"**. Should pull recent LinkedIn emails.
 
 ---
 
 ## Daily ops
 
-| Action | Command |
+| Action | How |
 |---|---|
-| View live logs | `flyctl logs -a job-tracker-ajinkya` |
-| SSH into container | `flyctl ssh console -a job-tracker-ajinkya` |
-| Download a backup of prod DB | `flyctl ssh sftp shell -a job-tracker-ajinkya` → `get /data/tracker.db ./prod-backup.db` |
-| Update a secret | `flyctl secrets set KEY=value -a job-tracker-ajinkya` |
-| Deploy a new version | push to GitHub + `flyctl deploy -a job-tracker-ajinkya` (or wire up auto-deploy later) |
-| Restart the app | `flyctl apps restart job-tracker-ajinkya` |
-| See app status | `flyctl status -a job-tracker-ajinkya` |
-| Stop billing entirely | `flyctl apps destroy job-tracker-ajinkya` (irreversible) |
+| View live logs | Render dashboard → web service → **Logs** tab |
+| Run a Postgres query | Render dashboard → database → **Connect** → "PSQL Command" |
+| Update a secret | Render dashboard → web service → **Environment** → edit value → save (auto-redeploys) |
+| Deploy a new version | `git push` to main; Render auto-deploys |
+| Restart the app | Dashboard → **Manual Deploy** → "Clear build cache & deploy" |
+| Backup the DB | Dashboard → database → **Backups** (free tier: 1 backup, no automatic) |
+| Download local backup | `pg_dump "<external-url>" > backup.sql` from your Mac |
 
 ---
 
 ## Troubleshooting
 
-- **`flyctl apps create` says name not available** → pick another, update `fly.toml`'s `app =` line to match.
-- **Build fails with "Detected production deploy but ADMIN_USERNAME or ADMIN_PASSWORD env var is missing"** → you skipped Step 5. Run the `flyctl secrets set` command.
-- **App starts but the URL returns 502** → uvicorn isn't binding to `$PORT`. Check `Dockerfile`'s CMD line wasn't edited; should use `${PORT:-8080}`.
-- **Auth prompt keeps appearing** → wrong username/password. Reset with `flyctl secrets set ADMIN_PASSWORD=...`.
-- **Page loads but is empty after Step 8** → DB upload didn't land. SSH in (`flyctl ssh console`), `ls -la /data`, confirm `tracker.db` size matches your local file. If it's still small, re-upload via SFTP.
-- **Gmail OAuth `redirect_uri_mismatch`** → the URL in Google Cloud Console doesn't exactly match the `GOOGLE_REDIRECT_URI` secret. Compare both character-by-character (https vs http, trailing slash, etc.).
-- **Page hangs after Fly says deployed** → first request after restart can be slow as Python boots. Wait 5–10s and retry.
-
-Paste any error log into chat and I'll diagnose.
+- **Build fails: "ADMIN_USERNAME missing"** → set the 5 env vars in Step 4.
+- **Build fails: Python version error** → confirm `.python-version` says `3.11`. Render respects it.
+- **App live but URL returns 502** → uvicorn isn't binding to `$PORT`. Check `render.yaml`'s `startCommand`.
+- **Auth prompt keeps appearing** → wrong username/password. Reset via Environment tab.
+- **App page loads but blank dashboard** → `DATABASE_URL` wired but tables not created. Hit the URL once (visiting `/` triggers `tracker.init_db()` which creates tables). Then migrate data again.
+- **Migration script: "could not connect to server"** → using Internal URL instead of External. Internal URL only works from inside Render's network.
+- **Gmail OAuth: `redirect_uri_mismatch`** → the URL in Google Cloud Console doesn't exactly match `GOOGLE_REDIRECT_URI`. Compare char-by-char.
+- **App is slow on first request** → expected. Free tier sleeps after 15 min idle.
 
 ---
 
 ## Cost expectations
 
-This single-machine app on `shared-cpu-1x@256MB` + 1GB volume runs at **$0/month** as long as you stay within Fly's free allowance:
+Render free tier:
+- Web service: 750 hrs/month free (24/7 = 720 hrs, fits inside)
+- PostgreSQL free tier: 1 GB storage, 256 MB RAM, expires after 90 days idle
+- 100 GB bandwidth/month free
 
-- 3 shared-cpu-1x VMs free (we use 1)
-- 3 GB persistent volume free (we use 1)
-- 160 GB outbound bandwidth free (we use ~negligible)
+Real monthly bill: **$0**. If you ever want to upgrade (no sleep, persistent DB), Starter web service is $7/mo + Postgres is $7/mo.
 
-If you ever scale up or add more apps, Fly charges per resource. Monitor at `flyctl dashboard`.
+---
+
+## Why we migrated from SQLite to Postgres
+
+The Render free tier has no persistent disk on the web service — every restart wipes the filesystem. SQLite needs a persistent file. So we use Render's managed PostgreSQL (which IS persistent) as the database, and the same Python codebase talks to either backend via `db.py`'s adapter.
+
+Locally, you still use SQLite (`tracker.db`) — fast, no setup, works offline. The adapter checks for `DATABASE_URL` and switches backends automatically.

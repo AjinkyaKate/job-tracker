@@ -1,0 +1,44 @@
+# Render Blueprint — declarative deploy for Job Tracker.
+# When the user creates a new Blueprint on Render and points it at this repo,
+# Render reads this file and provisions: 1 web service + 1 Postgres database.
+#
+# Secrets (sync: false) are entered manually in the Render dashboard after
+# Blueprint apply, so they're never committed to git.
+
+services:
+  - type: web
+    name: job-tracker
+    runtime: python
+    plan: free
+    region: singapore   # closest free-tier region for India
+    buildCommand: pip install -r requirements.txt
+    startCommand: uvicorn webapp:app --host 0.0.0.0 --port $PORT
+    healthCheckPath: /
+    envVars:
+      # Auto-injected from the Postgres database below — single source of truth.
+      - key: DATABASE_URL
+        fromDatabase:
+          name: job-tracker-db
+          property: connectionString
+      # Pin the Python version Render uses for build + run. Matches .python-version.
+      - key: PYTHON_VERSION
+        value: 3.11.7
+      # Secrets — set manually in Render dashboard. sync:false keeps them off
+      # both git AND Render's blueprint sync (so they survive blueprint updates).
+      - key: ADMIN_USERNAME
+        sync: false
+      - key: ADMIN_PASSWORD
+        sync: false
+      - key: GOOGLE_CLIENT_ID
+        sync: false
+      - key: GOOGLE_CLIENT_SECRET
+        sync: false
+      - key: GOOGLE_REDIRECT_URI
+        sync: false
+
+databases:
+  - name: job-tracker-db
+    plan: free
+    region: singapore
+    # Render's free PostgreSQL: 1 GB storage, 256 MB RAM, expires after 90 days
+    # if the project is left idle. Daily use keeps it alive indefinitely.

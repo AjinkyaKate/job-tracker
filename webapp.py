@@ -1,7 +1,6 @@
 import os
 import re
 import secrets
-import sqlite3
 from datetime import datetime
 from pathlib import Path
 from typing import Optional
@@ -20,8 +19,8 @@ from fastapi.templating import Jinja2Templates
 
 import gmail_integration
 import tracker
+from db import get_connection
 
-DB_FILE = os.environ.get("DB_FILE", "tracker.db")
 ADMIN_USERNAME = os.environ.get("ADMIN_USERNAME")
 ADMIN_PASSWORD = os.environ.get("ADMIN_PASSWORD")
 PORT_ENV = os.environ.get("PORT")
@@ -70,13 +69,6 @@ app = FastAPI(
     description="Personal job-application command center.",
     dependencies=[Depends(require_auth)],
 )
-
-
-def get_connection():
-    conn = sqlite3.connect(DB_FILE)
-    conn.row_factory = sqlite3.Row
-    conn.execute("PRAGMA foreign_keys = ON")
-    return conn
 
 
 def _rows_to_dicts(rows):

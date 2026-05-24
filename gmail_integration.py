@@ -15,9 +15,10 @@ Status: SCAFFOLDING (Phase 3 ship 1/3).
 
 import os
 import re
-import sqlite3
 from datetime import datetime, timedelta, timezone
 from typing import Optional
+
+from db import Connection, insert_returning_id, upsert_processed_message
 
 # Google libs are optional at import time so the webapp doesn't crash if they
 # aren't installed yet (we add them to requirements.txt in this ship).
@@ -114,7 +115,7 @@ def exchange_code_for_token(code: str) -> "Credentials":
 # Token storage (Phase 3 ship 2/3 will complete these)
 # ─────────────────────────────────────────────────────────────────────────────
 
-def store_credentials(conn: sqlite3.Connection, creds: "Credentials", user_email: str = "") -> None:
+def store_credentials(conn: Connection, creds: "Credentials", user_email: str = "") -> None:
     """Save creds to oauth_tokens table (upsert on provider key)."""
     now = datetime.now(timezone.utc).isoformat(timespec="seconds")
     expires_at = creds.expiry.isoformat(timespec="seconds") if creds.expiry else None
@@ -150,7 +151,7 @@ def store_credentials(conn: sqlite3.Connection, creds: "Credentials", user_email
     conn.commit()
 
 
-def load_credentials(conn: sqlite3.Connection) -> Optional["Credentials"]:
+def load_credentials(conn: Connection) -> Optional["Credentials"]:
     """Load stored Gmail creds. Returns None if not yet authorized."""
     row = conn.execute(
         "SELECT access_token, refresh_token, scopes FROM oauth_tokens WHERE provider = ?",
@@ -278,7 +279,7 @@ def _normalize_name(name: str) -> str:
     return " ".join(name.lower().split())
 
 
-def match_contact_in_tracker(conn: sqlite3.Connection, matched_name: str) -> Optional[dict]:
+def match_contact_in_tracker(conn: Connection, matched_name: str) -> Optional[dict]:
     """Tiered fuzzy match: exact -> case-insensitive -> last-name -> first-name.
 
     Returns dict with keys: id, job_id, name (or None if no match).
@@ -327,14 +328,14 @@ def match_contact_in_tracker(conn: sqlite3.Connection, matched_name: str) -> Opt
     return None
 
 
-def _get_sync_state(conn: sqlite3.Connection, key: str) -> Optional[str]:
+def _get_sync_state(conn: Connection, key: str) -> Optional[str]:
     row = conn.execute(
         "SELECT value FROM sync_state WHERE key = ?", (key,)
     ).fetchone()
     return row["value"] if row else None
 
 
-def _set_sync_state(conn: sqlite3.Connection, key: str, value: str) -> None:
+def _set_sync_state(conn: Connection, key: str, value: str) -> None:
     now = datetime.now(timezone.utc).isoformat(timespec="seconds")
     existing = conn.execute(
         "SELECT key FROM sync_state WHERE key = ?", (key,)
@@ -351,7 +352,7 @@ def _set_sync_state(conn: sqlite3.Connection, key: str, value: str) -> None:
         )
 
 
-def _already_processed(conn: sqlite3.Connection, gmail_message_id: str) -> bool:
+def _already_processed(conn: Connection, gmail_message_id: str) -> bool:
     row = conn.execute(
         "SELECT 1 FROM processed_messages WHERE gmail_message_id = ?",
         (gmail_message_id,),
@@ -359,16 +360,12 @@ def _already_processed(conn: sqlite3.Connection, gmail_message_id: str) -> bool:
     return row is not None
 
 
-def _mark_processed(conn: sqlite3.Connection, gmail_message_id: str, event_id: Optional[int]) -> None:
+def _mark_processed(conn: Connection, gmail_message_id: str, event_id: Optional[int]) -> None:
     now = datetime.now(timezone.utc).isoformat(timespec="seconds")
-    conn.execute(
-        "INSERT OR REPLACE INTO processed_messages (gmail_message_id, event_id, processed_at) "
-        "VALUES (?, ?, ?)",
-        (gmail_message_id, event_id, now),
-    )
+    upsert_processed_message(conn, gmail_message_id, event_id, now)
 
 
-def sync_to_tracker(conn: sqlite3.Connection) -> dict:
+def sync_to_tracker(conn: Connection) -> dict:
     """Main sync entrypoint: pull new LinkedIn emails -> parse -> match -> log events.
 
     Returns: {ok, fetched, parsed, logged, unmatched, last_sync, duration_s}.
@@ -421,7 +418,8 @@ def sync_to_tracker(conn: sqlite3.Connection) -> dict:
 
         if contact:
             # Log a real event tied to that contact + its job
-            cursor = conn.execute(
+            new_event_id = insert_returning_id(
+                conn,
                 "INSERT INTO events (job_id, contact_id, event_type, body, occurred_at, recorded_at) "
                 "VALUES (?, ?, ?, ?, ?, ?)",
                 (
@@ -433,7 +431,6 @@ def sync_to_tracker(conn: sqlite3.Connection) -> dict:
                     now_iso,
                 ),
             )
-            new_event_id = cursor.lastrowid
             # Touch the job's last_activity_at
             conn.execute(
                 "UPDATE jobs SET last_activity_at = ? WHERE id = ?",
@@ -472,6 +469,6 @@ def sync_to_tracker(conn: sqlite3.Connection) -> dict:
     }
 
 
-def get_last_sync(conn: sqlite3.Connection) -> Optional[str]:
+def get_last_sync(conn: Connection) -> Optional[str]:
     """Returns the ISO timestamp of the most recent successful Gmail sync, or None."""
     return _get_sync_state(conn, "last_gmail_sync")
