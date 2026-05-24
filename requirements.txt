@@ -46,6 +46,8 @@ watchfiles==1.1.1
 # with both uvicorn (>=10) and google-genai's transitive constraints.
 websockets>=13.0,<16.0
 zipp==3.23.1
+# Required for FastAPI Form() parsing (Add Job, Resume Studio, DM Studio forms)
+python-multipart>=0.0.9
 # Postgres backend for Render deploy. Pulls in pure-Python psycopg + C-binary.
 psycopg[binary]==3.2.13
 # Google Gemini API for LLM-powered email classification. Free tier (no card),

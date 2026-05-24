@@ -18,8 +18,10 @@ from fastapi.security import HTTPBasic, HTTPBasicCredentials
 from fastapi.templating import Jinja2Templates
 
 import gmail_integration
+import llm_helpers
 import tracker
 from db import get_connection
+from db import insert_returning_id
 
 ADMIN_USERNAME = os.environ.get("ADMIN_USERNAME")
 ADMIN_PASSWORD = os.environ.get("ADMIN_PASSWORD")
@@ -667,3 +669,357 @@ def gmail_status():
     }
 
 
+
+
+# ─────────────────────────────────────────────────────────────────────────────
+# Add Job · Resume Studio · DM Studio  (LLM-powered authoring features)
+# ─────────────────────────────────────────────────────────────────────────────
+
+from pydantic import BaseModel
+from typing import Optional as _Opt
+from fastapi import Form
+
+
+class ExtractedJob(BaseModel):
+    """Schema Gemini fills from a pasted JD."""
+    company: str
+    title: str
+    location: _Opt[str] = None
+    level: _Opt[str] = None
+    yoe_required: _Opt[str] = None
+    must_have_skills: _Opt[str] = None
+    nice_to_have_skills: _Opt[str] = None
+    comp_range: _Opt[str] = None
+    source: _Opt[str] = None
+    jd_summary: str
+
+
+JD_EXTRACT_PROMPT = """You're extracting structured fields from a pasted job-description for a personal job-tracker.
+
+Required fields:
+- company: the hiring company name (clean — no LLC/Inc unless distinctive)
+- title: the role title as worded in the JD
+- location: city/region + (Remote/Hybrid/On-site) if mentioned, or null
+- level: junior / associate / mid / senior / lead / principal — whichever fits
+- yoe_required: years of experience required (e.g. "2+ yrs" / "0-2 yrs" / "5-7 yrs")
+- must_have_skills: comma-separated CORE skills the JD calls out
+- nice_to_have_skills: comma-separated nice-to-haves
+- comp_range: if disclosed (e.g. "₹15-25 LPA" or "$120K-160K"), else null
+- source: 'linkedin' (default) or company portal name
+- jd_summary: 1-2 sentence plain-English summary of what the role is + what they're looking for
+
+Be conservative — return null for fields the JD doesn't actually mention. Don't invent."""
+
+
+@app.get("/jobs/new", response_class=HTMLResponse)
+def add_job_page(request: Request):
+    return TEMPLATES.TemplateResponse("add_job.html", {"request": request})
+
+
+@app.post("/jobs/new", response_class=HTMLResponse)
+def add_job_submit(
+    request: Request,
+    link: str = Form(""),
+    company: str = Form(""),
+    title: str = Form(""),
+    jd_text: str = Form(...),
+):
+    form = {"link": link, "company": company, "title": title, "jd_text": jd_text}
+    if not jd_text or len(jd_text) < 50:
+        return TEMPLATES.TemplateResponse("add_job.html", {
+            "request": request, "form": form,
+            "error": "JD text is too short — paste the full job description.",
+        })
+
+    if not llm_helpers.is_available():
+        # Fall back: just insert with whatever the user typed manually
+        try:
+            tracker.init_db()
+            now_iso = datetime.now().isoformat(timespec="seconds")
+            with get_connection() as conn:
+                new_id = insert_returning_id(
+                    conn,
+                    "INSERT INTO jobs (title, company, link, status, worth_pursuing, source, "
+                    "jd_raw_text, added_at, last_activity_at) "
+                    "VALUES (?, ?, ?, 'saved', 'unsure', 'manual', ?, ?, ?)",
+                    (title or "(untitled)", company or "(unknown)", link, jd_text, now_iso, now_iso),
+                )
+            return RedirectResponse(f"/jobs/{new_id}", status_code=303)
+        except Exception as exc:
+            return TEMPLATES.TemplateResponse("add_job.html", {
+                "request": request, "form": form,
+                "error": f"Insert failed: {exc}",
+            })
+
+    # Gemini path
+    try:
+        extracted = llm_helpers.gemini_json(
+            JD_EXTRACT_PROMPT,
+            f"JD to extract from:\n\n{jd_text}",
+            schema=ExtractedJob,
+        )
+    except Exception as exc:
+        return TEMPLATES.TemplateResponse("add_job.html", {
+            "request": request, "form": form,
+            "error": f"Gemini extraction failed: {type(exc).__name__}: {str(exc)[:300]}. Try again, or fill the form manually if Gemini quota is exhausted.",
+        })
+
+    # Override with user-provided values where present
+    company_final = company.strip() or extracted.company
+    title_final = title.strip() or extracted.title
+
+    tracker.init_db()
+    now_iso = datetime.now().isoformat(timespec="seconds")
+    try:
+        with get_connection() as conn:
+            new_id = insert_returning_id(
+                conn,
+                "INSERT INTO jobs (title, company, link, status, worth_pursuing, location, level, "
+                "yoe_required, source, must_have_skills, nice_to_have_skills, comp_range, "
+                "jd_raw_text, jd_summary, added_at, last_activity_at) "
+                "VALUES (?, ?, ?, 'saved', 'unsure', ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)",
+                (title_final, company_final, link, extracted.location, extracted.level,
+                 extracted.yoe_required, extracted.source or "linkedin",
+                 extracted.must_have_skills, extracted.nice_to_have_skills,
+                 extracted.comp_range, jd_text, extracted.jd_summary, now_iso, now_iso),
+            )
+            conn.execute(
+                "INSERT INTO events (job_id, event_type, body, occurred_at, recorded_at) "
+                "VALUES (?, ?, ?, ?, ?)",
+                (new_id, "job_added", f"Added via /jobs/new — Gemini-extracted from JD", now_iso, now_iso),
+            )
+    except Exception as exc:
+        return TEMPLATES.TemplateResponse("add_job.html", {
+            "request": request, "form": form, "preview": extracted.model_dump(),
+            "error": f"Insert failed: {exc}",
+        })
+
+    return RedirectResponse(f"/jobs/{new_id}", status_code=303)
+
+
+# ─── Resume Studio ────────────────────────────────────────────────────────
+
+RESUME_TAILOR_PROMPT = """You're tailoring a candidate's resume for a specific job application.
+
+CRITICAL RULES:
+- Output ONLY the resume markdown. No commentary, no "Why X" sections, no strategic notes for the candidate.
+- A recruiter reads this resume directly — never write content that addresses the candidate.
+- Keep total length around 3500-4500 chars (1 page printed).
+- Preserve the candidate's actual experience, education, certifications — never invent companies, roles, or dates.
+- Adjust the SUMMARY (1-2 sentences at top) to mirror what the JD prioritises.
+- Adjust BULLET POINTS in Experience to emphasise the most JD-relevant work the candidate has done.
+- Skills section should reorder to put JD-relevant skills first.
+- Use markdown: ## headers, ** for bold, - for bullets.
+- Sections in order: Summary, Experience, Projects (optional), Skills, Education, Certifications.
+
+The candidate is Ajinkya Kate. Use the provided base resume as the source of truth for facts."""
+
+
+@app.get("/jobs/{job_id}/resume-studio", response_class=HTMLResponse)
+def resume_studio_page(job_id: int, request: Request):
+    tracker.init_db()
+    with get_connection() as conn:
+        job_row = conn.execute("SELECT * FROM jobs WHERE id = ?", (job_id,)).fetchone()
+    if not job_row:
+        return HTMLResponse(f"<h1>Job #{job_id} not found</h1><a href='/'>back</a>", status_code=404)
+    job = dict(job_row)
+    return TEMPLATES.TemplateResponse("resume_studio.html", {
+        "request": request, "job": job,
+        "current_len": len(job.get("resume_md") or ""),
+        "new_resume_md": "",
+    })
+
+
+@app.post("/jobs/{job_id}/resume-studio", response_class=HTMLResponse)
+def resume_studio_submit(
+    job_id: int, request: Request,
+    action: str = Form(...),
+    new_resume_md: str = Form(""),
+):
+    tracker.init_db()
+    with get_connection() as conn:
+        job_row = conn.execute("SELECT * FROM jobs WHERE id = ?", (job_id,)).fetchone()
+    if not job_row:
+        return HTMLResponse(f"<h1>Job #{job_id} not found</h1>", status_code=404)
+    job = dict(job_row)
+
+    if action == "save":
+        if not new_resume_md.strip():
+            return TEMPLATES.TemplateResponse("resume_studio.html", {
+                "request": request, "job": job,
+                "current_len": len(job.get("resume_md") or ""),
+                "new_resume_md": new_resume_md,
+                "error": "Resume content is empty — nothing to save.",
+            })
+        now_iso = datetime.now().isoformat(timespec="seconds")
+        with get_connection() as conn:
+            conn.execute(
+                "UPDATE jobs SET resume_md = ?, last_activity_at = ? WHERE id = ?",
+                (new_resume_md, now_iso, job_id),
+            )
+            conn.execute(
+                "INSERT INTO events (job_id, event_type, body, occurred_at, recorded_at) "
+                "VALUES (?, ?, ?, ?, ?)",
+                (job_id, "note", f"Resume saved via Resume Studio ({len(new_resume_md)} chars)", now_iso, now_iso),
+            )
+        return RedirectResponse(f"/jobs/{job_id}/resume", status_code=303)
+
+    # action == "regenerate"
+    if not job.get("jd_raw_text"):
+        return TEMPLATES.TemplateResponse("resume_studio.html", {
+            "request": request, "job": job,
+            "current_len": len(job.get("resume_md") or ""),
+            "new_resume_md": "",
+            "error": "No JD text on this job — Gemini needs the JD to tailor. Edit the job and paste the JD first.",
+        })
+
+    if not llm_helpers.is_available():
+        return TEMPLATES.TemplateResponse("resume_studio.html", {
+            "request": request, "job": job,
+            "current_len": len(job.get("resume_md") or ""),
+            "new_resume_md": "",
+            "error": "GEMINI_API_KEY not configured.",
+        })
+
+    # Use peopleHum's resume (Job #19) as canonical base if this job has no current resume
+    with get_connection() as conn:
+        base_row = conn.execute("SELECT resume_md FROM jobs WHERE id = 19").fetchone()
+    base_resume = (job.get("resume_md") or "").strip() or (base_row["resume_md"] if base_row else "")
+
+    user_content = (
+        f"# JOB DESCRIPTION\n\n{job.get('jd_raw_text', '')[:4000]}\n\n"
+        f"# JOB METADATA\n\nCompany: {job.get('company')}\nTitle: {job.get('title')}\n"
+        f"Location: {job.get('location')}\nLevel: {job.get('level')}\n"
+        f"YoE required: {job.get('yoe_required')}\n\n"
+        f"# CANDIDATE'S CURRENT RESUME (base — use as factual source of truth)\n\n{base_resume}"
+    )
+
+    try:
+        new_text = llm_helpers.gemini_text(
+            RESUME_TAILOR_PROMPT, user_content, temperature=0.3,
+        ).strip()
+    except Exception as exc:
+        return TEMPLATES.TemplateResponse("resume_studio.html", {
+            "request": request, "job": job,
+            "current_len": len(job.get("resume_md") or ""),
+            "new_resume_md": "",
+            "error": f"Gemini call failed: {type(exc).__name__}: {str(exc)[:300]}",
+        })
+
+    return TEMPLATES.TemplateResponse("resume_studio.html", {
+        "request": request, "job": job,
+        "current_len": len(job.get("resume_md") or ""),
+        "new_resume_md": new_text,
+    })
+
+
+# ─── DM Studio ─────────────────────────────────────────────────────────────
+
+DM_PROMPT = """You're drafting a short personalized LinkedIn DM for Ajinkya Kate.
+
+CRITICAL FRAMING (must follow):
+- Ajinkya is Product Owner at D·engage (customer engagement SaaS), 2+ yrs PM, CSPO certified.
+- His D·engage role wrapped in May 2026 and he's exploring his next product role.
+- Use POSITIVE framing: "exploring my next product role" / "taking the next step." NEVER use "transitioning out," "just left," "in transition," "looking for a job," or anything that sounds like job-loss anxiety.
+- Tone: warm peer-to-peer, never sycophantic, never demanding.
+
+RULES:
+- 3-4 short paragraphs MAX. Under 150 words total.
+- Open with a specific reference to the recipient's profile (their role / background / something distinctive).
+- Quick context on Ajinkya (1 line).
+- ONE specific ask (the user provides it). Don't ask for too many things.
+- Offer reciprocity at the end if natural — what Ajinkya might offer them.
+- Close warm.
+- Output ONLY the DM text. No "Hi NAME," prefix needed (LinkedIn shows the name). No sign-off "Cheers, Ajinkya" — already implied.
+- Actually DO include "Hi <FirstName>," at the start.
+- Actually DO include "Cheers, Ajinkya" at the end.
+"""
+
+
+@app.get("/contacts/{contact_id}/dm-studio", response_class=HTMLResponse)
+def dm_studio_page(contact_id: int, request: Request):
+    tracker.init_db()
+    with get_connection() as conn:
+        contact_row = conn.execute(
+            "SELECT c.*, j.id AS j_id, j.company AS j_company, j.title AS j_title "
+            "FROM contacts c JOIN jobs j ON c.job_id = j.id WHERE c.id = ?",
+            (contact_id,),
+        ).fetchone()
+    if not contact_row:
+        return HTMLResponse(f"<h1>Contact #{contact_id} not found</h1>", status_code=404)
+    contact = dict(contact_row)
+    job = {"id": contact["j_id"], "company": contact["j_company"], "title": contact["j_title"]}
+    return TEMPLATES.TemplateResponse("dm_studio.html", {
+        "request": request, "contact": contact, "job": job,
+    })
+
+
+@app.post("/contacts/{contact_id}/dm-studio", response_class=HTMLResponse)
+def dm_studio_submit(
+    contact_id: int, request: Request,
+    action: str = Form(...),
+    profile_text: str = Form(""),
+    ask: str = Form(""),
+    tone: str = Form("warm peer"),
+    draft: str = Form(""),
+):
+    tracker.init_db()
+    with get_connection() as conn:
+        contact_row = conn.execute(
+            "SELECT c.*, j.id AS j_id, j.company AS j_company, j.title AS j_title, "
+            "j.status AS j_status, j.notes AS j_notes "
+            "FROM contacts c JOIN jobs j ON c.job_id = j.id WHERE c.id = ?",
+            (contact_id,),
+        ).fetchone()
+    if not contact_row:
+        return HTMLResponse(f"<h1>Contact #{contact_id} not found</h1>", status_code=404)
+    contact = dict(contact_row)
+    job = {"id": contact["j_id"], "company": contact["j_company"], "title": contact["j_title"]}
+    form = {"profile_text": profile_text, "ask": ask, "tone": tone}
+
+    if action == "save":
+        if not draft.strip():
+            return TEMPLATES.TemplateResponse("dm_studio.html", {
+                "request": request, "contact": contact, "job": job, "form": form,
+                "error": "No draft to save.",
+            })
+        now_iso = datetime.now().isoformat(timespec="seconds")
+        with get_connection() as conn:
+            conn.execute(
+                "INSERT INTO events (job_id, contact_id, event_type, body, occurred_at, recorded_at) "
+                "VALUES (?, ?, ?, ?, ?, ?)",
+                (job["id"], contact_id, "note", f"SUGGESTED DM (via DM Studio):\n\n{draft}", now_iso, now_iso),
+            )
+        return RedirectResponse(f"/jobs/{job['id']}", status_code=303)
+
+    # action == "generate"
+    if not llm_helpers.is_available():
+        return TEMPLATES.TemplateResponse("dm_studio.html", {
+            "request": request, "contact": contact, "job": job, "form": form,
+            "error": "GEMINI_API_KEY not configured.",
+        })
+
+    user_content = (
+        f"RECIPIENT: {contact.get('name', 'them')}\n"
+        f"RECIPIENT'S ROLE/HEADLINE: {contact.get('role', '—')}\n"
+        f"RECIPIENT'S PROFILE CONTENT (if provided):\n{profile_text or '(none — base DM on role/headline only)'}\n\n"
+        f"JOB CONTEXT FOR AJINKYA: applying for {job['title']} at {job['company']} (status: {contact.get('j_status')})\n\n"
+        f"AJINKYA'S SPECIFIC ASK FOR THIS RECIPIENT: {ask}\n\n"
+        f"DESIRED TONE: {tone}\n\n"
+        f"Draft the DM now. Plain text, no markdown, ready to paste into LinkedIn."
+    )
+
+    try:
+        draft_text = llm_helpers.gemini_text(
+            DM_PROMPT, user_content, temperature=0.5,
+        ).strip()
+    except Exception as exc:
+        return TEMPLATES.TemplateResponse("dm_studio.html", {
+            "request": request, "contact": contact, "job": job, "form": form,
+            "error": f"Gemini call failed: {type(exc).__name__}: {str(exc)[:300]}",
+        })
+
+    return TEMPLATES.TemplateResponse("dm_studio.html", {
+        "request": request, "contact": contact, "job": job, "form": form,
+        "draft": draft_text,
+    })

@@ -1,0 +1,87 @@
+{% extends "base.html" %}
+
+{% block title %}Add Job · Job Tracker{% endblock %}
+
+{% block topbar_breadcrumb %}
+<div class="text-ink3 text-[13px] hidden md:flex items-center gap-2">
+  <span>/</span>
+  <a href="/" class="hover:text-ink">Pipeline</a>
+  <span>/</span>
+  <span class="text-ink2">Add Job</span>
+</div>
+{% endblock %}
+
+{% block content %}
+<div class="max-w-3xl mx-auto py-6">
+
+  <header class="mb-6">
+    <h1 class="text-2xl font-semibold text-ink mb-1">Add Job</h1>
+    <p class="text-ink2 text-sm">
+      Paste a job description. Gemini extracts company, title, location, skills, YoE, salary, etc.
+      Add the LinkedIn URL too if you have it.
+    </p>
+  </header>
+
+  {% if error %}
+  <div class="mb-4 p-3 rounded-lg bg-rejected/10 border border-rejected/30 text-rejected text-sm">
+    {{ error }}
+  </div>
+  {% endif %}
+
+  {% if preview %}
+  <div class="mb-5 p-4 rounded-lg bg-raised border border-line">
+    <div class="text-[11px] font-mono uppercase tracking-[0.16em] text-ink3 mb-2">Gemini extracted</div>
+    <table class="w-full text-[13px]">
+      {% for k, v in preview.items() %}
+      <tr class="border-b border-line/40">
+        <td class="py-1.5 pr-3 text-ink3 font-mono text-[12px] align-top">{{ k }}</td>
+        <td class="py-1.5 text-ink">{{ v or '—' }}</td>
+      </tr>
+      {% endfor %}
+    </table>
+  </div>
+  {% endif %}
+
+  <form method="POST" action="/jobs/new" class="space-y-4">
+    <div>
+      <label class="block text-[12px] font-mono uppercase tracking-[0.16em] text-ink3 mb-1.5">LinkedIn URL <span class="text-ink3 normal-case font-sans">(optional)</span></label>
+      <input type="url" name="link" value="{{ form.link if form else '' }}"
+             placeholder="https://www.linkedin.com/jobs/view/..."
+             class="w-full px-3 h-10 rounded-md bg-sunken border border-line text-ink text-sm focus:outline-none focus:border-accent-500 focus:ring-1 focus:ring-accent-500">
+    </div>
+
+    <div class="grid grid-cols-2 gap-3">
+      <div>
+        <label class="block text-[12px] font-mono uppercase tracking-[0.16em] text-ink3 mb-1.5">Company <span class="text-ink3 normal-case font-sans">(optional — Gemini extracts)</span></label>
+        <input type="text" name="company" value="{{ form.company if form else '' }}"
+               class="w-full px-3 h-10 rounded-md bg-sunken border border-line text-ink text-sm focus:outline-none focus:border-accent-500 focus:ring-1 focus:ring-accent-500">
+      </div>
+      <div>
+        <label class="block text-[12px] font-mono uppercase tracking-[0.16em] text-ink3 mb-1.5">Title <span class="text-ink3 normal-case font-sans">(optional)</span></label>
+        <input type="text" name="title" value="{{ form.title if form else '' }}"
+               class="w-full px-3 h-10 rounded-md bg-sunken border border-line text-ink text-sm focus:outline-none focus:border-accent-500 focus:ring-1 focus:ring-accent-500">
+      </div>
+    </div>
+
+    <div>
+      <label class="block text-[12px] font-mono uppercase tracking-[0.16em] text-ink3 mb-1.5">
+        Job Description <span class="text-rejected normal-case font-sans">*required</span>
+      </label>
+      <textarea name="jd_text" rows="14" required
+                placeholder="Paste the full JD here. Gemini will extract structured fields and write a 1-paragraph summary."
+                class="w-full px-3 py-2.5 rounded-md bg-sunken border border-line text-ink text-sm font-mono leading-relaxed focus:outline-none focus:border-accent-500 focus:ring-1 focus:ring-accent-500">{{ form.jd_text if form else '' }}</textarea>
+      <div class="mt-1 text-[11px] text-ink3 font-mono">tip: paste from LinkedIn job page → "About the job" section</div>
+    </div>
+
+    <div class="flex items-center gap-3 pt-2">
+      <button type="submit"
+              class="h-10 px-5 rounded-md bg-accent-500 hover:bg-accent-400 text-white text-sm font-medium transition">
+        Extract + create job
+      </button>
+      <a href="/" class="h-10 px-4 rounded-md border border-line bg-raised hover:border-line2 text-ink2 hover:text-ink text-sm flex items-center transition">Cancel</a>
+      <div class="text-[11px] text-ink3 font-mono ml-auto">~3-5 sec for Gemini extraction</div>
+    </div>
+  </form>
+
+</div>
+{% endblock %}
