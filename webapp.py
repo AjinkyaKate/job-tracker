@@ -1474,6 +1474,28 @@ def leads_restore(lead_id: int):
     return RedirectResponse("/leads?show=dismissed", status_code=303)
 
 
+@app.get("/resumes", response_class=HTMLResponse)
+def resumes_library(request: Request):
+    """One-stop library page: list all 15 family resumes with their stable
+    filenames + open-in-new-tab links. User does a one-time pass on this
+    page to download each PDF, then on every Lead card they just see which
+    filename to use from disk."""
+    import role_resumes
+    families = []
+    for family_key, label in role_resumes.FAMILY_LABELS.items():
+        label_slug = label.replace(" / ", "_").replace(" ", "_")
+        families.append({
+            "key": family_key,
+            "label": label,
+            "filename": f"Ajinkya_Kate_{label_slug}.pdf",
+            "url": f"/resumes/role/{family_key}",
+        })
+    return TEMPLATES.TemplateResponse(
+        "resumes_library.html",
+        {"request": request, "families": families},
+    )
+
+
 @app.get("/resumes/role/{family}", response_class=HTMLResponse)
 def role_resume_page(family: str, request: Request):
     """Render a pre-tailored resume for a given role family.

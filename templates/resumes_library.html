@@ -1,0 +1,58 @@
+{% extends "base.html" %}
+
+{% block title %}Resume Library · Job Tracker{% endblock %}
+
+{% block topbar_breadcrumb %}
+<div class="text-ink3 text-[13px] hidden md:flex items-center gap-2">
+  <span>/</span>
+  <a href="/" class="hover:text-ink">Pipeline</a>
+  <span>/</span>
+  <span class="text-ink2">Resume Library</span>
+</div>
+{% endblock %}
+
+{% block content %}
+<div class="max-w-4xl mx-auto py-6">
+
+  <header class="mb-5">
+    <div class="text-[11px] font-mono uppercase tracking-[0.16em] text-ink3 mb-1">One-time setup</div>
+    <h1 class="text-2xl font-semibold text-ink">Resume Library · {{ families|length }} role-tailored resumes</h1>
+    <p class="text-ink2 text-sm mt-2 leading-relaxed">
+      Download each resume PDF <strong class="text-ink">once</strong> and save to your Downloads folder. Then when a Lead card on <a href="/leads" class="underline text-accent-400 hover:text-accent-300">/leads</a> shows
+      <span class="font-mono text-[12px] bg-sunken px-1.5 py-0.5 rounded">📄 Ajinkya_Kate_AI_Product_Manager.pdf</span>,
+      you grab that file from disk and attach it to LinkedIn — no re-download, no duplicate files.
+    </p>
+    <p class="text-ink3 text-[12.5px] mt-2 font-mono">
+      Filename per family is <strong>stable</strong> — downloading the same family twice overwrites instead of duplicating.
+    </p>
+  </header>
+
+  <div class="space-y-2">
+    {% for fam in families %}
+    <a href="{{ fam.url }}" target="_blank" rel="noopener"
+       class="block group">
+      <div class="flex items-center gap-3 p-3 rounded-lg bg-raised border border-line hover:border-accent-500/50 transition">
+        <div class="w-10 h-10 rounded-md bg-sunken flex items-center justify-center text-accent-400 text-[18px] flex-shrink-0">📄</div>
+        <div class="flex-1 min-w-0">
+          <div class="text-ink text-[14px] font-medium group-hover:text-accent-400 transition">{{ fam.label }}</div>
+          <div class="text-ink3 text-[12px] font-mono mt-0.5">{{ fam.filename }}</div>
+        </div>
+        <div class="text-ink3 text-[14px] group-hover:translate-x-1 group-hover:text-accent-400 transition flex-shrink-0">Open ↗</div>
+      </div>
+    </a>
+    {% endfor %}
+  </div>
+
+  <div class="mt-6 p-4 rounded-lg bg-raised border border-line text-[12.5px] text-ink2 leading-relaxed">
+    <strong class="text-ink">How to use:</strong>
+    <ol class="list-decimal ml-5 mt-2 space-y-1.5 text-ink3">
+      <li>Open each resume above in a new tab.</li>
+      <li>Review the content (Summary + Skills are tailored per family; Experience / Projects / Education are shared).</li>
+      <li>Click <span class="font-mono text-ink2">⬇ Download PDF</span> on the resume page — file saves to Downloads with the exact filename you see above.</li>
+      <li>Repeat for each role family you target. ~15 PDFs, ~5 minutes once.</li>
+      <li>From now on, when a Lead card tells you <span class="font-mono text-[11.5px] bg-sunken px-1 rounded">📄 Ajinkya_Kate_X.pdf</span>, pick that file from Downloads and attach to LinkedIn.</li>
+    </ol>
+  </div>
+
+</div>
+{% endblock %}

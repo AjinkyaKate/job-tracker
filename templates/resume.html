@@ -120,8 +120,14 @@
     </div>
     <div class="flex items-center gap-2 shrink-0">
       {% if resume_html %}
-      <button onclick="window.print()" class="h-9 px-3.5 rounded-md bg-accent-500 hover:bg-accent-400 text-white text-[13px] font-medium transition">
-        📄 Save as PDF
+      <button id="download-pdf-btn" class="h-9 px-3.5 rounded-md bg-accent-500 hover:bg-accent-400 text-white text-[13px] font-medium transition flex items-center gap-2 disabled:opacity-60 disabled:cursor-wait">
+        <svg id="download-spinner" class="hidden w-3.5 h-3.5 animate-spin" viewBox="0 0 16 16" fill="none" stroke="currentColor" stroke-width="2">
+          <path d="M13.5 7.5a5.5 5.5 0 1 1-1.6-3.9M13.5 2v4h-4"/>
+        </svg>
+        <span id="download-label">⬇ Download PDF</span>
+      </button>
+      <button onclick="window.print()" class="h-9 px-3 rounded-md border border-line-light dark:border-line bg-raised-light dark:bg-raised text-ink2 hover:text-ink dark:hover:text-ink text-[12px] transition" title="Use browser Print instead (fallback)">
+        🖨 Print
       </button>
       {% endif %}
       <button id="theme-toggle" class="h-9 px-3 rounded-md border border-line-light dark:border-line bg-raised-light dark:bg-raised text-[12px] font-medium hover:bg-sunken-light dark:hover:bg-sunken transition">
@@ -153,6 +159,11 @@
   {% endif %}
 </div>
 
+<!-- html2pdf.js: client-side HTML → PDF. ~300KB, served from CDN. Renders
+     the .paper .resume div as a true PDF file (not a print dialog) so the
+     user gets a 1-click download with the stable per-family filename. -->
+<script src="https://cdnjs.cloudflare.com/ajax/libs/html2pdf.js/0.10.1/html2pdf.bundle.min.js" defer></script>
+
 <script>
   // Theme toggle with localStorage (shared logic with base.html)
   (function() {
@@ -168,6 +179,59 @@
         localStorage.setItem('jt-theme', root.classList.contains('dark') ? 'dark' : 'light');
       });
     }
+  })();
+
+  // True 1-click PDF download — no print dialog, no "duplicate-on-Downloads"
+  // problem because the filename is stable per family. Forces light theme
+  // on the .paper element before rendering so the PDF always renders white-
+  // paper-on-black-text regardless of the current dark/light toggle state.
+  (function() {
+    const btn = document.getElementById('download-pdf-btn');
+    if (!btn) return;
+    const spinner = document.getElementById('download-spinner');
+    const label = document.getElementById('download-label');
+
+    btn.addEventListener('click', async () => {
+      if (typeof html2pdf === 'undefined') {
+        alert('PDF library still loading — give it 1 sec and try again.');
+        return;
+      }
+      btn.disabled = true;
+      spinner.classList.remove('hidden');
+      label.textContent = 'Generating…';
+
+      const element = document.querySelector('.paper');
+      // Force the resume area into light mode for the PDF capture, even if
+      // the user is currently in dark theme. .paper is already white via
+      // its CSS, so this is a no-op for it; the html-level class doesn't
+      // affect .paper styling.
+      const wasDark = document.documentElement.classList.contains('dark');
+
+      const opts = {
+        margin: 0,
+        filename: {{ pdf_filename|tojson }},
+        image: { type: 'jpeg', quality: 0.98 },
+        html2canvas: {
+          scale: 2,
+          useCORS: true,
+          backgroundColor: '#ffffff',
+          logging: false,
+        },
+        jsPDF: { unit: 'mm', format: 'a4', orientation: 'portrait' },
+        pagebreak: { mode: ['css', 'legacy'] },
+      };
+
+      try {
+        await html2pdf().set(opts).from(element).save();
+      } catch (e) {
+        alert('PDF generation failed: ' + (e.message || e) + '\nFalling back to browser print — uncheck "Headers and footers" in the dialog.');
+        window.print();
+      } finally {
+        btn.disabled = false;
+        spinner.classList.add('hidden');
+        label.textContent = '⬇ Download PDF';
+      }
+    });
   })();
 </script>
 </body>

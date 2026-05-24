@@ -188,6 +188,132 @@ ROLE_RESUMES = {
             "**Domain:** B2B SaaS, MarTech, Customer Engagement, Enterprise (Banking/Retail/Telecom)"
         ),
     },
+    "senior-pm": {
+        "summary": (
+            "Senior Product Manager candidate with 2+ years owning B2B SaaS product delivery at D·engage — "
+            "discovery, PRDs, sprint cadence, AI feature shipping for enterprise customers in banking, "
+            "retail, telecom. Ready to step up to Senior PM scope: own a product area end-to-end, mentor "
+            "APMs, lead multi-team initiatives, set quarterly OKRs. CSPO certified. Targeting Senior PM "
+            "seats at B2B SaaS, MarTech, or AI-product companies."
+        ),
+        "skills": (
+            "**Product Leadership:** Product strategy, Multi-team coordination, Roadmap ownership, OKR-setting, Stakeholder alignment, Mentoring junior PMs\n"
+            "**Delivery:** PRDs, Sprint cadence, Backlog management, Release management, Cross-functional delivery\n"
+            "**AI Product:** LLM feature design, Prompt engineering, Evaluation, AI roadmap planning\n"
+            "**Data:** SQL, A/B testing, Funnel analysis, Cohort analysis, Amplitude, Mixpanel\n"
+            "**Tools:** Jira, Notion, Figma, Confluence, Miro\n"
+            "**Domain:** B2B SaaS, MarTech, Customer Engagement, Enterprise (Banking/Retail/Telecom)"
+        ),
+    },
+    "technical-pm": {
+        "summary": (
+            "Technical Product Manager — PM with hands-on code comfort. 2+ years at D·engage as Product "
+            "Owner shipping B2B SaaS marketing automation + AI-powered features for enterprise customers. "
+            "Code on weekends: built personal AI job-tracker in Python/FastAPI/Postgres with Gemini email "
+            "classification, deployed on Render, in daily use (github.com/AjinkyaKate/job-tracker). "
+            "Comfortable in eng standups, reading PRs, scoping integrations, debating architectural "
+            "trade-offs. Targeting Technical PM / TPM / Platform PM roles where the PM owns technical "
+            "decisions alongside engineering."
+        ),
+        "skills": (
+            "**Technical PM:** API design reviews, Architecture trade-offs, Integration scoping, Engineering effort estimation, Technical PRDs\n"
+            "**Code:** Python (intermediate), FastAPI, SQL/PostgreSQL, REST APIs, Git/GitHub, basic Jinja2/HTMX\n"
+            "**AI APIs:** Gemini, OpenAI, Anthropic Claude (familiar via personal projects)\n"
+            "**Product:** Roadmap planning, Cross-functional delivery, Customer discovery, PRDs, Backlog management\n"
+            "**Tools:** Jira, Notion, Figma, Postman, GitHub, GitHub Actions\n"
+            "**Domain:** B2B SaaS, MarTech, AI-product, Customer Engagement, Enterprise SaaS"
+        ),
+    },
+    "forward-deployed-engineer": {
+        "summary": (
+            "Forward-Deployed Engineer candidate — code-leaning generalist who lives with enterprise "
+            "customers and ships integrations end-to-end. 2+ years at D·engage on the product side "
+            "(B2B SaaS, AI marketing automation for enterprise clients in banking, retail, telecom) gave "
+            "me deep instinct for customer pain → product fit. Personal projects in production: AI "
+            "job-tracker (FastAPI + Postgres + Gemini, deployed on Render, in daily use) and AI QA agent. "
+            "Targeting Forward Deployed Engineer roles at AI-native vendors where I own 2-3 enterprise "
+            "accounts end-to-end and ship code alongside the customer."
+        ),
+        "skills": (
+            "**Customer-Embedded Eng:** Enterprise integration scoping, Customer-pain → code translation, On-site iteration cycles, Customer training, Adoption tracking\n"
+            "**Code:** Python (intermediate), FastAPI, SQL/PostgreSQL, Git/GitHub, REST APIs, Render/Vercel deploy, basic Jinja2/HTMX/Tailwind\n"
+            "**AI APIs:** Gemini, OpenAI, Anthropic Claude (via personal projects), Prompt design, RAG basics\n"
+            "**Product Instinct:** Customer discovery, PRDs, Roadmap reasoning, Cross-functional delivery (from D·engage Product Owner role)\n"
+            "**Domain:** B2B SaaS, MarTech, Customer Engagement, Enterprise (Banking/Retail/Telecom)"
+        ),
+    },
+    "founding-engineer": {
+        "summary": (
+            "Founding Engineer candidate at AI-native seed / Series-A startups. 2+ years on the product "
+            "side at D·engage (B2B SaaS, enterprise customer engagement, AI feature shipping). Side-project "
+            "track record: built personal AI job-tracker solo (FastAPI + PostgreSQL + Gemini email "
+            "classification + GitHub Actions cron, deployed on Render, currently in daily use — "
+            "github.com/AjinkyaKate/job-tracker), and AI QA agent for ticket-driven test automation. "
+            "Wear engineer + PM + customer-success hats simultaneously. CSPO certified. Pune-based, "
+            "immediate joiner."
+        ),
+        "skills": (
+            "**0-to-1 Engineering:** Solo full-stack builds, Rapid prototyping, MVP design, Production deploys, Owning the whole stack, Async writing\n"
+            "**Code:** Python (intermediate, growing), FastAPI, SQL/PostgreSQL, Git/GitHub, Render/Vercel, REST APIs, Jinja2/HTMX/Tailwind\n"
+            "**AI:** Gemini, OpenAI, Anthropic Claude APIs (familiar), Prompt engineering, RAG basics, Agent loops\n"
+            "**Product:** Customer discovery, PRDs (when needed), MVP scoping, Cross-functional delivery\n"
+            "**Domain:** B2B SaaS, MarTech, AI-product"
+        ),
+    },
+    "customer-engineer": {
+        "summary": (
+            "Customer Engineer with 2+ years at the intersection of B2B SaaS product and enterprise "
+            "customer support. At D·engage owned product delivery for cross-functional team serving "
+            "enterprise clients in banking, retail, telecom — discovery, customization scoping, AI feature "
+            "design, customer onboarding & training, escalation triage. Comfortable reading code, scoping "
+            "integrations, debugging API issues. Targeting Customer Engineer / Customer Success Engineer "
+            "/ Technical Customer Manager roles at AI-native B2B vendors where I own a portfolio of "
+            "enterprise accounts post-sale."
+        ),
+        "skills": (
+            "**Customer Eng:** Enterprise customer onboarding, Integration support, Escalation triage, Customer success collaboration, Training delivery, Health monitoring\n"
+            "**Code:** Python (intermediate), SQL/PostgreSQL, REST APIs, Postman/curl, basic JS, Git/GitHub\n"
+            "**AI APIs:** Gemini, OpenAI, Anthropic Claude (via personal projects)\n"
+            "**Product:** PRDs, Roadmap input, Cross-functional delivery, Customer discovery\n"
+            "**Domain:** B2B SaaS, MarTech, Customer Engagement, Enterprise (Banking/Retail/Telecom)"
+        ),
+    },
+    "implementation-consultant": {
+        "summary": (
+            "Implementation Consultant / Engineer with 2+ years at D·engage owning the product side of "
+            "enterprise B2B SaaS deployment — requirements gathering, customization scoping, AI feature "
+            "configuration, onboarding & training, success monitoring. Worked with enterprise customers in "
+            "banking, retail, telecom — translating business needs into product configurations and tracking "
+            "adoption. CSPO certified. Targeting Implementation Consultant / Implementation Engineer roles "
+            "at B2B SaaS / AI-product vendors selling to enterprise customers."
+        ),
+        "skills": (
+            "**Implementation:** Requirements gathering, Customer customization, Project management, Configuration design, Onboarding & training, Adoption monitoring\n"
+            "**Technical:** Python (intermediate), SQL, REST APIs, Postman, basic data mapping, ETL concepts\n"
+            "**Product:** PRDs, User stories, Acceptance criteria, Stakeholder management, Cross-functional delivery\n"
+            "**AI:** LLM feature configuration, Prompt design, Evaluation basics (Gemini/OpenAI familiar)\n"
+            "**Domain:** B2B SaaS, MarTech, Customer Engagement, Enterprise (Banking/Retail/Telecom)"
+        ),
+    },
+    "applied-ai-engineer": {
+        "summary": (
+            "Applied AI Engineer — PM-engineer hybrid focused on shipping LLM-powered features into "
+            "production. 2+ years at D·engage shipping AI-powered marketing engagement features "
+            "(LLM-assisted content generation, smart segmentation, personalization journeys) — partnering "
+            "with engineering on model selection, prompt design, and evaluation. Personal AI projects in "
+            "production: job-tracker using Gemini for email classification (deployed on Render, in daily "
+            "use) and AI QA agent for ticket-native testing. Strong product instinct combined with "
+            "fast-iterating engineering. Targeting Applied AI Engineer / AI Engineer (Product-leaning) / "
+            "GenAI Engineer roles at AI-native B2B SaaS."
+        ),
+        "skills": (
+            "**AI Engineering:** LLM API integration (Gemini, OpenAI, Anthropic), Prompt engineering, RAG basics, Evaluation pipelines, AI agent design\n"
+            "**Code:** Python (intermediate, growing), FastAPI, SQL/PostgreSQL, Git/GitHub, REST APIs, Render/Vercel deploy\n"
+            "**Product Sensibility:** Customer-pain → AI-feature scoping, MVP-first thinking, Evaluation-driven iteration, Async writing\n"
+            "**AI Domain:** LLM features in B2B SaaS, MarTech AI, Customer Engagement AI, Enterprise AI deployment\n"
+            "**Build Style:** Ship fast, measure, iterate. Side-project track: github.com/AjinkyaKate"
+        ),
+    },
 }
 
 
@@ -230,61 +356,91 @@ CHIP_TO_RESUME_FAMILY = {
 }
 
 def detect_family_from_title(title: str) -> str:
-    """Map a free-text job title to the most-relevant resume family.
+    """Map a free-text job title to the most-relevant resume family (1 of 15).
 
-    Used by /leads + /jobs to surface a one-click 'Resume' button per row
-    without making the user pick a chip. Order-of-rules matters — more
-    specific patterns must come first (e.g. 'ai product manager' before
-    plain 'product manager'). Falls back to pm-apm because that's the
-    most common slot and the resume is broadly applicable.
+    Order matters — match the MOST SPECIFIC patterns first so e.g.
+    'Senior Technical Product Manager' routes to technical-pm (not senior-pm
+    or generic pm-apm), and 'AI Product Manager' beats 'Product Manager'.
+    Default falls back to pm-apm (generic Product Manager) since that's the
+    broadest match for unknown titles.
     """
     if not title:
         return "pm-apm"
     t = title.lower()
 
-    # AI-product cluster — match BEFORE generic 'product manager' / 'pm'
-    if any(kw in t for kw in ("ai product", "genai pm", "gen ai pm", "ml pm",
-                              "machine learning product", "applied ai pm",
-                              "ai pm")):
+    # ── AI / ML cluster — match BEFORE plain product manager ────────────────
+    if any(kw in t for kw in ("ai product manager", "ai pm", "genai pm",
+                              "gen ai pm", "gen-ai pm", "ml pm",
+                              "machine learning pm",
+                              "machine learning product",
+                              "applied ai pm", "applied-ai pm")):
         return "ai-product-manager"
-    if "applied ai" in t and ("engineer" in t or "scientist" in t):
-        return "product-engineer"
+    if any(kw in t for kw in ("applied ai engineer", "applied-ai engineer",
+                              "ai engineer", "genai engineer", "gen ai engineer",
+                              "ml engineer (product", "llm engineer",
+                              "ai/ml engineer")):
+        return "applied-ai-engineer"
 
-    # Founding cluster
+    # ── Founding cluster — engineer vs PM split ─────────────────────────────
+    if "founding" in t and any(kw in t for kw in ("engineer", "developer", "dev")):
+        return "founding-engineer"
     if "founding" in t:
-        return "founding"
+        return "founding"  # founding pm / founding member / founding (generic)
 
-    # Forward Deployed cluster
-    if any(kw in t for kw in ("forward deployed", "forward-deployed", "fde",
-                              "deployed engineer", "deployed pm")):
+    # ── Forward Deployed cluster — engineer vs PM split ─────────────────────
+    if any(kw in t for kw in ("forward deployed engineer", "forward-deployed engineer",
+                              "deployed engineer", "fde")):
+        return "forward-deployed-engineer"
+    if any(kw in t for kw in ("forward deployed", "forward-deployed", "deployed pm",
+                              "deployed product manager")):
         return "forward-deployed"
 
-    # Solutions / Customer / Implementation engineer
+    # ── Customer-side technical roles ──────────────────────────────────────
+    if any(kw in t for kw in ("customer engineer", "customer success engineer",
+                              "technical customer manager", "customer engineering")):
+        return "customer-engineer"
+    if any(kw in t for kw in ("implementation consultant", "implementation engineer",
+                              "implementation specialist", "deployment consultant",
+                              "professional services engineer")):
+        return "implementation-consultant"
     if any(kw in t for kw in ("solutions engineer", "solution engineer",
                               "solutions architect", "solution architect",
-                              "sales engineer", "customer engineer",
-                              "implementation engineer", "implementation consultant")):
+                              "sales engineer", "pre-sales engineer", "presales engineer")):
         return "solutions-engineer"
 
-    # Product engineer (full-stack-leaning IC track)
+    # ── Product engineer (full-stack-leaning IC track) ──────────────────────
     if "product engineer" in t:
         return "product-engineer"
 
-    # Business / Systems Analyst
+    # ── Business / Systems Analyst ──────────────────────────────────────────
     if any(kw in t for kw in ("business analyst", "business systems analyst",
-                              "systems analyst", "bsa")):
+                              "systems analyst", "bsa", "data analyst (product")):
         return "business-analyst"
 
-    # Product Owner cluster
+    # ── Product Owner cluster ───────────────────────────────────────────────
     if any(kw in t for kw in ("product owner", "scrum product owner",
                               "agile product owner", " po ", " po,")):
         return "product-owner"
 
-    # Generic PM / APM cluster — broad match, last so it doesn't steal from above
+    # ── Technical PM / TPM (must come BEFORE senior PM since "Senior
+    # Technical PM" should route to technical-pm, not senior-pm) ────────────
+    if any(kw in t for kw in ("technical product manager", "technical pm", "tpm",
+                              "platform product manager", "platform pm",
+                              "infrastructure pm")):
+        return "technical-pm"
+
+    # ── Senior PM cluster ───────────────────────────────────────────────────
+    if any(kw in t for kw in ("senior product manager", "sr. product manager",
+                              "sr product manager", "lead product manager",
+                              "principal product manager", "staff product manager",
+                              "group product manager", "head of product",
+                              "director of product", "senior pm", "sr pm",
+                              "lead pm", "principal pm")):
+        return "senior-pm"
+
+    # ── Generic PM / APM cluster — broad fallback ───────────────────────────
     if any(kw in t for kw in ("product manager", "associate product manager",
-                              "senior product manager", "principal product manager",
-                              "group product manager", "apm", "lead product",
-                              "head of product")):
+                              "junior product manager", "apm")):
         return "pm-apm"
     if t == "pm" or t.endswith(" pm") or t.startswith("pm "):
         return "pm-apm"
@@ -292,14 +448,24 @@ def detect_family_from_title(title: str) -> str:
     return "pm-apm"
 
 
-# Human-readable labels for the download button (per family)
+# Human-readable labels for the download button (per family).
+# These also become the PDF filename slug — keep them short, no slashes,
+# no parens. Stable across sessions so the user downloads each file once
+# and reuses (no duplicate-on-disk problem).
 FAMILY_LABELS = {
-    "product-owner": "Product Owner",
-    "pm-apm": "Product Manager / APM",
-    "ai-product-manager": "AI Product Manager",
-    "forward-deployed": "Forward Deployed (PM / Engineer / AI)",
-    "founding": "Founding Engineer / PM",
-    "solutions-engineer": "Solutions / Customer / Implementation Engineer",
-    "product-engineer": "Product Engineer",
-    "business-analyst": "Business Analyst",
+    "product-owner":             "Product Owner",
+    "pm-apm":                    "Product Manager",
+    "senior-pm":                 "Senior Product Manager",
+    "technical-pm":              "Technical Product Manager",
+    "ai-product-manager":        "AI Product Manager",
+    "forward-deployed":          "Forward Deployed PM",
+    "forward-deployed-engineer": "Forward Deployed Engineer",
+    "founding":                  "Founding PM",
+    "founding-engineer":         "Founding Engineer",
+    "solutions-engineer":        "Solutions Engineer",
+    "customer-engineer":         "Customer Engineer",
+    "implementation-consultant": "Implementation Consultant",
+    "product-engineer":          "Product Engineer",
+    "applied-ai-engineer":       "Applied AI Engineer",
+    "business-analyst":          "Business Analyst",
 }
