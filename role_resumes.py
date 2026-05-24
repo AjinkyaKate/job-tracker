@@ -229,6 +229,69 @@ CHIP_TO_RESUME_FAMILY = {
     "ba": "business-analyst",
 }
 
+def detect_family_from_title(title: str) -> str:
+    """Map a free-text job title to the most-relevant resume family.
+
+    Used by /leads + /jobs to surface a one-click 'Resume' button per row
+    without making the user pick a chip. Order-of-rules matters — more
+    specific patterns must come first (e.g. 'ai product manager' before
+    plain 'product manager'). Falls back to pm-apm because that's the
+    most common slot and the resume is broadly applicable.
+    """
+    if not title:
+        return "pm-apm"
+    t = title.lower()
+
+    # AI-product cluster — match BEFORE generic 'product manager' / 'pm'
+    if any(kw in t for kw in ("ai product", "genai pm", "gen ai pm", "ml pm",
+                              "machine learning product", "applied ai pm",
+                              "ai pm")):
+        return "ai-product-manager"
+    if "applied ai" in t and ("engineer" in t or "scientist" in t):
+        return "product-engineer"
+
+    # Founding cluster
+    if "founding" in t:
+        return "founding"
+
+    # Forward Deployed cluster
+    if any(kw in t for kw in ("forward deployed", "forward-deployed", "fde",
+                              "deployed engineer", "deployed pm")):
+        return "forward-deployed"
+
+    # Solutions / Customer / Implementation engineer
+    if any(kw in t for kw in ("solutions engineer", "solution engineer",
+                              "solutions architect", "solution architect",
+                              "sales engineer", "customer engineer",
+                              "implementation engineer", "implementation consultant")):
+        return "solutions-engineer"
+
+    # Product engineer (full-stack-leaning IC track)
+    if "product engineer" in t:
+        return "product-engineer"
+
+    # Business / Systems Analyst
+    if any(kw in t for kw in ("business analyst", "business systems analyst",
+                              "systems analyst", "bsa")):
+        return "business-analyst"
+
+    # Product Owner cluster
+    if any(kw in t for kw in ("product owner", "scrum product owner",
+                              "agile product owner", " po ", " po,")):
+        return "product-owner"
+
+    # Generic PM / APM cluster — broad match, last so it doesn't steal from above
+    if any(kw in t for kw in ("product manager", "associate product manager",
+                              "senior product manager", "principal product manager",
+                              "group product manager", "apm", "lead product",
+                              "head of product")):
+        return "pm-apm"
+    if t == "pm" or t.endswith(" pm") or t.startswith("pm "):
+        return "pm-apm"
+
+    return "pm-apm"
+
+
 # Human-readable labels for the download button (per family)
 FAMILY_LABELS = {
     "product-owner": "Product Owner",

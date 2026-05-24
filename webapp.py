@@ -1295,6 +1295,20 @@ def leads_inbox(request: Request, show: str = "", title: str = "", loc: str = ""
         d["ini"] = ((words[0][0] + words[1][0]).upper()
                     if len(words) >= 2 else co[:2].upper() or "?")
         d["added_rel"] = _relative_time(d.get("added_at", ""))
+        # Per-lead resume routing — auto-detect family from the job title so
+        # each card gets a one-click '📄 Resume' button without the user
+        # picking a chip first. URL also carries company so the resume page
+        # can put the target company in the PDF filename.
+        import role_resumes as _rr
+        fam = _rr.detect_family_from_title(d.get("title") or "")
+        d["resume_family"] = fam
+        d["resume_label"] = _rr.FAMILY_LABELS.get(fam, fam)
+        company_qs = (d.get("company") or "").strip()
+        if company_qs:
+            from urllib.parse import quote
+            d["resume_url"] = f"/resumes/role/{fam}?company={quote(company_qs)}"
+        else:
+            d["resume_url"] = f"/resumes/role/{fam}"
         leads.append(d)
     # Build display chips with active/inactive state + URLs that toggle membership
     def build_chip_state(defs, current_keys, param_name):
@@ -1460,7 +1474,14 @@ def leads_restore(lead_id: int):
 
 @app.get("/resumes/role/{family}", response_class=HTMLResponse)
 def role_resume_page(family: str, request: Request):
-    """Render a pre-tailored resume for a given role family."""
+    """Render a pre-tailored resume for a given role family.
+
+    Optional ?company=X query param customizes the suggested PDF filename
+    so downloading from a Lead card produces
+    'Ajinkya_Kate_Allianz_AI_Product_Manager.pdf' instead of the generic
+    'Ajinkya_Kate_AI_Product_Manager.pdf' — easier for the user to track
+    which file they sent to which recruiter.
+    """
     import role_resumes
     md = role_resumes.render_role_resume(family)
     if not md:
@@ -1471,14 +1492,25 @@ def role_resume_page(family: str, request: Request):
         )
     resume_html = md_lib.markdown(md, extensions=["extra", "sane_lists"])
     label = role_resumes.FAMILY_LABELS.get(family, family)
-    pdf_filename = f"Ajinkya_Kate_{label.replace(' / ', '_').replace(' ', '_')}.pdf"
-    # Reuse the existing resume.html template — pass a synthetic "job" dict
+
+    company = (request.query_params.get("company") or "").strip()
+    company_slug = _slugify_for_filename(company) if company else ""
+    label_slug = label.replace(" / ", "_").replace(" ", "_")
+    if company_slug:
+        pdf_filename = f"Ajinkya_Kate_{company_slug}_{label_slug}.pdf"
+    else:
+        pdf_filename = f"Ajinkya_Kate_{label_slug}.pdf"
+
+    # Reuse the existing resume.html template — pass a synthetic "job" dict.
+    # title displays target role @ target company at the top of the page.
+    display_title = label
+    display_company = company if company else label
     return TEMPLATES.TemplateResponse(
         "resume.html",
         {
             "request": request,
-            "job": {"id": 0, "company": label, "title": label,
-                    "resume_md": md, "link": "", "company_slug": label},
+            "job": {"id": 0, "company": display_company, "title": display_title,
+                    "resume_md": md, "link": "", "company_slug": company_slug or label_slug},
             "resume_html": resume_html,
             "pdf_filename": pdf_filename,
         },
