@@ -153,8 +153,10 @@ def analyze_email(subject: str, sender: str, body: str,
     )
 
     try:
+        # gemini-2.0-flash-lite has higher RPM cap (30/min) than 2.5-flash (20/min)
+        # — important for sync runs that touch many emails.
         response = client.models.generate_content(
-            model="gemini-2.5-flash",
+            model="gemini-2.0-flash-lite-001",
             contents=[user_msg],
             config=genai_types.GenerateContentConfig(
                 system_instruction=system_prompt,
