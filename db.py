@@ -50,8 +50,11 @@ class Connection:
         self._raw = raw
 
     def execute(self, sql: str, params: Optional[Sequence] = None):
-        sql = sql.replace("?", "%s") if IS_POSTGRES else sql
         if IS_POSTGRES:
+            # Escape literal '%' (e.g. LIKE 'SUGGESTED%') to '%%' BEFORE converting
+            # '?' placeholders to '%s' — otherwise psycopg tries to interpret the
+            # literal % as a placeholder and fails.
+            sql = sql.replace("%", "%%").replace("?", "%s")
             cur = self._raw.cursor()
             cur.execute(sql, params or ())
             return cur
@@ -109,7 +112,8 @@ def insert_returning_id(conn: Connection, sql: str, params: Sequence) -> int:
          handles it for Postgres and falls back to lastrowid for SQLite.
     """
     if IS_POSTGRES:
-        rewritten = sql.replace("?", "%s") + " RETURNING id"
+        # Same %-escape rule as Connection.execute — see comment there.
+        rewritten = sql.replace("%", "%%").replace("?", "%s") + " RETURNING id"
         cur = conn._raw.cursor()
         cur.execute(rewritten, params)
         row = cur.fetchone()
