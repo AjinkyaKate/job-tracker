@@ -522,9 +522,11 @@ def fetch_relevant_emails(creds: "Credentials", since_iso: Optional[str] = None,
     """
     service = build("gmail", "v1", credentials=creds)
 
-    # Pull from primary tab only (excludes Promotions / Social / Forums / Updates)
-    # so we don't waste Gemini calls on newsletters and notification spam.
-    query = "category:primary"
+    # No category filter: 'category:primary' matches NOTHING for users who
+    # haven't enabled Gmail's Inbox-tabs feature (most mobile-first accounts).
+    # We accept slightly more email noise (newsletters, transactional) and let
+    # Gemini's is_job_related=false classification drop the irrelevant ones.
+    query = "in:inbox"
     if since_iso:
         try:
             dt = datetime.fromisoformat(since_iso)
