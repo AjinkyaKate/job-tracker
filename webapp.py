@@ -1023,3 +1023,106 @@ def dm_studio_submit(
         "request": request, "contact": contact, "job": job, "form": form,
         "draft": draft_text,
     })
+
+
+# ─────────────────────────────────────────────────────────────────────────────
+# Phase 1 — Leads inbox (LinkedIn alerts → tracker)
+# ─────────────────────────────────────────────────────────────────────────────
+
+def _relative_time(iso_str: str) -> str:
+    """Format ISO datetime as '2h ago' / 'just now' / '3d ago'."""
+    if not iso_str:
+        return ""
+    try:
+        from datetime import datetime as _dt, timezone as _tz
+        dt = _dt.fromisoformat(iso_str.replace("Z", "+00:00"))
+        if dt.tzinfo is None:
+            dt = dt.replace(tzinfo=_tz.utc)
+        delta = _dt.now(_tz.utc) - dt
+        s = int(delta.total_seconds())
+        if s < 60: return "just now"
+        if s < 3600: return f"{s // 60}m ago"
+        if s < 86400: return f"{s // 3600}h ago"
+        if s < 604800: return f"{s // 86400}d ago"
+        return f"{s // 604800}w ago"
+    except Exception:
+        return iso_str[:10]
+
+
+@app.get("/leads", response_class=HTMLResponse)
+def leads_inbox(request: Request, show: str = ""):
+    """Triage list of LinkedIn-alert-imported leads (status='lead' or 'lead-dismissed')."""
+    tracker.init_db()
+    show_dismissed = (show == "dismissed")
+    status_filter = "lead-dismissed" if show_dismissed else "lead"
+    with get_connection() as conn:
+        rows = conn.execute(
+            "SELECT id, title, company, link, location, added_at FROM jobs "
+            "WHERE status = ? ORDER BY added_at DESC LIMIT 200",
+            (status_filter,),
+        ).fetchall()
+        dismissed_row = conn.execute(
+            "SELECT COUNT(*) AS n FROM jobs WHERE status = 'lead-dismissed'"
+        ).fetchone()
+    leads = []
+    for r in rows:
+        d = dict(r)
+        co = d.get("company") or ""
+        words = [w for w in co.split() if w[0:1].isalnum()]
+        d["ini"] = ((words[0][0] + words[1][0]).upper()
+                    if len(words) >= 2 else co[:2].upper() or "?")
+        d["added_rel"] = _relative_time(d.get("added_at", ""))
+        leads.append(d)
+    return TEMPLATES.TemplateResponse("leads.html", {
+        "request": request, "leads": leads,
+        "show_dismissed": show_dismissed,
+        "dismissed_count": dismissed_row["n"] if dismissed_row else 0,
+    })
+
+
+@app.post("/leads/{lead_id}/pursue")
+def leads_pursue(lead_id: int):
+    """Promote a lead to status='saved'. Returns a redirect that opens the LinkedIn URL."""
+    tracker.init_db()
+    now_iso = datetime.now().isoformat(timespec="seconds")
+    with get_connection() as conn:
+        row = conn.execute("SELECT link FROM jobs WHERE id = ?", (lead_id,)).fetchone()
+        if not row:
+            return RedirectResponse("/leads", status_code=303)
+        conn.execute(
+            "UPDATE jobs SET status = 'saved', worth_pursuing = 'yes', last_activity_at = ? WHERE id = ?",
+            (now_iso, lead_id),
+        )
+        conn.execute(
+            "INSERT INTO events (job_id, event_type, body, occurred_at, recorded_at) "
+            "VALUES (?, ?, ?, ?, ?)",
+            (lead_id, "status_change", "lead -> saved (promoted from Leads inbox)", now_iso, now_iso),
+        )
+    # Redirect to the job detail page; user can click the LinkedIn link there.
+    return RedirectResponse(f"/jobs/{lead_id}", status_code=303)
+
+
+@app.post("/leads/{lead_id}/dismiss")
+def leads_dismiss(lead_id: int):
+    """Hide a lead — stays in DB so future LinkedIn emails dedup against it."""
+    tracker.init_db()
+    now_iso = datetime.now().isoformat(timespec="seconds")
+    with get_connection() as conn:
+        conn.execute(
+            "UPDATE jobs SET status = 'lead-dismissed', last_activity_at = ? WHERE id = ?",
+            (now_iso, lead_id),
+        )
+    return RedirectResponse("/leads", status_code=303)
+
+
+@app.post("/leads/{lead_id}/restore")
+def leads_restore(lead_id: int):
+    """Undo a dismiss — bring back to active leads."""
+    tracker.init_db()
+    now_iso = datetime.now().isoformat(timespec="seconds")
+    with get_connection() as conn:
+        conn.execute(
+            "UPDATE jobs SET status = 'lead', last_activity_at = ? WHERE id = ?",
+            (now_iso, lead_id),
+        )
+    return RedirectResponse("/leads?show=dismissed", status_code=303)

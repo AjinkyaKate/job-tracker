@@ -1,0 +1,90 @@
+{% extends "base.html" %}
+
+{% block title %}Leads · {{ leads|length }} new · Job Tracker{% endblock %}
+
+{% block topbar_breadcrumb %}
+<div class="text-ink3 text-[13px] hidden md:flex items-center gap-2">
+  <span>/</span>
+  <a href="/" class="hover:text-ink">Pipeline</a>
+  <span>/</span>
+  <span class="text-ink2">Leads</span>
+</div>
+{% endblock %}
+
+{% block content %}
+<div class="max-w-6xl mx-auto py-6">
+
+  <header class="mb-5 flex items-end justify-between">
+    <div>
+      <div class="text-[11px] font-mono uppercase tracking-[0.16em] text-ink3 mb-1">Discovery</div>
+      <h1 class="text-2xl font-semibold text-ink">
+        {{ leads|length }} leads from LinkedIn alerts
+        {% if dismissed_count %}<span class="text-ink3 text-[14px] font-normal ml-2">· {{ dismissed_count }} dismissed</span>{% endif %}
+      </h1>
+      <p class="text-ink2 text-sm mt-1">
+        Auto-imported from LinkedIn job-alert emails via Gmail sync. Triage daily: Pursue → moves to pipeline. Dismiss → hidden.
+      </p>
+    </div>
+    <div class="flex gap-2">
+      <a href="/leads?show=dismissed" class="h-9 px-3.5 rounded-md border border-line bg-raised hover:border-line2 text-ink2 hover:text-ink text-[13px] flex items-center transition">
+        {% if show_dismissed %}← Active leads{% else %}Show dismissed ({{ dismissed_count }}){% endif %}
+      </a>
+    </div>
+  </header>
+
+  {% if not leads %}
+  <div class="p-8 rounded-lg bg-raised border border-line text-center">
+    <p class="text-ink2 text-sm mb-2">No leads yet.</p>
+    <p class="text-ink3 text-[13px]">
+      Set up LinkedIn saved-search alerts (see <code class="bg-sunken px-1.5 py-0.5 rounded text-[12px]">LINKEDIN_ALERTS_SETUP.md</code>) → leads start landing here within 24 hours.
+    </p>
+  </div>
+  {% else %}
+  <div class="space-y-2">
+    {% for lead in leads %}
+    <div class="flex items-center gap-3 p-3 rounded-lg bg-raised border border-line hover:border-line2 transition">
+      <div class="w-10 h-10 rounded-md bg-sunken flex items-center justify-center text-ink2 text-[13px] font-mono font-semibold flex-shrink-0">
+        {{ lead.ini or '?' }}
+      </div>
+      <div class="flex-1 min-w-0">
+        <div class="text-ink text-[14px] font-medium truncate">{{ lead.title }}</div>
+        <div class="text-ink2 text-[12.5px] truncate">
+          {{ lead.company }}{% if lead.location %} · {{ lead.location }}{% endif %}
+        </div>
+        <div class="text-ink3 text-[11px] font-mono mt-0.5">
+          added {{ lead.added_rel }} · #{{ lead.id }}
+          {% if lead.link %} · <a href="{{ lead.link }}" target="_blank" class="hover:text-accent-500 underline">view on LinkedIn ↗</a>{% endif %}
+        </div>
+      </div>
+      <div class="flex gap-1.5 flex-shrink-0">
+        {% if show_dismissed %}
+        <form method="POST" action="/leads/{{ lead.id }}/restore" class="inline">
+          <button type="submit" class="h-8 px-3 rounded-md border border-line bg-sunken hover:border-line2 text-ink2 hover:text-ink text-[12.5px] transition">
+            Restore
+          </button>
+        </form>
+        {% else %}
+        <form method="POST" action="/leads/{{ lead.id }}/pursue" class="inline">
+          <button type="submit" class="h-8 px-3 rounded-md bg-accent-500 hover:bg-accent-400 text-white text-[12.5px] font-medium transition">
+            Pursue ↗
+          </button>
+        </form>
+        <form method="POST" action="/leads/{{ lead.id }}/dismiss" class="inline">
+          <button type="submit" class="h-8 px-3 rounded-md border border-line bg-sunken hover:border-rejected/40 hover:text-rejected text-ink3 text-[12.5px] transition">
+            Dismiss
+          </button>
+        </form>
+        {% endif %}
+      </div>
+    </div>
+    {% endfor %}
+  </div>
+  {% endif %}
+
+  <div class="mt-6 p-3 rounded-lg bg-raised border border-line text-[12px] text-ink3 font-mono">
+    <strong class="text-ink2">Pursue</strong> → moves the lead to status=saved (kanban Saved column) AND opens the LinkedIn URL in a new tab so you can read the full JD + apply.
+    <br><strong class="text-ink2">Dismiss</strong> → hides this lead. Won't re-import if LinkedIn sends it again (dedup by URL).
+  </div>
+
+</div>
+{% endblock %}

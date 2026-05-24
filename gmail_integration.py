@@ -21,6 +21,7 @@ from typing import Optional
 
 from db import Connection, insert_returning_id, upsert_processed_message
 import email_analyzer
+import linkedin_alerts
 
 # Google libs are optional at import time so the webapp doesn't crash if they
 # aren't installed yet (we add them to requirements.txt in this ship).
@@ -716,9 +717,39 @@ def sync_to_tracker(conn: Connection) -> dict:
 
     now_iso = datetime.now(timezone.utc).isoformat(timespec="seconds")
 
+    # Track leads ingested (LinkedIn job-alert path — see below).
+    leads_ingested = 0
+
     for msg in messages:
         gmail_id = msg.get("id")
         if not gmail_id or _already_processed(conn, gmail_id):
+            continue
+
+        # ─── LinkedIn job-alert ingestion (Phase 1 discovery path) ──────
+        headers = {h["name"]: h["value"] for h in msg.get("payload", {}).get("headers", [])}
+        if linkedin_alerts.is_linkedin_alert(headers):
+            body = get_email_body(msg)
+            jobs_in_alert = linkedin_alerts.parse_alert(body)
+            for j in jobs_in_alert:
+                # Dedup on link (canonical URL with no tracking params)
+                existing = conn.execute(
+                    "SELECT id FROM jobs WHERE link = ?", (j["link"],),
+                ).fetchone()
+                if existing:
+                    continue
+                location = j["location"] or ""
+                company = j["company"] or "(unknown)"
+                title = j["title"] or "(untitled)"
+                insert_returning_id(
+                    conn,
+                    "INSERT INTO jobs (title, company, link, status, worth_pursuing, "
+                    "location, source, added_at, last_activity_at) "
+                    "VALUES (?, ?, ?, 'lead', 'unsure', ?, 'linkedin-alert', ?, ?)",
+                    (title, company, j["link"], location, now_iso, now_iso),
+                )
+                leads_ingested += 1
+            # Mark email as processed regardless of whether jobs were new
+            _mark_processed(conn, gmail_id, None)
             continue
 
         # ─── Regex pass first — fast + no quota ─────────────────────────
@@ -908,6 +939,7 @@ def sync_to_tracker(conn: Connection) -> dict:
         "status_changes": status_changes,
         "last_sync": now_iso,
         "duration_s": round(duration_s, 2),
+        "leads_ingested": leads_ingested,
     }
 
 
