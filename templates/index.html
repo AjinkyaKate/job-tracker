@@ -1,61 +1,28 @@
-<!doctype html>
-<html lang="en" class="dark">
-<head>
-<meta charset="utf-8" />
-<meta name="viewport" content="width=device-width, initial-scale=1" />
-<title>Job Tracker · Pipeline · {{ today }}</title>
-<link rel="icon" href="data:image/svg+xml,<svg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 100 100'><text y='.9em' font-size='90'>%F0%9F%93%8B</text></svg>">
-<script src="https://cdn.tailwindcss.com"></script>
-<link rel="preconnect" href="https://fonts.googleapis.com">
-<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
-<link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&family=JetBrains+Mono:wght@400;500;600&display=swap" rel="stylesheet">
-<script>
-  tailwind.config = {
-    darkMode: 'class',
-    theme: {
-      extend: {
-        fontFamily: {
-          sans: ['Inter', 'ui-sans-serif', 'system-ui', 'sans-serif'],
-          mono: ['"JetBrains Mono"', 'ui-monospace', 'monospace'],
-        },
-        colors: {
-          base:   { light: '#fafaf9', DEFAULT: '#0b0b0e' },
-          raised: { light: '#ffffff', DEFAULT: '#131318' },
-          sunken: { light: '#f1f0ee', DEFAULT: '#08080b' },
-          line:   { light: '#e6e4e0', DEFAULT: '#26262e' },
-          line2:  { light: '#d8d6d1', DEFAULT: '#32323c' },
-          ink:    { light: '#0f0f12', DEFAULT: '#f4f3ef' },
-          ink2:   { light: '#55554f', DEFAULT: '#a7a6a1' },
-          ink3:   { light: '#85847d', DEFAULT: '#6c6c72' },
-          accent: { 100:'#e9deff',300:'#b896ff',400:'#9a6bff',500:'#7e44ff',600:'#6a2ef0',700:'#5520c4' },
-          saved:    '#9aa0a6',
-          applied:  '#4b8df8',
-          replied:  '#f5a524',
-          interview:'#22c55e',
-          offer:    '#10b981',
-          rejected: '#ef4444',
-          backlog:  '#6b7280',
-        },
-        boxShadow: {
-          'pop': '0 8px 24px -8px rgba(0,0,0,0.55), 0 2px 6px -1px rgba(0,0,0,0.35)',
-          'pop-light': '0 8px 24px -8px rgba(15,15,18,0.12), 0 2px 6px -1px rgba(15,15,18,0.06)',
-        },
-      }
-    }
-  };
-</script>
+{% extends "base.html" %}
+
+{% block title %}Pipeline · {{ today }} · Job Tracker{% endblock %}
+
+{% block topbar_breadcrumb %}
+<div class="text-ink3 text-[13px] hidden md:flex items-center gap-2">
+  <span>/</span>
+  <span class="text-ink2">Pipeline</span>
+</div>
+{% endblock %}
+
+{% block topbar_actions %}
+<div class="hidden md:flex items-center gap-2">
+  <a href="/leads" class="h-9 px-3.5 rounded-md border border-line bg-raised hover:border-line2 text-ink2 hover:text-ink text-[13px] flex items-center transition">
+    Leads
+  </a>
+  <a href="/add-job" class="h-9 px-3.5 rounded-md bg-accent-500 hover:bg-accent-400 text-white text-[13px] font-medium flex items-center transition">
+    + Add job
+  </a>
+</div>
+{% endblock %}
+
+{% block extra_head %}
 <style>
-  html, body { height: 100%; }
-  body { font-family: 'Inter', system-ui, sans-serif; font-feature-settings: 'ss01','cv11','cv02'; }
-  .tabular { font-variant-numeric: tabular-nums; }
-  .nice-scroll::-webkit-scrollbar { height: 10px; width: 10px; }
-  .nice-scroll::-webkit-scrollbar-thumb { background: rgba(255,255,255,0.06); border-radius: 999px; }
-  .nice-scroll::-webkit-scrollbar-track { background: transparent; }
-  html:not(.dark) .nice-scroll::-webkit-scrollbar-thumb { background: rgba(15,15,18,0.08); }
-  .card.dragging { opacity: 0.3; }
-  .col.drop-over .col-body { background: rgba(126, 68, 255, 0.06); outline: 1px dashed rgba(126, 68, 255, 0.45); outline-offset: -4px; border-radius: 12px; }
-  .placeholder { height: 4px; background: rgb(126 68 255 / 0.8); border-radius: 999px; margin: 4px 0; }
-  .dragging-active * { user-select: none !important; }
+  /* Status color CSS variables driven by data-status — used for pills + dots. */
   [data-status="saved"]     { --st: #9aa0a6; }
   [data-status="applied"]   { --st: #4b8df8; }
   [data-status="replied"]   { --st: #f5a524; }
@@ -63,569 +30,133 @@
   [data-status="offer"]     { --st: #10b981; }
   [data-status="rejected"]  { --st: #ef4444; }
   [data-status="backlog"]   { --st: #6b7280; }
-  .dot { background: var(--st); }
-  .tint { background: color-mix(in oklab, var(--st) 14%, transparent); color: var(--st); }
-  .tint-strong { background: color-mix(in oklab, var(--st) 22%, transparent); color: var(--st); }
-</style>
-</head>
-<body class="bg-base-light dark:bg-base text-ink-light dark:text-ink antialiased min-h-screen md:h-screen md:flex md:flex-col md:overflow-hidden">
-
-<!-- ============ TOP BAR ============ -->
-<header class="shrink-0 border-b border-line-light dark:border-line bg-base-light/85 dark:bg-base/85 backdrop-blur">
-  <div class="px-4 md:px-6 h-12 flex items-center gap-4">
-    <div class="flex items-center gap-2.5">
-      <div class="w-6 h-6 rounded-md bg-accent-500 grid place-items-center">
-        <svg viewBox="0 0 20 20" class="w-3.5 h-3.5 text-white" fill="none" stroke="currentColor" stroke-width="2.4"><path d="M4 11l4 4 8-9"/></svg>
-      </div>
-      <span class="text-[13px] font-semibold tracking-tight">Job Tracker</span>
-      <span class="text-ink3 dark:text-ink3 text-[12px] hidden md:inline">·</span>
-      <span class="text-ink2 dark:text-ink2 text-[12px] hidden md:inline">Ajinkya Kate</span>
-    </div>
-    <nav class="hidden md:flex items-center gap-1 ml-4 text-[12.5px]">
-      <a class="px-2.5 h-7 rounded-md inline-flex items-center bg-sunken-light dark:bg-sunken font-medium" href="/">Pipeline</a>
-      <span class="px-2.5 h-7 rounded-md inline-flex items-center text-ink3 cursor-not-allowed" title="Phase C">Today</span>
-      <span class="px-2.5 h-7 rounded-md inline-flex items-center text-ink3 cursor-not-allowed" title="Phase D">Resume Studio</span>
-      <span class="px-2.5 h-7 rounded-md inline-flex items-center text-ink3 cursor-not-allowed" title="Phase D">Settings</span>
-    </nav>
-    <div class="flex-1 flex justify-center">
-      <div class="relative w-full md:w-[420px] max-w-full">
-        <svg class="absolute left-3 top-1/2 -translate-y-1/2 w-3.5 h-3.5 text-ink3" viewBox="0 0 16 16" fill="none" stroke="currentColor" stroke-width="2"><circle cx="7" cy="7" r="5"/><path d="M14 14l-3-3"/></svg>
-        <input id="search" type="text" placeholder="Search jobs, companies, contacts…" class="w-full h-8 pl-8 pr-12 rounded-md bg-raised-light dark:bg-raised border border-line-light dark:border-line text-[12.5px] placeholder:text-ink3 focus:outline-none focus:ring-2 focus:ring-accent-500/40 focus:border-accent-500/50" />
-        <kbd class="absolute right-2 top-1/2 -translate-y-1/2 px-1.5 h-5 rounded border border-line-light dark:border-line bg-sunken-light dark:bg-sunken text-[10px] font-mono text-ink3 inline-flex items-center">/</kbd>
-      </div>
-    </div>
-    <div class="flex items-center gap-2">
-      {# Gmail Sync widget — state depends on configuration + authorization #}
-      {% if gmail.configured and gmail.authorized %}
-      <button id="gmail-sync" class="hidden md:inline-flex items-center gap-1.5 h-7 px-2.5 rounded-md border border-accent-500/40 bg-accent-500/10 text-accent-300 text-[12px] font-medium hover:bg-accent-500/15 transition" title="Pull new LinkedIn events from Gmail">
-        <svg class="w-3.5 h-3.5" viewBox="0 0 16 16" fill="none" stroke="currentColor" stroke-width="2"><path d="M14 8a6 6 0 11-6-6c1.5 0 2.9.6 4 1.5M14 2v4h-4"/></svg>
-        <span id="gmail-sync-label">Sync Gmail</span>
-        {% if gmail.last_sync %}<span class="font-mono text-[10px] text-accent-300/70" id="gmail-last-sync">· {{ gmail.last_sync[11:16] }}</span>{% endif %}
-      </button>
-      {% elif gmail.configured %}
-      <a href="/auth/gmail/start" class="hidden md:inline-flex items-center gap-1.5 h-7 px-2.5 rounded-md border border-line-light dark:border-line bg-raised-light dark:bg-raised text-[12px] font-medium hover:border-accent-500/40 hover:text-accent-300 transition" title="Connect Gmail to auto-detect LinkedIn events">
-        <svg class="w-3.5 h-3.5" viewBox="0 0 16 16" fill="none" stroke="currentColor" stroke-width="2"><rect x="2" y="3" width="12" height="10" rx="1.5"/><path d="M2 5l6 4 6-4"/></svg>
-        Connect Gmail
-      </a>
-      {% else %}
-      <span class="hidden md:inline-flex items-center gap-1.5 h-7 px-2.5 rounded-md border border-dashed border-line-light dark:border-line text-ink3 text-[11px]" title="See GMAIL_SETUP.md to configure">
-        <svg class="w-3 h-3" viewBox="0 0 16 16" fill="none" stroke="currentColor" stroke-width="1.8"><rect x="2" y="3" width="12" height="10" rx="1.5"/><path d="M2 5l6 4 6-4"/></svg>
-        Gmail (setup)
-      </span>
-      {% endif %}
-
-      <button id="theme-toggle" class="h-7 w-7 grid place-items-center rounded-md text-ink2 hover:text-ink hover:bg-sunken-light dark:hover:bg-sunken">
-        <svg class="w-3.5 h-3.5 dark:hidden" viewBox="0 0 16 16" fill="currentColor"><path d="M6 1A6 6 0 008 13a6 6 0 005.9-5A4.5 4.5 0 116 1z"/></svg>
-        <svg class="w-3.5 h-3.5 hidden dark:block" viewBox="0 0 16 16" fill="currentColor"><path d="M8 4a4 4 0 100 8 4 4 0 000-8zM8 0v2M8 14v2M16 8h-2M2 8H0"/></svg>
-      </button>
-      <div class="w-7 h-7 rounded-full bg-accent-500/20 text-accent-300 grid place-items-center text-[11px] font-mono font-semibold">AK</div>
-    </div>
-  </div>
-</header>
-
-<!-- ============ HEADER STRIP ============ -->
-<section class="shrink-0 px-4 md:px-6 pt-4 pb-3">
-  <div class="flex items-end justify-between gap-6 flex-wrap">
-    <div>
-      <div class="flex items-center gap-3">
-        <h1 class="text-[24px] md:text-[26px] font-semibold tracking-[-0.02em]">Pipeline</h1>
-        <span class="px-1.5 h-5 inline-flex items-center rounded bg-sunken-light dark:bg-sunken text-[11px] font-mono text-ink2 tabular">{{ total_active }} active</span>
-      </div>
-      <div class="mt-1 text-[12.5px] text-ink2 dark:text-ink2 font-mono">{{ today }}</div>
-    </div>
-    <div class="grid grid-cols-3 md:grid-cols-5 gap-2 w-full md:w-[640px]">
-      <div class="text-left rounded-xl border {% if due_today_count or overdue_count %}border-rejected/30 bg-rejected/8 dark:bg-rejected/10{% else %}border-line-light dark:border-line bg-raised-light dark:bg-raised{% endif %} px-3 py-2.5">
-        <div class="text-[10px] font-mono uppercase tracking-[0.14em] {% if due_today_count or overdue_count %}text-rejected{% else %}text-ink3{% endif %}">Due today</div>
-        <div class="mt-1 flex items-baseline gap-1.5">
-          <span class="text-[20px] tabular font-semibold leading-none">{{ due_today_count }}</span>
-          {% if overdue_count %}<span class="text-[10.5px] font-mono text-rejected/80">overdue {{ overdue_count }}</span>{% endif %}
-        </div>
-      </div>
-      <div class="text-left rounded-xl border border-line-light dark:border-line bg-raised-light dark:bg-raised px-3 py-2.5">
-        <div class="text-[10px] font-mono uppercase tracking-[0.14em] text-ink3">Upcoming · 7d</div>
-        <div class="mt-1 text-[20px] tabular font-semibold leading-none">{{ upcoming_count }}</div>
-      </div>
-      <div class="text-left rounded-xl border border-line-light dark:border-line bg-raised-light dark:bg-raised px-3 py-2.5">
-        <div class="text-[10px] font-mono uppercase tracking-[0.14em] text-ink3">Active</div>
-        <div class="mt-1 text-[20px] tabular font-semibold leading-none">{{ total_active }}</div>
-      </div>
-      <div class="text-left rounded-xl border border-line-light dark:border-line bg-raised-light dark:bg-raised px-3 py-2.5">
-        <div class="text-[10px] font-mono uppercase tracking-[0.14em] text-ink3">Drafts</div>
-        <div class="mt-1 flex items-baseline gap-1.5">
-          <span class="text-[20px] tabular font-semibold leading-none text-accent-300">{{ drafts_pending or 0 }}</span>
-        </div>
-      </div>
-      <div class="text-left rounded-xl border {% if offer_count %}border-offer/30 bg-offer/8 dark:bg-offer/10{% else %}border-line-light dark:border-line bg-raised-light dark:bg-raised{% endif %} px-3 py-2.5">
-        <div class="text-[10px] font-mono uppercase tracking-[0.14em] {% if offer_count %}text-offer{% else %}text-ink3{% endif %}">Offers</div>
-        <div class="mt-1 text-[20px] tabular font-semibold leading-none">{{ offer_count }}</div>
-      </div>
-    </div>
-  </div>
-</section>
-
-<!-- ============ FILTER BAR ============ -->
-<section class="shrink-0 px-4 md:px-6 pb-3">
-  <div class="flex items-center justify-between gap-3 flex-wrap">
-    <div class="flex items-center gap-1.5 flex-wrap">
-      <button data-filter="fit-70" class="filter-chip inline-flex items-center gap-1.5 h-7 px-2.5 rounded-full border border-line-light dark:border-line bg-raised-light dark:bg-raised text-[12px]">Fit ≥ 70</button>
-      <button data-filter="warm" class="filter-chip inline-flex items-center gap-1.5 h-7 px-2.5 rounded-full border border-line-light dark:border-line bg-raised-light dark:bg-raised text-[12px]">
-        <svg class="w-3 h-3" viewBox="0 0 16 16" fill="currentColor"><path d="M8 1.3l1.9 3.9 4.3.6-3.1 3 .7 4.3L8 11l-3.8 2.1.7-4.3-3.1-3 4.3-.6z"/></svg>
-        Warm contact
-      </button>
-      <button data-filter="overdue" class="filter-chip inline-flex items-center gap-1.5 h-7 px-2.5 rounded-full border border-line-light dark:border-line bg-raised-light dark:bg-raised text-[12px]">Overdue</button>
-      <button data-filter="pursue-yes" class="filter-chip inline-flex items-center gap-1.5 h-7 px-2.5 rounded-full border border-line-light dark:border-line bg-raised-light dark:bg-raised text-[12px]">Pursue: yes</button>
-    </div>
-    <div class="flex items-center gap-2 text-[12px] text-ink3">
-      <span id="filter-summary" class="font-mono">{{ jobs|length }} jobs · all stages</span>
-      <span class="h-4 w-px bg-line-light dark:bg-line"></span>
-      <div class="inline-flex p-0.5 rounded-md bg-sunken-light dark:bg-sunken border border-line-light dark:border-line">
-        <button id="view-kanban" class="view-btn h-6 px-2 rounded inline-flex items-center gap-1.5 text-[11.5px] font-medium bg-raised-light dark:bg-base text-ink-light dark:text-ink shadow-pop-light dark:shadow-pop">
-          <svg class="w-3.5 h-3.5" viewBox="0 0 16 16" fill="none" stroke="currentColor" stroke-width="1.7"><rect x="2" y="3" width="3.5" height="10" rx="1"/><rect x="6.5" y="3" width="3.5" height="7" rx="1"/><rect x="11" y="3" width="3.5" height="5" rx="1"/></svg>
-          Board
-        </button>
-        <button id="view-list" class="view-btn h-6 px-2 rounded inline-flex items-center gap-1.5 text-[11.5px] font-medium text-ink2">
-          <svg class="w-3.5 h-3.5" viewBox="0 0 16 16" fill="none" stroke="currentColor" stroke-width="1.7"><path d="M2 4h12M2 8h12M2 12h12"/></svg>
-          List
-        </button>
-      </div>
-    </div>
-  </div>
-</section>
-
-<!-- ============ KANBAN BOARD ============ -->
-<section id="board" class="md:flex-1 md:min-h-0 nice-scroll overflow-x-auto md:overflow-y-hidden pb-6">
-  <div class="h-full inline-flex gap-3 px-4 md:px-6 pt-2 min-w-max">
-    {% for s in statuses %}
-    <div class="col flex flex-col w-[300px] shrink-0" data-status="{{ s.key }}">
-      <header class="px-2 mb-1.5 flex items-center gap-2">
-        <span class="w-2 h-2 rounded-full dot"></span>
-        <span class="text-[12.5px] font-semibold">{{ s.label }}</span>
-        <span class="px-1.5 h-5 inline-flex items-center rounded bg-sunken-light dark:bg-sunken text-[11px] font-mono text-ink2 tabular col-count">{{ by_status[s.key]|length }}</span>
-      </header>
-      <div class="col-body flex-1 md:min-h-0 md:overflow-y-auto nice-scroll rounded-xl bg-sunken-light/40 dark:bg-sunken/40 border border-transparent p-2 space-y-2" data-drop="{{ s.key }}">
-        {% for j in by_status[s.key] %}
-        {% set fit_color = 'interview' if j.fit >= 80 else ('applied' if j.fit >= 65 else ('replied' if j.fit >= 45 else 'rejected')) %}
-        <a href="/jobs/{{ j.id }}"
-           class="card group block rounded-lg border border-line-light dark:border-line bg-raised-light dark:bg-raised hover:border-line2-light dark:hover:border-line2 hover:shadow-pop-light dark:hover:shadow-pop transition cursor-grab active:cursor-grabbing"
-           data-id="{{ j.id }}" data-status="{{ j.status }}" draggable="true"
-           data-fit="{{ j.fit }}" data-warm="{{ j.warm_count }}" data-overdue="{{ 1 if j.is_overdue else 0 }}" data-pursue="{{ j.worth_pursuing or 'unsure' }}">
-          <div class="p-3">
-            <div class="flex items-start gap-2.5">
-              <div class="w-7 h-7 rounded text-[10.5px] font-mono font-semibold grid place-items-center shrink-0 tint-strong" data-status="{{ j.status }}">{{ j.ini }}</div>
-              <div class="min-w-0 flex-1">
-                <div class="text-[13px] font-semibold leading-tight truncate" title="{{ j.title }}">{{ j.title }}</div>
-                <div class="text-[12px] text-ink2 dark:text-ink2 truncate">{{ j.company }}{% if j.location %} · {{ j.location }}{% endif %}</div>
-              </div>
-              <div class="relative w-8 h-8 shrink-0">
-                <svg viewBox="0 0 36 36" class="w-8 h-8 -rotate-90">
-                  <circle cx="18" cy="18" r="15.5" fill="none" stroke="currentColor" class="text-line-light dark:text-line" stroke-width="3"/>
-                  <circle cx="18" cy="18" r="15.5" fill="none" stroke="currentColor" class="text-{{ fit_color }}" stroke-width="3" stroke-dasharray="{{ j.fit }} 100" stroke-linecap="round"/>
-                </svg>
-                <div class="absolute inset-0 grid place-items-center text-[10px] font-mono tabular font-semibold">{{ j.fit }}</div>
-              </div>
-            </div>
-
-            {% if j.activity_preview %}
-            <div class="mt-2.5 text-[12px] text-ink2 dark:text-ink2 line-clamp-1">{{ j.activity_preview }}</div>
-            {% endif %}
-
-            <div class="mt-2.5 flex items-center justify-between gap-2">
-              <div class="flex items-center gap-1.5 text-[11px] font-mono min-w-0">
-                {% if j.is_overdue %}
-                <svg class="w-3 h-3 text-rejected shrink-0" viewBox="0 0 16 16" fill="currentColor"><path d="M8 1l7 13H1L8 1zm-.8 5h1.6v4H7.2V6zM8 11.4a.9.9 0 100 1.8.9.9 0 000-1.8z"/></svg>
-                <span class="text-rejected truncate">Overdue · {{ j.days_overdue }}d</span>
-                {% elif j.next_action_at %}
-                <svg class="w-3 h-3 text-replied shrink-0" viewBox="0 0 16 16" fill="none" stroke="currentColor" stroke-width="2"><circle cx="8" cy="8" r="6"/><path d="M8 5v3l2 1"/></svg>
-                <span class="text-replied truncate">{{ j.next_action_at }}</span>
-                {% else %}
-                <span class="text-ink3 truncate">—</span>
-                {% endif %}
-              </div>
-              <div class="flex items-center gap-1.5 shrink-0">
-                {% if j.warm_count %}
-                <span class="inline-flex items-center gap-1 px-1.5 h-5 rounded bg-accent-500/12 text-accent-300 text-[10.5px] font-mono">
-                  <svg class="w-3 h-3" viewBox="0 0 16 16" fill="currentColor"><path d="M8 1.3l1.9 3.9 4.3.6-3.1 3 .7 4.3L8 11l-3.8 2.1.7-4.3-3.1-3 4.3-.6z"/></svg>{{ j.warm_count }}
-                </span>
-                {% endif %}
-                {% if j.resume_md %}
-                <span class="px-1.5 h-5 inline-flex items-center rounded bg-accent-500/15 text-accent-300 text-[10.5px] font-mono" title="Tailored resume ready">📄</span>
-                {% endif %}
-                {% if j.draft_count %}
-                <span class="px-1.5 h-5 inline-flex items-center rounded bg-replied/15 text-replied text-[10.5px] font-mono" title="{{ j.draft_count }} message drafts ready">{{ j.draft_count }}</span>
-                {% endif %}
-              </div>
-            </div>
-          </div>
-        </a>
-        {% else %}
-        <div class="empty rounded-lg border border-dashed border-line-light dark:border-line px-3 py-6 text-center">
-          <div class="text-[12px] font-medium text-ink2">No jobs in {{ s.label }}</div>
-          <div class="text-[10.5px] font-mono text-ink3 mt-1">Drop a card here</div>
-        </div>
-        {% endfor %}
-      </div>
-    </div>
-    {% endfor %}
-  </div>
-</section>
-
-<!-- ============ LIST VIEW ============ -->
-<section id="list-view" class="hidden md:flex-1 md:min-h-0 px-4 md:px-6 pb-6 pt-1">
-  <div class="h-full flex flex-col rounded-xl border border-line-light dark:border-line bg-raised-light dark:bg-raised overflow-hidden">
-    <div class="shrink-0 grid items-center gap-3 px-4 h-9 border-b border-line-light dark:border-line bg-sunken-light/60 dark:bg-sunken/60 text-[10.5px] font-mono uppercase tracking-[0.14em] text-ink3"
-         style="grid-template-columns: 28px minmax(280px,2.4fr) 110px 64px minmax(180px,1.2fr) 80px 48px;">
-      <span></span>
-      <span>Role · Company</span>
-      <span>Status</span>
-      <span>Fit</span>
-      <span>Next action</span>
-      <span>Warm-in</span>
-      <span class="text-right pr-1">Evts</span>
-    </div>
-    <div id="list-body" class="flex-1 overflow-y-auto nice-scroll">
-      {% for s in statuses %}
-      {% if by_status[s.key] %}
-      <div class="sticky top-0 z-10 grid items-center gap-3 px-4 h-8 border-b border-line-light dark:border-line bg-sunken-light/95 dark:bg-sunken/95 backdrop-blur"
-           style="grid-template-columns: 28px 1fr;">
-        <span class="w-2 h-2 rounded-full dot" data-status="{{ s.key }}"></span>
-        <span class="text-[11px] font-mono uppercase tracking-[0.14em] font-medium">{{ s.label }} · <span class="text-ink3 tabular">{{ by_status[s.key]|length }}</span></span>
-      </div>
-      {% for j in by_status[s.key] %}
-      {% set fit_color = 'interview' if j.fit >= 80 else ('applied' if j.fit >= 65 else ('replied' if j.fit >= 45 else 'rejected')) %}
-      <a href="/jobs/{{ j.id }}"
-         class="row group grid items-center gap-3 px-4 h-12 hover:bg-sunken-light/70 dark:hover:bg-sunken/70 border-b border-line-light dark:border-line"
-         data-id="{{ j.id }}" data-status="{{ j.status }}"
-         data-fit="{{ j.fit }}" data-warm="{{ j.warm_count }}" data-overdue="{{ 1 if j.is_overdue else 0 }}" data-pursue="{{ j.worth_pursuing or 'unsure' }}"
-         style="grid-template-columns: 28px minmax(280px,2.4fr) 110px 64px minmax(180px,1.2fr) 80px 48px;">
-        <div class="w-7 h-7 rounded text-[10.5px] font-mono font-semibold grid place-items-center tint-strong" data-status="{{ j.status }}">{{ j.ini }}</div>
-        <div class="min-w-0">
-          <div class="text-[13px] font-semibold leading-tight truncate">{{ j.title }}</div>
-          <div class="text-[11.5px] text-ink2 truncate">{{ j.company }}{% if j.location %} · {{ j.location }}{% endif %}</div>
-        </div>
-        <div>
-          <span class="inline-flex items-center gap-1.5 px-1.5 h-5 rounded tint text-[11px] font-medium" data-status="{{ j.status }}"><span class="w-1.5 h-1.5 rounded-full dot"></span>{{ s.label }}</span>
-        </div>
-        <div class="flex items-center gap-1.5">
-          <div class="relative w-6 h-6">
-            <svg viewBox="0 0 36 36" class="w-6 h-6 -rotate-90"><circle cx="18" cy="18" r="15.5" fill="none" stroke="currentColor" class="text-line-light dark:text-line" stroke-width="4"/><circle cx="18" cy="18" r="15.5" fill="none" stroke="currentColor" class="text-{{ fit_color }}" stroke-width="4" stroke-dasharray="{{ j.fit }} 100" stroke-linecap="round"/></svg>
-          </div>
-          <span class="text-[12px] font-mono tabular font-semibold">{{ j.fit }}</span>
-        </div>
-        <div class="flex items-center gap-1.5 text-[12px] font-mono min-w-0">
-          {% if j.is_overdue %}
-          <svg class="w-3 h-3 text-rejected shrink-0" viewBox="0 0 16 16" fill="currentColor"><path d="M8 1l7 13H1L8 1zm-.8 5h1.6v4H7.2V6zM8 11.4a.9.9 0 100 1.8.9.9 0 000-1.8z"/></svg>
-          <span class="text-rejected truncate">Overdue · {{ j.days_overdue }}d</span>
-          {% elif j.next_action_at %}
-          <svg class="w-3 h-3 text-replied shrink-0" viewBox="0 0 16 16" fill="none" stroke="currentColor" stroke-width="2"><circle cx="8" cy="8" r="6"/><path d="M8 5v3l2 1"/></svg>
-          <span class="text-replied truncate">{{ j.next_action_at }}</span>
-          {% else %}
-          <span class="text-ink3">—</span>
-          {% endif %}
-        </div>
-        <div>
-          {% if j.warm_count %}
-          <span class="inline-flex items-center gap-1 px-1.5 h-5 rounded bg-accent-500/12 text-accent-300 text-[10.5px] font-mono">
-            <svg class="w-3 h-3" viewBox="0 0 16 16" fill="currentColor"><path d="M8 1.3l1.9 3.9 4.3.6-3.1 3 .7 4.3L8 11l-3.8 2.1.7-4.3-3.1-3 4.3-.6z"/></svg>{{ j.warm_count }}
-          </span>
-          {% else %}
-          <span class="text-[11px] font-mono text-ink3">—</span>
-          {% endif %}
-        </div>
-        <div class="text-right pr-1 text-[11.5px] font-mono tabular text-ink3">{{ (j.draft_count or 0) + (j.contact_count or 0) }}</div>
-      </a>
-      {% endfor %}
-      {% endif %}
-      {% endfor %}
-    </div>
-  </div>
-</section>
-
-<!-- ============ FAB ============ -->
-<button id="fab" class="fixed bottom-6 right-6 h-11 pl-3 pr-4 rounded-full bg-accent-500 text-white text-[13px] font-medium inline-flex items-center gap-2 shadow-pop hover:bg-accent-400 transition z-30">
-  <span class="w-6 h-6 rounded-full bg-white/15 grid place-items-center">
-    <svg class="w-3.5 h-3.5" viewBox="0 0 16 16" fill="none" stroke="currentColor" stroke-width="2.4"><path d="M8 2v12M2 8h12"/></svg>
-  </span>
-  Add job
-  <kbd class="ml-1 px-1.5 h-5 rounded bg-white/15 text-white/90 text-[10px] font-mono inline-flex items-center">N</kbd>
-</button>
-
-<!-- ============ ADD JOB MODAL (stub) ============ -->
-<div id="modal" class="fixed inset-0 z-50 hidden">
-  <div class="absolute inset-0 bg-black/55 backdrop-blur-sm" data-close></div>
-  <div class="absolute left-1/2 top-1/2 -translate-x-1/2 -translate-y-1/2 w-[520px] max-w-[95vw] rounded-2xl border border-line-light dark:border-line bg-raised-light dark:bg-raised shadow-pop-light dark:shadow-pop overflow-hidden">
-    <div class="px-5 py-3.5 flex items-center justify-between border-b border-line-light dark:border-line">
-      <div class="flex items-center gap-2">
-        <span class="text-[13px] font-semibold">Add job</span>
-        <span class="text-[11px] font-mono text-ink3">→ Saved column</span>
-      </div>
-      <button data-close class="w-7 h-7 grid place-items-center rounded-md text-ink2 hover:text-ink hover:bg-sunken-light dark:hover:bg-sunken">×</button>
-    </div>
-    <div class="p-5">
-      <div class="rounded-lg border border-dashed border-line-light dark:border-line bg-sunken-light dark:bg-sunken px-3 py-3 text-[12.5px] text-ink2 flex items-start gap-2.5">
-        <svg class="w-4 h-4 text-accent-400 mt-0.5 shrink-0" viewBox="0 0 16 16" fill="currentColor"><circle cx="8" cy="8" r="7" fill="none" stroke="currentColor" stroke-width="1.4"/><path d="M8 4v4M8 11h0" stroke="currentColor" stroke-width="1.4"/></svg>
-        <div>
-          <div class="font-medium text-ink dark:text-ink">Add-job UI ships in Phase D</div>
-          <div class="mt-0.5">Until then, drop a JD or LinkedIn URL in the chat — Claude extracts it and runs <code class="font-mono text-[11px] bg-base-light dark:bg-base px-1 rounded">tracker.py add</code> for you. Or use the CLI directly.</div>
-        </div>
-      </div>
-      <div class="mt-5 flex items-center justify-end gap-2">
-        <button data-close class="h-9 px-3.5 rounded-md text-[13px] text-ink2 hover:text-ink">Close</button>
-        <a href="https://github.com/AjinkyaKate/job-tracker" target="_blank" rel="noopener" class="h-9 px-3.5 rounded-md bg-accent-500 text-white text-[13px] font-medium inline-flex items-center">View on GitHub →</a>
-      </div>
-    </div>
-  </div>
-</div>
-
-<!-- ============ TOAST ============ -->
-<div id="toast" class="fixed bottom-20 right-6 z-50 opacity-0 pointer-events-none transition translate-y-3">
-  <div class="flex items-center gap-3 rounded-lg border border-line2-light dark:border-line2 bg-raised-light dark:bg-raised shadow-pop-light dark:shadow-pop px-3.5 py-2.5">
-    <svg class="w-4 h-4 text-interview" viewBox="0 0 16 16" fill="currentColor"><path d="M8 1.5a6.5 6.5 0 100 13 6.5 6.5 0 000-13zm3.2 4.8L7 10.6 4.8 8.4l1-1L7 8.6l3.2-3.3 1 1z"/></svg>
-    <div id="toast-msg" class="text-[13px]">Moved.</div>
-  </div>
-</div>
-
-<script>
-  // ─── Theme toggle ───
-  (function() {
-    const root = document.documentElement;
-    const stored = localStorage.getItem('jt-theme');
-    if (stored === 'light') root.classList.remove('dark');
-    else if (stored === 'dark') root.classList.add('dark');
-    const btn = document.getElementById('theme-toggle');
-    if (btn) {
-      btn.addEventListener('click', () => {
-        root.classList.toggle('dark');
-        localStorage.setItem('jt-theme', root.classList.contains('dark') ? 'dark' : 'light');
-      });
-    }
-  })();
-
-  // ─── Drag and drop kanban ───
-  (function() {
-    const board = document.getElementById('board');
-    let dragging = null;
-    let origStatus = null;
-
-    document.querySelectorAll('.card').forEach(card => {
-      card.addEventListener('dragstart', (e) => {
-        dragging = card;
-        origStatus = card.dataset.status;
-        card.classList.add('dragging');
-        document.body.classList.add('dragging-active');
-        e.dataTransfer.effectAllowed = 'move';
-        e.dataTransfer.setData('text/plain', card.dataset.id);
-      });
-      card.addEventListener('dragend', () => {
-        if (dragging) dragging.classList.remove('dragging');
-        dragging = null;
-        document.body.classList.remove('dragging-active');
-        document.querySelectorAll('.col').forEach(c => c.classList.remove('drop-over'));
-      });
-    });
-
-    document.querySelectorAll('.col-body').forEach(body => {
-      const col = body.closest('.col');
-      body.addEventListener('dragover', (e) => {
-        e.preventDefault();
-        col.classList.add('drop-over');
-        e.dataTransfer.dropEffect = 'move';
-      });
-      body.addEventListener('dragleave', (e) => {
-        if (e.target === body) col.classList.remove('drop-over');
-      });
-      body.addEventListener('drop', async (e) => {
-        e.preventDefault();
-        col.classList.remove('drop-over');
-        if (!dragging) return;
-        const newStatus = body.dataset.drop;
-        if (newStatus === origStatus) {
-          // No status change — just reorder visually (not persisted in Phase B)
-          body.appendChild(dragging);
-          return;
-        }
-
-        const jobId = dragging.dataset.id;
-        // Optimistic UI: move card immediately
-        body.appendChild(dragging);
-        dragging.dataset.status = newStatus;
-        // Update column counts
-        updateCounts();
-        // Hide empty placeholder if this column had one
-        body.querySelectorAll('.empty').forEach(e => e.remove());
-
-        try {
-          const res = await fetch(`/jobs/${jobId}/status`, {
-            method: 'POST',
-            headers: {'Content-Type': 'application/json'},
-            body: JSON.stringify({status: newStatus})
-          });
-          if (!res.ok) throw new Error(`HTTP ${res.status}`);
-          showToast(`Moved → ${newStatus}`);
-        } catch (err) {
-          console.error('status update failed', err);
-          showToast(`Failed to save · refresh`, 'rejected');
-        }
-      });
-    });
-
-    function updateCounts() {
-      document.querySelectorAll('.col').forEach(col => {
-        const status = col.dataset.status;
-        const count = col.querySelectorAll('.card[data-status="' + status + '"]').length;
-        col.querySelector('.col-count').textContent = count;
-      });
-    }
-  })();
-
-  // ─── Toast ───
-  function showToast(msg, tone) {
-    const t = document.getElementById('toast');
-    const m = document.getElementById('toast-msg');
-    m.textContent = msg;
-    t.style.opacity = '1';
-    t.style.transform = 'translateY(0)';
-    t.style.pointerEvents = 'auto';
-    setTimeout(() => {
-      t.style.opacity = '0';
-      t.style.transform = 'translateY(0.75rem)';
-      t.style.pointerEvents = 'none';
-    }, 2200);
+  .st-pill {
+    background: color-mix(in oklab, var(--st) 14%, transparent);
+    color: var(--st);
+    border: 1px solid color-mix(in oklab, var(--st) 30%, transparent);
   }
+  .st-dot { background: var(--st); }
+</style>
+{% endblock %}
 
-  // ─── Filter chips ───
-  (function() {
-    const chips = document.querySelectorAll('.filter-chip');
-    const active = new Set();
-    chips.forEach(chip => {
-      chip.addEventListener('click', () => {
-        const key = chip.dataset.filter;
-        if (active.has(key)) {
-          active.delete(key);
-          chip.classList.remove('border-accent-500/50','bg-accent-500/10','text-accent-300');
-          chip.classList.add('border-line-light','dark:border-line','bg-raised-light','dark:bg-raised');
-        } else {
-          active.add(key);
-          chip.classList.add('border-accent-500/50','bg-accent-500/10','text-accent-300');
-          chip.classList.remove('border-line-light','dark:border-line','bg-raised-light','dark:bg-raised');
-        }
-        applyFilters();
-      });
-    });
+{% block content %}
+<div class="max-w-6xl mx-auto py-6">
 
-    function applyFilters() {
-      const query = (document.getElementById('search').value || '').toLowerCase().trim();
-      const items = document.querySelectorAll('.card, .row');
-      let visibleCount = 0;
-      items.forEach(el => {
-        const fit = parseInt(el.dataset.fit) || 0;
-        const warm = parseInt(el.dataset.warm) || 0;
-        const overdue = el.dataset.overdue === '1';
-        const pursue = el.dataset.pursue || '';
-        let show = true;
-        if (active.has('fit-70') && fit < 70) show = false;
-        if (active.has('warm') && warm < 1) show = false;
-        if (active.has('overdue') && !overdue) show = false;
-        if (active.has('pursue-yes') && pursue !== 'yes') show = false;
-        if (show && query) {
-          show = el.innerText.toLowerCase().includes(query);
-        }
-        el.style.display = show ? '' : 'none';
-        if (show) visibleCount++;
-      });
-      const total = document.querySelectorAll('.card').length;
-      document.getElementById('filter-summary').textContent =
-        active.size || query
-          ? `${visibleCount/2|0} jobs match · ${active.size || (query?1:0)} filter${active.size>1?'s':''}`
-          : `${total} jobs · all stages`;
-    }
+  {# ─── Header ──────────────────────────────────────────────────────────── #}
+  <header class="mb-5 flex items-end justify-between">
+    <div>
+      <div class="text-[11px] font-mono uppercase tracking-[0.16em] text-ink3 mb-1">Pipeline · {{ today }}</div>
+      <h1 class="text-2xl font-semibold text-ink">
+        {{ total_active }} active jobs
+        {% if backlog_count %}<span class="text-ink3 text-[14px] font-normal ml-2">· {{ backlog_count }} backlog</span>{% endif %}
+      </h1>
+      <p class="text-ink2 text-sm mt-1">
+        Triage your existing applications + status. New discoveries land in <a href="/leads" class="underline hover:text-accent-400">Leads</a>.
+      </p>
+    </div>
+  </header>
 
-    document.getElementById('search').addEventListener('input', applyFilters);
-    window.applyFilters = applyFilters;
-  })();
+  {# ─── Stats cards ──────────────────────────────────────────────────────── #}
+  <div class="grid grid-cols-2 md:grid-cols-5 gap-3 mb-6">
+    <div class="p-3 rounded-lg bg-raised border border-line">
+      <div class="text-[11px] font-mono uppercase tracking-[0.16em] text-ink3 mb-1">Due today</div>
+      <div class="text-2xl font-semibold text-ink tabular">{{ due_today_count }}</div>
+    </div>
+    <div class="p-3 rounded-lg bg-raised border border-line">
+      <div class="text-[11px] font-mono uppercase tracking-[0.16em] text-ink3 mb-1">Upcoming · 7d</div>
+      <div class="text-2xl font-semibold text-ink tabular">{{ upcoming_count }}</div>
+    </div>
+    <div class="p-3 rounded-lg bg-raised border border-line">
+      <div class="text-[11px] font-mono uppercase tracking-[0.16em] text-ink3 mb-1">Active</div>
+      <div class="text-2xl font-semibold text-ink tabular">{{ total_active }}</div>
+    </div>
+    <div class="p-3 rounded-lg bg-raised border border-line">
+      <div class="text-[11px] font-mono uppercase tracking-[0.16em] text-ink3 mb-1">Drafts</div>
+      <div class="text-2xl font-semibold text-ink tabular">{{ drafts_pending }}</div>
+    </div>
+    <div class="p-3 rounded-lg bg-raised border border-line">
+      <div class="text-[11px] font-mono uppercase tracking-[0.16em] text-ink3 mb-1">Offers</div>
+      <div class="text-2xl font-semibold text-ink tabular">{{ offer_count }}</div>
+    </div>
+  </div>
 
-  // ─── View toggle ───
-  (function() {
-    const board = document.getElementById('board');
-    const list = document.getElementById('list-view');
-    const btnBoard = document.getElementById('view-kanban');
-    const btnList = document.getElementById('view-list');
-    const activeCls = ['bg-raised-light','dark:bg-base','text-ink-light','dark:text-ink','shadow-pop-light','dark:shadow-pop'];
-    const inactiveCls = ['text-ink2'];
-    function show(which) {
-      if (which === 'list') {
-        board.classList.add('hidden');
-        list.classList.remove('hidden');
-        list.classList.add('flex');
-        btnList.classList.add(...activeCls); btnList.classList.remove(...inactiveCls);
-        btnBoard.classList.remove(...activeCls); btnBoard.classList.add(...inactiveCls);
-      } else {
-        list.classList.add('hidden');
-        list.classList.remove('flex');
-        board.classList.remove('hidden');
-        btnBoard.classList.add(...activeCls); btnBoard.classList.remove(...inactiveCls);
-        btnList.classList.remove(...activeCls); btnList.classList.add(...inactiveCls);
-      }
-      localStorage.setItem('jt-view', which);
-    }
-    btnBoard.addEventListener('click', () => show('board'));
-    btnList.addEventListener('click', () => show('list'));
-    // Default to list view on first-load mobile (saved preference overrides)
-    const stored = localStorage.getItem('jt-view');
-    if (stored === 'list') {
-      show('list');
-    } else if (!stored && window.matchMedia('(max-width: 767px)').matches) {
-      show('list');
-    }
-  })();
+  {# ─── Gmail sync widget ───────────────────────────────────────────────── #}
+  {% if gmail.configured %}
+  <div class="mb-5 p-3 rounded-lg bg-raised border border-line flex items-center gap-3">
+    <div class="w-10 h-10 rounded-md bg-sunken flex items-center justify-center text-accent-400 text-[18px] flex-shrink-0">📧</div>
+    <div class="flex-1 min-w-0">
+      <div class="text-ink text-[14px] font-medium">
+        Gmail sync · {% if gmail.authorized %}Connected{% else %}Not connected{% endif %}
+      </div>
+      <div class="text-ink2 text-[12.5px]">
+        {% if gmail.last_sync %}Last sync: {{ gmail.last_sync }}{% else %}No sync yet{% endif %} · Auto-runs every 10 min via GitHub Actions
+      </div>
+    </div>
+    {% if not gmail.authorized %}
+    <a href="/auth/gmail/start" class="h-9 px-3.5 rounded-md bg-accent-500 hover:bg-accent-400 text-white text-[13px] font-medium flex items-center transition">
+      Connect Gmail
+    </a>
+    {% else %}
+    <form method="POST" action="/gmail/sync" class="inline">
+      <button type="submit" class="h-9 px-3.5 rounded-md border border-line bg-sunken hover:border-line2 text-ink2 hover:text-ink text-[13px] flex items-center transition">
+        Sync now
+      </button>
+    </form>
+    {% endif %}
+  </div>
+  {% endif %}
 
-  // ─── Gmail sync ───
-  (function() {
-    const btn = document.getElementById('gmail-sync');
-    if (!btn) return;  // not configured + authorized yet
-    btn.addEventListener('click', async () => {
-      const label = document.getElementById('gmail-sync-label');
-      const orig = label.textContent;
-      label.textContent = 'Syncing…';
-      btn.disabled = true;
-      btn.style.opacity = '0.7';
-      try {
-        const res = await fetch('/gmail/sync', { method: 'POST' });
-        const data = await res.json();
-        if (data.ok) {
-          showToast(`Gmail sync: ${data.logged} new event${data.logged !== 1 ? 's' : ''} · ${data.fetched} mail${data.fetched !== 1 ? 's' : ''} checked`);
-          // Reload to show the new events
-          setTimeout(() => location.reload(), 1400);
-        } else {
-          showToast(`Sync failed: ${data.message || 'unknown'}`, 'rejected');
-        }
-      } catch (err) {
-        console.error(err);
-        showToast('Sync failed · check network', 'rejected');
-      } finally {
-        label.textContent = orig;
-        btn.disabled = false;
-        btn.style.opacity = '';
-      }
-    });
-  })();
+  {# ─── Job cards grouped by status ────────────────────────────────────── #}
+  {% for status in statuses %}
+    {% set jobs_in_status = by_status[status.key] %}
+    {% if jobs_in_status %}
+    <div class="mt-6 mb-2 text-[11px] font-mono uppercase tracking-[0.16em] text-ink3 flex items-center gap-2">
+      <span data-status="{{ status.key }}" class="w-2 h-2 rounded-full st-dot"></span>
+      {{ status.label }} · {{ status_counts[status.key] }}
+    </div>
+    <div class="space-y-2">
+      {% for job in jobs_in_status %}
+      <a href="/jobs/{{ job.id }}" class="block group">
+        <div class="flex items-center gap-3 p-3 rounded-lg bg-raised border border-line hover:border-line2 transition">
+          <div class="w-10 h-10 rounded-md bg-sunken flex items-center justify-center text-ink2 text-[13px] font-mono font-semibold flex-shrink-0">
+            {{ job.ini }}
+          </div>
+          <div class="flex-1 min-w-0">
+            <div class="flex items-center gap-2 flex-wrap">
+              <div class="text-ink text-[14px] font-medium truncate">{{ job.title }}</div>
+              <span data-status="{{ job.status }}" class="st-pill px-2 h-5 rounded text-[10.5px] font-mono uppercase tracking-wider inline-flex items-center">{{ job.status }}</span>
+            </div>
+            <div class="text-ink2 text-[12.5px] truncate">
+              {{ job.company }}{% if job.location %} · {{ job.location }}{% endif %}
+            </div>
+            <div class="text-ink3 text-[11px] font-mono mt-0.5 flex items-center gap-3 flex-wrap">
+              <span>fit {{ job.fit }}</span>
+              {% if job.next_action_at %}
+                <span class="{% if job.is_overdue %}text-replied{% endif %}">· next {{ job.next_action_at }}{% if job.is_overdue %} (overdue {{ job.days_overdue }}d){% endif %}</span>
+              {% endif %}
+              {% if job.contact_count %}<span>· ★ {{ job.contact_count }} warm</span>{% endif %}
+              {% if job.draft_count %}<span>· {{ job.draft_count }} draft{% if job.draft_count > 1 %}s{% endif %}</span>{% endif %}
+              <span class="text-ink3">· #{{ job.id }}</span>
+            </div>
+          </div>
+          <div class="text-ink3 text-[14px] group-hover:translate-x-1 group-hover:text-accent-400 transition flex-shrink-0">→</div>
+        </div>
+      </a>
+      {% endfor %}
+    </div>
+    {% endif %}
+  {% endfor %}
 
-  // ─── FAB + modal ───
-  (function() {
-    const modal = document.getElementById('modal');
-    const open = () => modal.classList.remove('hidden');
-    const close = () => modal.classList.add('hidden');
-    document.getElementById('fab').addEventListener('click', open);
-    modal.querySelectorAll('[data-close]').forEach(b => b.addEventListener('click', close));
-    document.addEventListener('keydown', (e) => {
-      if (e.key === 'Escape') close();
-      if (e.key === 'n' && !['INPUT','TEXTAREA'].includes(document.activeElement.tagName)) {
-        e.preventDefault(); open();
-      }
-      if (e.key === '/' && !['INPUT','TEXTAREA'].includes(document.activeElement.tagName)) {
-        e.preventDefault(); document.getElementById('search').focus();
-      }
-    });
-  })();
-</script>
-</body>
-</html>
+  {# Empty state #}
+  {% if total_active == 0 and backlog_count == 0 %}
+  <div class="mt-8 p-8 rounded-lg bg-raised border border-line text-center">
+    <p class="text-ink2 text-sm mb-2">No jobs in pipeline yet.</p>
+    <p class="text-ink3 text-[13px] mb-4">
+      Add a job manually OR set up LinkedIn alerts and let leads flow into <a href="/leads" class="underline hover:text-accent-400">Leads</a>.
+    </p>
+    <a href="/add-job" class="inline-block h-9 px-4 rounded-md bg-accent-500 hover:bg-accent-400 text-white text-[13px] font-medium transition">+ Add your first job</a>
+  </div>
+  {% endif %}
+
+</div>
+{% endblock %}
