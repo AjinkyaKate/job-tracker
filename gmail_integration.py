@@ -204,9 +204,16 @@ def store_credentials(conn: Connection, creds: "Credentials", user_email: str = 
 
 
 def load_credentials(conn: Connection) -> Optional["Credentials"]:
-    """Load stored Gmail creds. Returns None if not yet authorized."""
+    """Load stored Gmail creds, force-refresh if expired, persist new token.
+
+    Without this, an expired access_token would silently fail subsequent Gmail
+    API calls (returning empty lists or 401s). We pass expiry to Credentials
+    so the SDK can self-evaluate creds.expired, then explicitly refresh when
+    needed so the returned creds object always has a live token.
+    """
     row = conn.execute(
-        "SELECT access_token, refresh_token, scopes FROM oauth_tokens WHERE provider = ?",
+        "SELECT access_token, refresh_token, expires_at, scopes "
+        "FROM oauth_tokens WHERE provider = ?",
         (TOKEN_PROVIDER_KEY,),
     ).fetchone()
     if not row or not row["access_token"]:
@@ -214,6 +221,18 @@ def load_credentials(conn: Connection) -> Optional["Credentials"]:
     cfg = get_oauth_config()
     if cfg is None:
         return None
+
+    # Parse expiry. Credentials.expiry must be naive UTC per google-auth contract.
+    expiry = None
+    if row["expires_at"]:
+        try:
+            dt = datetime.fromisoformat(row["expires_at"].replace("Z", "+00:00"))
+            if dt.tzinfo is not None:
+                dt = dt.astimezone(timezone.utc).replace(tzinfo=None)
+            expiry = dt
+        except (ValueError, AttributeError):
+            pass
+
     creds = Credentials(
         token=row["access_token"],
         refresh_token=row["refresh_token"],
@@ -221,7 +240,21 @@ def load_credentials(conn: Connection) -> Optional["Credentials"]:
         client_id=cfg["client_id"],
         client_secret=cfg["client_secret"],
         scopes=row["scopes"].split() if row["scopes"] else SCOPES,
+        expiry=expiry,
     )
+
+    # Force refresh if expired (or no expiry recorded). Costs one network call
+    # only when actually needed — google-auth short-circuits if creds are live.
+    if creds.expired and creds.refresh_token:
+        try:
+            from google.auth.transport.requests import Request
+            creds.refresh(Request())
+            # Persist the new token so future loads start fresh.
+            store_credentials(conn, creds)
+        except Exception as exc:
+            print(f"[gmail_integration] token refresh failed: {exc}")
+            return None
+
     return creds
 
 
