@@ -46,3 +46,6 @@ websockets==15.0.1
 zipp==3.23.1
 # Postgres backend for Render deploy. Pulls in pure-Python psycopg + C-binary.
 psycopg[binary]==3.2.13
+# Google Gemini API for LLM-powered email classification. Free tier (no card),
+# 1500 requests/day. Set GEMINI_API_KEY env var to enable.
+google-genai==0.8.0

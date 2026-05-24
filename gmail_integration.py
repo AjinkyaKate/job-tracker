@@ -13,12 +13,14 @@ Status: SCAFFOLDING (Phase 3 ship 1/3).
 - email fetch + parse + sync        -> stubbed (Phase 3 ship 3/3)
 """
 
+import base64
 import os
 import re
 from datetime import datetime, timedelta, timezone
 from typing import Optional
 
 from db import Connection, insert_returning_id, upsert_processed_message
+import email_analyzer
 
 # Google libs are optional at import time so the webapp doesn't crash if they
 # aren't installed yet (we add them to requirements.txt in this ship).
@@ -317,6 +319,51 @@ SUBJECT_PATTERNS = [
 ]
 
 
+# ─────────────────────────────────────────────────────────────────────────────
+# Gmail MIME-tree body extraction
+# ─────────────────────────────────────────────────────────────────────────────
+
+def _decode_b64(data: str) -> str:
+    """Decode Gmail's URL-safe base64 (with permissive padding) to UTF-8."""
+    if not data:
+        return ""
+    try:
+        return base64.urlsafe_b64decode(data + "===").decode("utf-8", errors="replace")
+    except Exception:
+        return ""
+
+
+def _walk_for_body(part: dict) -> str:
+    """Walk a Gmail message payload looking for text/plain first, text/html as fallback."""
+    if part.get("mimeType") == "text/plain":
+        data = part.get("body", {}).get("data")
+        if data:
+            return _decode_b64(data)
+    if part.get("mimeType") == "text/html":
+        data = part.get("body", {}).get("data")
+        if data:
+            html = _decode_b64(data)
+            # Strip HTML tags + decode common entities. Crude but enough for LLM input.
+            text = re.sub(r"<style[^>]*>.*?</style>", " ", html, flags=re.DOTALL | re.IGNORECASE)
+            text = re.sub(r"<script[^>]*>.*?</script>", " ", text, flags=re.DOTALL | re.IGNORECASE)
+            text = re.sub(r"<[^>]+>", " ", text)
+            text = text.replace("&nbsp;", " ").replace("&amp;", "&").replace("&quot;", '"').replace("&#39;", "'")
+            return text
+    for sub in part.get("parts", []):
+        result = _walk_for_body(sub)
+        if result:
+            return result
+    return ""
+
+
+def get_email_body(msg: dict) -> str:
+    """Pull plain-text body from a Gmail message. Falls back to snippet if MIME walk fails."""
+    body = _walk_for_body(msg.get("payload", {}))
+    if body:
+        return " ".join(body.split())[:5000]  # collapse whitespace, cap at 5KB
+    return msg.get("snippet", "")
+
+
 def _normalize_company(s: str) -> str:
     """Normalize a company string for fuzzy comparison."""
     if not s:
@@ -474,10 +521,11 @@ def fetch_relevant_emails(creds: "Credentials", since_iso: Optional[str] = None,
 
     fetched = []
     for m in result.get("messages", []):
+        # Full payload — gives us body parts so the LLM can read the actual email.
+        # (Regex-only path only used headers; switching to "full" is a minor
+        # latency hit but enables LLM-grade classification.)
         full = service.users().messages().get(
-            userId="me", id=m["id"],
-            format="metadata",
-            metadataHeaders=["From", "Subject", "Date"],
+            userId="me", id=m["id"], format="full",
         ).execute()
         fetched.append(full)
     return fetched
@@ -582,21 +630,26 @@ def _mark_processed(conn: Connection, gmail_message_id: str, event_id: Optional[
 
 
 def sync_to_tracker(conn: Connection) -> dict:
-    """Pull recent emails → parse → match to contact or job → log events.
+    """Pull recent emails → classify → match to a tracker job → log event.
 
-    Tries two match paths per email:
-      1. matched_name → contact lookup (LinkedIn relationship events)
-      2. matched_company → job lookup (ATS application emails)
-    Whichever lands first wins. If both miss, the message goes to the
-    'unmatched' bucket and is NOT marked processed (so user can re-sync after
-    adding the missing contact/job).
+    Two classification paths, picked at sync time:
+      • **Gemini (preferred)** — when GEMINI_API_KEY is set + google-genai is
+        installed. Sends each email's subject + sender + cleaned body + the
+        tracker's job list to Gemini 2.5 Flash; gets back a structured
+        classification (is_job_related, matched_job_id, event_type,
+        target_status, summary, confidence).
+      • **Regex (fallback)** — when no LLM key is available. Pattern-matches
+        subject lines against SUBJECT_PATTERNS and matches names/companies
+        to contacts/jobs via the older deterministic logic.
 
-    Auto-advances jobs.status when an email's pattern carries a target_status
-    that's further along the pipeline than the job's current status. Never
-    moves backwards (won't reset interview → applied on stale acks).
+    In both paths:
+      - Job-related emails with NO matching tracker job → 'unmatched' bucket
+        for user review (NOT marked processed, so re-sync after adding the
+        job catches it).
+      - Status auto-advances forward in the pipeline only — never backward.
 
-    Returns: {ok, fetched, parsed, logged, unmatched, status_changes, last_sync,
-              duration_s}.
+    Returns: {ok, mode, fetched, parsed, logged, unmatched, status_changes,
+              last_sync, duration_s}.
     """
     started = datetime.now(timezone.utc)
 
@@ -621,6 +674,15 @@ def sync_to_tracker(conn: Connection) -> dict:
             "message": f"Gmail API call failed: {exc}",
         }
 
+    use_llm = email_analyzer.is_available()
+    jobs_ctx = []
+    if use_llm:
+        # Single fetch of jobs list — passed to Gemini on every email.
+        rows = conn.execute(
+            "SELECT id, company, title, status FROM jobs ORDER BY id"
+        ).fetchall()
+        jobs_ctx = [dict(r) for r in rows]
+
     fetched = len(messages)
     parsed_count = 0
     logged = []
@@ -634,13 +696,109 @@ def sync_to_tracker(conn: Connection) -> dict:
         if not gmail_id or _already_processed(conn, gmail_id):
             continue
 
+        if use_llm:
+            # ─── Gemini path ────────────────────────────────────────────────
+            headers = {h["name"]: h["value"] for h in msg.get("payload", {}).get("headers", [])}
+            subject = headers.get("Subject", "")
+            sender = headers.get("From", "")
+            body = get_email_body(msg)
+
+            classification = email_analyzer.analyze_email(subject, sender, body, jobs_ctx)
+            if classification is None:
+                # Gemini call failed — leave unprocessed so next sync retries.
+                continue
+            if not classification.is_job_related:
+                _mark_processed(conn, gmail_id, None)
+                continue
+
+            parsed_count += 1
+
+            job = None
+            if classification.matched_job_id is not None:
+                job_row = conn.execute(
+                    "SELECT id, company, status FROM jobs WHERE id = ?",
+                    (classification.matched_job_id,),
+                ).fetchone()
+                if job_row:
+                    job = dict(job_row)
+
+            if not job:
+                # Job-related per Gemini, but couldn't find a matching tracker job.
+                # User adds the company manually → next sync picks it up.
+                unmatched.append({
+                    "gmail_id": gmail_id,
+                    "subject": subject,
+                    "sender": sender,
+                    "event_type": classification.event_type,
+                    "ai_summary": classification.summary,
+                    "confidence": classification.confidence,
+                    "gmail_url": f"https://mail.google.com/mail/u/0/#inbox/{gmail_id}",
+                })
+                continue
+
+            gmail_url = f"https://mail.google.com/mail/u/0/#inbox/{gmail_id}"
+            event_body = (
+                f"{subject}\n"
+                f"From: {sender}\n\n"
+                f"AI summary (Gemini, confidence {classification.confidence:.2f}):\n"
+                f"{classification.summary}\n\n"
+                f"Snippet:\n{body[:500]}\n\n"
+                f"Open in Gmail: {gmail_url}"
+            )
+
+            new_event_id = insert_returning_id(
+                conn,
+                "INSERT INTO events (job_id, event_type, body, occurred_at, recorded_at) "
+                "VALUES (?, ?, ?, ?, ?)",
+                (job["id"], classification.event_type, event_body, now_iso, now_iso),
+            )
+            conn.execute(
+                "UPDATE jobs SET last_activity_at = ? WHERE id = ?",
+                (now_iso, job["id"]),
+            )
+
+            if classification.target_status:
+                current_rank = STATUS_RANK.get(job["status"], 0)
+                target_rank = STATUS_RANK.get(classification.target_status, 0)
+                if target_rank > current_rank:
+                    conn.execute(
+                        "UPDATE jobs SET status = ?, last_activity_at = ? WHERE id = ?",
+                        (classification.target_status, now_iso, job["id"]),
+                    )
+                    conn.execute(
+                        "INSERT INTO events (job_id, event_type, body, occurred_at, recorded_at) "
+                        "VALUES (?, ?, ?, ?, ?)",
+                        (job["id"], "status_change",
+                         f"{job['status']} -> {classification.target_status} (Gemini: {classification.event_type})",
+                         now_iso, now_iso),
+                    )
+                    status_changes.append({
+                        "job_id": job["id"],
+                        "company": job.get("company"),
+                        "from": job["status"],
+                        "to": classification.target_status,
+                        "reason": classification.event_type,
+                        "ai_summary": classification.summary,
+                    })
+
+            _mark_processed(conn, gmail_id, new_event_id)
+            logged.append({
+                "gmail_id": gmail_id,
+                "company": job.get("company"),
+                "job_id": job["id"],
+                "event_type": classification.event_type,
+                "summary": classification.summary,
+                "confidence": classification.confidence,
+            })
+            continue
+
+        # ─── Regex fallback path ──────────────────────────────────────────
         parsed = parse_email(msg)
         if not parsed:
             _mark_processed(conn, gmail_id, None)
             continue
         parsed_count += 1
 
-        # Match priority: contact (LinkedIn) → job (ATS).
         contact = None
         job = None
         if parsed["matched_name"]:
@@ -663,13 +821,8 @@ def sync_to_tracker(conn: Connection) -> dict:
                 "tried_name": parsed["matched_name"] or None,
                 "tried_company": parsed["matched_company"] or None,
             })
-            # Intentionally NOT marked processed — user may add the missing
-            # contact/job later and re-trigger sync.
             continue
 
-        # Multi-line event body so the activity feed shows real content + a
-        # link back to Gmail. The job_detail template renders body as plain
-        # text inside a <pre>-ish container, so newlines display naturally.
         gmail_url = f"https://mail.google.com/mail/u/0/#inbox/{gmail_id}"
         event_body = (
             f"{parsed['raw_subject']}\n"
@@ -682,22 +835,14 @@ def sync_to_tracker(conn: Connection) -> dict:
             conn,
             "INSERT INTO events (job_id, contact_id, event_type, body, occurred_at, recorded_at) "
             "VALUES (?, ?, ?, ?, ?, ?)",
-            (
-                job["id"],
-                contact["id"] if contact else None,
-                parsed["event_type"],
-                event_body,
-                now_iso,
-                now_iso,
-            ),
+            (job["id"], contact["id"] if contact else None,
+             parsed["event_type"], event_body, now_iso, now_iso),
         )
         conn.execute(
             "UPDATE jobs SET last_activity_at = ? WHERE id = ?",
             (now_iso, job["id"]),
         )
 
-        # Auto-advance status if the pattern set a target and it's further
-        # along the pipeline than the job's current status.
         if parsed["target_status"]:
             current_rank = STATUS_RANK.get(job["status"], 0)
             target_rank = STATUS_RANK.get(parsed["target_status"], 0)
@@ -709,13 +854,9 @@ def sync_to_tracker(conn: Connection) -> dict:
                 conn.execute(
                     "INSERT INTO events (job_id, event_type, body, occurred_at, recorded_at) "
                     "VALUES (?, ?, ?, ?, ?)",
-                    (
-                        job["id"],
-                        "status_change",
-                        f"{job['status']} -> {parsed['target_status']} (auto from Gmail: {parsed['event_type']})",
-                        now_iso,
-                        now_iso,
-                    ),
+                    (job["id"], "status_change",
+                     f"{job['status']} -> {parsed['target_status']} (regex: {parsed['event_type']})",
+                     now_iso, now_iso),
                 )
                 status_changes.append({
                     "job_id": job["id"],
@@ -742,6 +883,7 @@ def sync_to_tracker(conn: Connection) -> dict:
 
     return {
         "ok": True,
+        "mode": "gemini" if use_llm else "regex",
         "fetched": fetched,
         "parsed": parsed_count,
         "logged": len(logged),
