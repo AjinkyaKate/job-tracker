@@ -1049,32 +1049,84 @@ def _relative_time(iso_str: str) -> str:
         return iso_str[:10]
 
 
-@app.get("/leads", response_class=HTMLResponse)
-def leads_inbox(request: Request, show: str = "", q: str = ""):
-    """Triage list of LinkedIn-alert-imported leads (status='lead' or 'lead-dismissed').
+# Filter chip definitions — chips map to keyword sets that LIKE-match against
+# title or location. Multi-select within each row, combined AND across rows.
+TITLE_CHIPS = [
+    ("po",   "Product Owner",      ["product owner"]),
+    ("pm",   "Product Manager",    ["product manager"]),
+    ("apm",  "APM",                ["associate product manager", "junior product manager"]),
+    ("spm",  "Senior PM",          ["senior product manager", "lead product manager",
+                                    "principal product manager", "staff product manager"]),
+    ("ai",   "AI / ML Product",    ["ai product", "ml product", "machine learning",
+                                    "llm product", "ai/ml"]),
+    ("ba",   "BA / Analyst",       ["business analyst", "product analyst"]),
+]
+LOC_CHIPS = [
+    ("pune",   "Pune",         ["pune"]),
+    ("mumbai", "Mumbai",       ["mumbai"]),
+    ("blr",    "Bengaluru",    ["bengaluru", "bangalore"]),
+    ("hyd",    "Hyderabad",    ["hyderabad", "hyderābād"]),
+    ("remote", "Remote (India)", ["remote"]),
+    ("delhi",  "Delhi/NCR",    ["delhi", "ncr", "gurugram", "noida", "gurgaon"]),
+]
 
-    Optional ?q= filters by title/company/location (case-insensitive LIKE).
+
+def _build_chip_clause(chips_def, selected_keys, column):
+    """Build a WHERE clause for any-of-selected chip values matching `column`.
+
+    Returns (sql_fragment, params_list). sql_fragment is like:
+        (LOWER(title) LIKE ? OR LOWER(title) LIKE ? OR ...)
+    """
+    if not selected_keys:
+        return "", []
+    keywords = []
+    for key in selected_keys:
+        for k, _label, kws in chips_def:
+            if k == key:
+                keywords.extend(kws)
+                break
+    if not keywords:
+        return "", []
+    fragments = [f"LOWER({column}) LIKE ?"] * len(keywords)
+    params = [f"%{k}%" for k in keywords]
+    return f"({' OR '.join(fragments)})", params
+
+
+@app.get("/leads", response_class=HTMLResponse)
+def leads_inbox(request: Request, show: str = "", title: str = "", loc: str = ""):
+    """Triage list of leads, filtered by chip-style title + location selectors.
+
+    Both `title` and `loc` are comma-separated keys (e.g. ?title=po,pm&loc=pune,remote).
     """
     tracker.init_db()
     show_dismissed = (show == "dismissed")
     status_filter = "lead-dismissed" if show_dismissed else "lead"
-    q_clean = (q or "").strip()
+
+    selected_titles = [t for t in (title or "").split(",") if t.strip()]
+    selected_locs = [l for l in (loc or "").split(",") if l.strip()]
+
+    title_clause, title_params = _build_chip_clause(TITLE_CHIPS, selected_titles, "title")
+    loc_clause, loc_params = _build_chip_clause(LOC_CHIPS, selected_locs, "location")
+
+    where_parts = ["status = ?"]
+    params = [status_filter]
+    if title_clause:
+        where_parts.append(title_clause)
+        params.extend(title_params)
+    if loc_clause:
+        where_parts.append(loc_clause)
+        params.extend(loc_params)
+    where_sql = " AND ".join(where_parts)
+
     with get_connection() as conn:
-        if q_clean:
-            like_arg = f"%{q_clean.lower()}%"
-            rows = conn.execute(
-                "SELECT id, title, company, link, location, added_at FROM jobs "
-                "WHERE status = ? AND ("
-                "  LOWER(title) LIKE ? OR LOWER(company) LIKE ? OR LOWER(location) LIKE ?"
-                ") ORDER BY added_at DESC LIMIT 200",
-                (status_filter, like_arg, like_arg, like_arg),
-            ).fetchall()
-        else:
-            rows = conn.execute(
-                "SELECT id, title, company, link, location, added_at FROM jobs "
-                "WHERE status = ? ORDER BY added_at DESC LIMIT 200",
-                (status_filter,),
-            ).fetchall()
+        rows = conn.execute(
+            f"SELECT id, title, company, link, location, added_at FROM jobs "
+            f"WHERE {where_sql} ORDER BY added_at DESC LIMIT 200",
+            tuple(params),
+        ).fetchall()
+        total_unfiltered = conn.execute(
+            "SELECT COUNT(*) AS n FROM jobs WHERE status = ?", (status_filter,),
+        ).fetchone()["n"]
         dismissed_row = conn.execute(
             "SELECT COUNT(*) AS n FROM jobs WHERE status = 'lead-dismissed'"
         ).fetchone()
@@ -1087,19 +1139,39 @@ def leads_inbox(request: Request, show: str = "", q: str = ""):
                     if len(words) >= 2 else co[:2].upper() or "?")
         d["added_rel"] = _relative_time(d.get("added_at", ""))
         leads.append(d)
-    # Build a LinkedIn search URL for the user's query (opens in new tab on click)
-    linkedin_search_url = ""
-    if q_clean:
-        from urllib.parse import quote_plus
-        linkedin_search_url = (
-            f"https://www.linkedin.com/jobs/search/?keywords={quote_plus(q_clean)}"
-        )
+    # Build display chips with active/inactive state + URLs that toggle membership
+    def build_chip_state(defs, current_keys, param_name):
+        out = []
+        for key, label, _kws in defs:
+            is_active = key in current_keys
+            # Toggle URL: if active, remove this key; if not, add
+            if is_active:
+                new_keys = [k for k in current_keys if k != key]
+            else:
+                new_keys = current_keys + [key]
+            query_parts = []
+            if param_name == "title":
+                if new_keys:
+                    query_parts.append(f"title={','.join(new_keys)}")
+                if selected_locs:
+                    query_parts.append(f"loc={','.join(selected_locs)}")
+            else:
+                if selected_titles:
+                    query_parts.append(f"title={','.join(selected_titles)}")
+                if new_keys:
+                    query_parts.append(f"loc={','.join(new_keys)}")
+            url = "/leads" + (("?" + "&".join(query_parts)) if query_parts else "")
+            out.append({"key": key, "label": label, "active": is_active, "url": url})
+        return out
+
     return TEMPLATES.TemplateResponse("leads.html", {
         "request": request, "leads": leads,
         "show_dismissed": show_dismissed,
         "dismissed_count": dismissed_row["n"] if dismissed_row else 0,
-        "q": q_clean,
-        "linkedin_search_url": linkedin_search_url,
+        "title_chips": build_chip_state(TITLE_CHIPS, selected_titles, "title"),
+        "loc_chips": build_chip_state(LOC_CHIPS, selected_locs, "loc"),
+        "active_filters_count": len(selected_titles) + len(selected_locs),
+        "total_unfiltered": total_unfiltered,
     })
 
 
