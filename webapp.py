@@ -1303,12 +1303,14 @@ def leads_inbox(request: Request, show: str = "", title: str = "", loc: str = ""
         fam = _rr.detect_family_from_title(d.get("title") or "")
         d["resume_family"] = fam
         d["resume_label"] = _rr.FAMILY_LABELS.get(fam, fam)
-        company_qs = (d.get("company") or "").strip()
-        if company_qs:
-            from urllib.parse import quote
-            d["resume_url"] = f"/resumes/role/{fam}?company={quote(company_qs)}"
-        else:
-            d["resume_url"] = f"/resumes/role/{fam}"
+        # Stable per-family URL — no company suffix in filename so the user
+        # downloads each family resume ONCE and reuses across all leads.
+        d["resume_url"] = f"/resumes/role/{fam}"
+        # The stable PDF filename the user will pick from their Downloads
+        # folder. Generated to match the resume page's download default so
+        # the on-screen hint matches the file on disk.
+        label_slug = (d["resume_label"] or fam).replace(" / ", "_").replace(" ", "_")
+        d["resume_filename"] = f"Ajinkya_Kate_{label_slug}.pdf"
         leads.append(d)
     # Build display chips with active/inactive state + URLs that toggle membership
     def build_chip_state(defs, current_keys, param_name):
