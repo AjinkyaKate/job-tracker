@@ -477,34 +477,21 @@ def match_job_by_company(conn: Connection, company_name: str) -> Optional[dict]:
 
 
 def fetch_relevant_emails(creds: "Credentials", since_iso: Optional[str] = None,
-                          max_results: int = 100) -> list:
-    """Fetch potentially-relevant emails (LinkedIn + ATS + recruiting addresses).
+                          max_results: int = 300) -> list:
+    """Fetch emails since the given timestamp.
 
-    Returns Gmail message dicts with metadata headers + snippet (the first
-    ~200 chars of body). We don't fetch full body — snippet is enough for the
-    activity feed; user clicks the Gmail link if they want the full email.
+    With Gemini doing the classification, we no longer pre-filter by sender —
+    the narrow OR-chain ('from:linkedin.com OR from:no-reply OR ...') was
+    silently dropping legitimate hiring emails whose senders didn't match any
+    of those patterns. Instead we pull everything in the time window AND
+    exclude Gmail's promotional / social / forum tabs to skip newsletters.
+    Gemini decides per-email whether it's job-related.
     """
     service = build("gmail", "v1", credentials=creds)
 
-    sender_query = " OR ".join([
-        "from:linkedin.com",
-        "from:no-reply",
-        "from:noreply",
-        "from:careers",
-        "from:recruiting",
-        "from:recruiter",
-        "from:talent",
-        "from:hiring",
-        "from:jobs",
-        "from:hr",
-        "from:applications",
-        "from:greenhouse.io",
-        "from:lever.co",
-        "from:workable.com",
-        "from:myworkdayjobs.com",
-        "from:ashbyhq.com",
-    ])
-    query = f"({sender_query})"
+    # Pull from primary tab only (excludes Promotions / Social / Forums / Updates)
+    # so we don't waste Gemini calls on newsletters and notification spam.
+    query = "category:primary"
     if since_iso:
         try:
             dt = datetime.fromisoformat(since_iso)
