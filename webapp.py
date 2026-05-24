@@ -1050,17 +1050,31 @@ def _relative_time(iso_str: str) -> str:
 
 
 @app.get("/leads", response_class=HTMLResponse)
-def leads_inbox(request: Request, show: str = ""):
-    """Triage list of LinkedIn-alert-imported leads (status='lead' or 'lead-dismissed')."""
+def leads_inbox(request: Request, show: str = "", q: str = ""):
+    """Triage list of LinkedIn-alert-imported leads (status='lead' or 'lead-dismissed').
+
+    Optional ?q= filters by title/company/location (case-insensitive LIKE).
+    """
     tracker.init_db()
     show_dismissed = (show == "dismissed")
     status_filter = "lead-dismissed" if show_dismissed else "lead"
+    q_clean = (q or "").strip()
     with get_connection() as conn:
-        rows = conn.execute(
-            "SELECT id, title, company, link, location, added_at FROM jobs "
-            "WHERE status = ? ORDER BY added_at DESC LIMIT 200",
-            (status_filter,),
-        ).fetchall()
+        if q_clean:
+            like_arg = f"%{q_clean.lower()}%"
+            rows = conn.execute(
+                "SELECT id, title, company, link, location, added_at FROM jobs "
+                "WHERE status = ? AND ("
+                "  LOWER(title) LIKE ? OR LOWER(company) LIKE ? OR LOWER(location) LIKE ?"
+                ") ORDER BY added_at DESC LIMIT 200",
+                (status_filter, like_arg, like_arg, like_arg),
+            ).fetchall()
+        else:
+            rows = conn.execute(
+                "SELECT id, title, company, link, location, added_at FROM jobs "
+                "WHERE status = ? ORDER BY added_at DESC LIMIT 200",
+                (status_filter,),
+            ).fetchall()
         dismissed_row = conn.execute(
             "SELECT COUNT(*) AS n FROM jobs WHERE status = 'lead-dismissed'"
         ).fetchone()
@@ -1073,32 +1087,81 @@ def leads_inbox(request: Request, show: str = ""):
                     if len(words) >= 2 else co[:2].upper() or "?")
         d["added_rel"] = _relative_time(d.get("added_at", ""))
         leads.append(d)
+    # Build a LinkedIn search URL for the user's query (opens in new tab on click)
+    linkedin_search_url = ""
+    if q_clean:
+        from urllib.parse import quote_plus
+        linkedin_search_url = (
+            f"https://www.linkedin.com/jobs/search/?keywords={quote_plus(q_clean)}"
+        )
     return TEMPLATES.TemplateResponse("leads.html", {
         "request": request, "leads": leads,
         "show_dismissed": show_dismissed,
         "dismissed_count": dismissed_row["n"] if dismissed_row else 0,
+        "q": q_clean,
+        "linkedin_search_url": linkedin_search_url,
     })
 
 
 @app.post("/leads/{lead_id}/pursue")
 def leads_pursue(lead_id: int):
-    """Promote a lead to status='saved'. Returns a redirect that opens the LinkedIn URL."""
+    """Promote a lead to status='saved'. Tries to fetch full JD from LinkedIn
+    guest page so Resume Studio can tailor immediately.
+    """
+    import linkedin_fetch
     tracker.init_db()
     now_iso = datetime.now().isoformat(timespec="seconds")
     with get_connection() as conn:
-        row = conn.execute("SELECT link FROM jobs WHERE id = ?", (lead_id,)).fetchone()
+        row = conn.execute(
+            "SELECT id, link, jd_raw_text, company, title, location "
+            "FROM jobs WHERE id = ?",
+            (lead_id,),
+        ).fetchone()
         if not row:
             return RedirectResponse("/leads", status_code=303)
-        conn.execute(
-            "UPDATE jobs SET status = 'saved', worth_pursuing = 'yes', last_activity_at = ? WHERE id = ?",
-            (now_iso, lead_id),
-        )
+
+        # Best-effort: fetch full JD from LinkedIn guest page if we don't have it
+        link = row["link"] or ""
+        already_has_jd = (row["jd_raw_text"] or "").strip()
+        fetched_jd = None
+        if link and not already_has_jd and "linkedin.com" in link:
+            details = linkedin_fetch.fetch_job_details(link)
+            if details and (details.get("jd_text") or "").strip():
+                fetched_jd = details
+
+        # Update job: promote to saved, optionally enrich with fetched JD
+        if fetched_jd:
+            conn.execute(
+                "UPDATE jobs SET status = 'saved', worth_pursuing = 'yes', "
+                "jd_raw_text = ?, "
+                "title = COALESCE(NULLIF(title, ''), ?), "
+                "company = COALESCE(NULLIF(company, ''), ?), "
+                "location = COALESCE(NULLIF(location, ''), ?), "
+                "last_activity_at = ? WHERE id = ?",
+                (fetched_jd["jd_text"], fetched_jd.get("title") or row["title"],
+                 fetched_jd.get("company") or row["company"],
+                 fetched_jd.get("location") or row["location"],
+                 now_iso, lead_id),
+            )
+            conn.execute(
+                "INSERT INTO events (job_id, event_type, body, occurred_at, recorded_at) "
+                "VALUES (?, ?, ?, ?, ?)",
+                (lead_id, "note",
+                 f"Auto-fetched JD from LinkedIn guest page ({len(fetched_jd['jd_text'])} chars). "
+                 "Resume Studio can now tailor against the real JD.",
+                 now_iso, now_iso),
+            )
+        else:
+            conn.execute(
+                "UPDATE jobs SET status = 'saved', worth_pursuing = 'yes', last_activity_at = ? WHERE id = ?",
+                (now_iso, lead_id),
+            )
+
         conn.execute(
             "INSERT INTO events (job_id, event_type, body, occurred_at, recorded_at) "
             "VALUES (?, ?, ?, ?, ?)",
             (lead_id, "status_change", "lead -> saved (promoted from Leads inbox)", now_iso, now_iso),
         )
-    # Redirect to the job detail page; user can click the LinkedIn link there.
     return RedirectResponse(f"/jobs/{lead_id}", status_code=303)
 
 

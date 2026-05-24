@@ -18,7 +18,11 @@
     <div>
       <div class="text-[11px] font-mono uppercase tracking-[0.16em] text-ink3 mb-1">Discovery</div>
       <h1 class="text-2xl font-semibold text-ink">
-        {{ leads|length }} leads from LinkedIn alerts
+        {% if q %}
+          {{ leads|length }} matches for <span class="text-accent-400">“{{ q }}”</span>
+        {% else %}
+          {{ leads|length }} leads from LinkedIn alerts
+        {% endif %}
         {% if dismissed_count %}<span class="text-ink3 text-[14px] font-normal ml-2">· {{ dismissed_count }} dismissed</span>{% endif %}
       </h1>
       <p class="text-ink2 text-sm mt-1">
@@ -31,6 +35,32 @@
       </a>
     </div>
   </header>
+
+  {# Search bar — filters the leads list + offers a LinkedIn search launcher #}
+  <form method="GET" action="/leads" class="mb-5 flex gap-2 items-stretch">
+    <div class="flex-1 relative">
+      <input type="text" name="q" value="{{ q }}" autofocus
+             placeholder="Filter by title, company, or location (e.g. ‘product manager pune’)"
+             class="w-full pl-10 pr-3 h-10 rounded-md bg-sunken border border-line text-ink text-sm focus:outline-none focus:border-accent-500 focus:ring-1 focus:ring-accent-500">
+      <svg class="absolute left-3 top-1/2 -translate-y-1/2 w-4 h-4 text-ink3" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+        <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M21 21l-4.35-4.35M11 19a8 8 0 1 1 0-16 8 8 0 0 1 0 16z"/>
+      </svg>
+    </div>
+    <button type="submit" class="h-10 px-4 rounded-md bg-accent-500 hover:bg-accent-400 text-white text-[13px] font-medium transition">
+      Filter
+    </button>
+    {% if q %}
+    <a href="/leads" class="h-10 px-3 rounded-md border border-line bg-raised hover:border-line2 text-ink2 hover:text-ink text-[13px] flex items-center transition">
+      Clear
+    </a>
+    {% endif %}
+    {% if linkedin_search_url %}
+    <a href="{{ linkedin_search_url }}" target="_blank" rel="noopener"
+       class="h-10 px-4 rounded-md border border-accent-500 text-accent-400 hover:bg-accent-500/10 text-[13px] flex items-center transition">
+      Search LinkedIn for “{{ q }}” ↗
+    </a>
+    {% endif %}
+  </form>
 
   {% if not leads %}
   <div class="p-8 rounded-lg bg-raised border border-line text-center">
