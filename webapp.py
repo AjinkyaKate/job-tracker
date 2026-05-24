@@ -299,29 +299,17 @@ def _enrich_job(job_dict, today, contacts_by_job, drafts_by_job):
     job_dict["is_overdue"] = is_overdue
     job_dict["days_overdue"] = days_overdue
     job_dict["draft_count"] = drafts
-    # Activity preview: prefer next_action_note (so card carries something useful)
-    job_dict["activity_preview"] = (
-        job_dict.get("next_action_note")
-        or job_dict.get("notes", "")[:80]
-        or ""
-    )[:120]
+    # Activity preview: prefer next_action_note. Use 'or ""' to coerce NULL → "".
+    # (.get(k, "") only returns the default when the KEY is missing — not when
+    # the value is None, which is the common case for Postgres NULL columns.)
+    next_note = job_dict.get("next_action_note") or ""
+    notes_str = job_dict.get("notes") or ""
+    job_dict["activity_preview"] = (next_note or notes_str[:80] or "")[:120]
     return job_dict
 
 
 @app.get("/", response_class=HTMLResponse)
 def homepage(request: Request):
-    try:
-        return _homepage_inner(request)
-    except Exception as exc:
-        import traceback
-        return HTMLResponse(
-            f"<h1>Homepage error</h1><pre>{type(exc).__name__}: {exc}\n\n"
-            f"{traceback.format_exc()}</pre>",
-            status_code=500,
-        )
-
-
-def _homepage_inner(request: Request):
     tracker.init_db()
     today = datetime.now().date().isoformat()
 
