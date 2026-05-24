@@ -62,28 +62,28 @@
 
 {% block topbar %}
 <header class="sticky top-0 z-40 border-b border-line-light dark:border-line bg-base-light/80 dark:bg-base/80 backdrop-blur">
-  <div class="max-w-[1280px] mx-auto px-6 md:px-8 h-14 flex items-center justify-between">
-    <div class="flex items-center gap-3">
-      <a href="/" class="flex items-center gap-3">
+  <div class="max-w-[1280px] mx-auto px-3 sm:px-6 md:px-8 h-14 flex items-center justify-between gap-2">
+    <div class="flex items-center gap-2 sm:gap-3 min-w-0">
+      <a href="/" class="flex items-center gap-2 sm:gap-3 flex-shrink-0">
         <div class="w-7 h-7 rounded-md bg-accent-500 flex items-center justify-center">
           <svg viewBox="0 0 20 20" class="w-4 h-4 text-white" fill="none" stroke="currentColor" stroke-width="2.2"><path d="M4 11l4 4 8-9"/></svg>
         </div>
-        <div class="text-[15px] font-semibold tracking-tight">Job Tracker</div>
+        <div class="text-[14px] sm:text-[15px] font-semibold tracking-tight">Job Tracker</div>
       </a>
       {% block topbar_breadcrumb %}{% endblock %}
     </div>
-    <div class="flex items-center gap-2">
+    <div class="flex items-center gap-1 sm:gap-2 flex-shrink-0">
       {% block topbar_actions %}{% endblock %}
-      <button id="theme-toggle" class="h-8 px-3 rounded-md border border-line-light dark:border-line bg-raised-light dark:bg-raised text-[12px] font-medium hover:bg-sunken-light dark:hover:bg-sunken transition">
-        <span class="dark:hidden">☾ Dark</span>
-        <span class="hidden dark:inline">☀ Light</span>
+      <button id="theme-toggle" class="h-8 px-2 sm:px-3 rounded-md border border-line-light dark:border-line bg-raised-light dark:bg-raised text-[12px] font-medium hover:bg-sunken-light dark:hover:bg-sunken transition">
+        <span class="dark:hidden">☾<span class="hidden sm:inline"> Dark</span></span>
+        <span class="hidden dark:inline">☀<span class="hidden sm:inline"> Light</span></span>
       </button>
     </div>
   </div>
 </header>
 {% endblock %}
 
-<main class="max-w-[1280px] mx-auto px-6 md:px-8 py-6 md:py-8">
+<main class="max-w-[1280px] mx-auto px-3 sm:px-6 md:px-8 py-4 sm:py-6 md:py-8">
   {% block content %}{% endblock %}
 </main>
 

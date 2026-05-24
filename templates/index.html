@@ -10,15 +10,18 @@
 {% endblock %}
 
 {% block topbar_actions %}
-<div class="hidden md:flex items-center gap-2">
-  <a href="/resumes" class="h-9 px-3.5 rounded-md border border-line bg-raised hover:border-line2 text-ink2 hover:text-ink text-[13px] flex items-center transition">
-    📄 Resumes
+<div class="flex items-center gap-1 sm:gap-2">
+  <a href="/resumes" title="Resume Library"
+     class="h-8 sm:h-9 px-2 sm:px-3.5 rounded-md border border-line bg-raised hover:border-line2 text-ink2 hover:text-ink text-[13px] flex items-center transition">
+    📄<span class="hidden sm:inline ml-1">Resumes</span>
   </a>
-  <a href="/leads" class="h-9 px-3.5 rounded-md border border-line bg-raised hover:border-line2 text-ink2 hover:text-ink text-[13px] flex items-center transition">
-    Leads
+  <a href="/leads" title="Leads inbox"
+     class="h-8 sm:h-9 px-2 sm:px-3.5 rounded-md border border-line bg-raised hover:border-line2 text-ink2 hover:text-ink text-[13px] flex items-center transition">
+    🎯<span class="hidden sm:inline ml-1">Leads</span>
   </a>
-  <a href="/add-job" class="h-9 px-3.5 rounded-md bg-accent-500 hover:bg-accent-400 text-white text-[13px] font-medium flex items-center transition">
-    + Add job
+  <a href="/add-job" title="Add a new job"
+     class="h-8 sm:h-9 px-2 sm:px-3.5 rounded-md bg-accent-500 hover:bg-accent-400 text-white text-[13px] font-medium flex items-center transition">
+    +<span class="hidden sm:inline ml-1">Add job</span>
   </a>
 </div>
 {% endblock %}
@@ -46,17 +49,15 @@
 <div class="max-w-6xl mx-auto py-6">
 
   {# ─── Header ──────────────────────────────────────────────────────────── #}
-  <header class="mb-5 flex items-end justify-between">
-    <div>
-      <div class="text-[11px] font-mono uppercase tracking-[0.16em] text-ink3 mb-1">Pipeline · {{ today }}</div>
-      <h1 class="text-2xl font-semibold text-ink">
-        {{ total_active }} active jobs
-        {% if backlog_count %}<span class="text-ink3 text-[14px] font-normal ml-2">· {{ backlog_count }} backlog</span>{% endif %}
-      </h1>
-      <p class="text-ink2 text-sm mt-1">
-        Triage your existing applications + status. New discoveries land in <a href="/leads" class="underline hover:text-accent-400">Leads</a>.
-      </p>
-    </div>
+  <header class="mb-5">
+    <div class="text-[11px] font-mono uppercase tracking-[0.16em] text-ink3 mb-1">Pipeline · {{ today }}</div>
+    <h1 class="text-xl sm:text-2xl font-semibold text-ink">
+      {{ total_active }} active jobs
+      {% if backlog_count %}<span class="text-ink3 text-[13px] sm:text-[14px] font-normal ml-2">· {{ backlog_count }} backlog</span>{% endif %}
+    </h1>
+    <p class="text-ink2 text-[13px] sm:text-sm mt-1">
+      Triage your existing applications + status. New discoveries land in <a href="/leads" class="underline hover:text-accent-400">Leads</a>.
+    </p>
   </header>
 
   {# ─── Stats cards ──────────────────────────────────────────────────────── #}
@@ -85,7 +86,7 @@
 
   {# ─── Gmail sync widget ───────────────────────────────────────────────── #}
   {% if gmail.configured %}
-  <div id="sync-card" class="mb-5 p-3 rounded-lg bg-raised border border-line flex items-center gap-3">
+  <div id="sync-card" class="mb-5 p-3 rounded-lg bg-raised border border-line flex flex-col sm:flex-row items-stretch sm:items-center gap-3">
     <div class="w-10 h-10 rounded-md bg-sunken flex items-center justify-center text-accent-400 text-[18px] flex-shrink-0">📧</div>
     <div class="flex-1 min-w-0">
       <div class="flex items-center gap-2 flex-wrap">
@@ -126,7 +127,7 @@
   </div>
 
   {# Toast for sync result — fixed bottom-right, auto-dismisses after 8s. #}
-  <div id="sync-toast" class="hidden fixed bottom-6 right-6 z-50 max-w-sm p-4 rounded-lg bg-raised border border-line shadow-pop">
+  <div id="sync-toast" class="hidden fixed bottom-4 left-3 right-3 sm:bottom-6 sm:right-6 sm:left-auto z-50 sm:max-w-sm p-4 rounded-lg bg-raised border border-line shadow-pop">
     <div class="flex items-start gap-3">
       <div id="sync-toast-icon" class="w-5 h-5 rounded-full flex items-center justify-center text-[11px] flex-shrink-0 mt-0.5"></div>
       <div class="flex-1 min-w-0">

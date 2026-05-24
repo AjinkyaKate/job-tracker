@@ -14,7 +14,7 @@
 {% block content %}
 <div class="max-w-6xl mx-auto py-6">
 
-  <header class="mb-5 flex items-end justify-between">
+  <header class="mb-5 flex flex-col sm:flex-row sm:items-end sm:justify-between gap-3">
     <div>
       <div class="text-[11px] font-mono uppercase tracking-[0.16em] text-ink3 mb-1">Discovery</div>
       <h1 class="text-2xl font-semibold text-ink">
@@ -95,7 +95,7 @@
   {% else %}
   <div id="leads-list" class="space-y-2">
     {% for lead in leads %}
-    <div class="lead-card flex items-center gap-3 p-3 rounded-lg bg-raised border border-line hover:border-line2 transition group"
+    <div class="lead-card flex flex-col sm:flex-row sm:items-center gap-3 p-3 rounded-lg bg-raised border border-line hover:border-line2 transition group"
          data-lead-id="{{ lead.id }}"
          data-title="{{ lead.title or '' }}"
          data-company="{{ lead.company or '' }}">
@@ -116,7 +116,7 @@
           </div>
         </div>
       </a>
-      <div class="flex gap-1.5 flex-shrink-0">
+      <div class="flex flex-wrap gap-1.5 sm:flex-shrink-0">
         {% if show_dismissed %}
         <form method="POST" action="/leads/{{ lead.id }}/restore" class="inline lead-action" data-action="restore">
           <button type="submit" class="h-8 px-3 rounded-md border border-line bg-sunken hover:border-line2 text-ink2 hover:text-ink text-[12.5px] transition">
@@ -129,9 +129,9 @@
            (one-time per family). The filename is stable per family so
            downloading the same family twice overwrites instead of duplicating. #}
         <a href="{{ lead.resume_url }}" target="_blank" rel="noopener"
-           title="Use this file from your Downloads folder for the LinkedIn application. Click to view / re-download if you don't have it yet."
-           class="h-8 px-3 rounded-md border border-line bg-sunken hover:border-accent-500/50 hover:text-accent-400 text-ink2 text-[12px] transition inline-flex items-center gap-1.5 font-mono">
-          📄 <span class="text-ink hidden md:inline">{{ lead.resume_filename }}</span><span class="text-ink md:hidden">{{ lead.resume_label }}</span> <span class="text-ink3">↗</span>
+           title="Use {{ lead.resume_filename }} from your Downloads folder. Click to view / re-download if you don't have it yet."
+           class="h-8 px-2.5 sm:px-3 rounded-md border border-line bg-sunken hover:border-accent-500/50 hover:text-accent-400 text-ink2 text-[11.5px] sm:text-[12px] transition inline-flex items-center gap-1.5 font-mono max-w-full truncate">
+          📄 <span class="text-ink hidden md:inline truncate">{{ lead.resume_filename }}</span><span class="text-ink md:hidden truncate">{{ lead.resume_label }}</span> <span class="text-ink3">↗</span>
         </a>
         <form method="POST" action="/leads/{{ lead.id }}/applied" class="inline lead-action" data-action="applied"
               title="I already applied earlier — moves directly to Pipeline · Applied">
@@ -159,7 +159,7 @@
   {% endif %}
 
   {# Toast for action confirmation — fixed bottom-right, auto-dismisses. #}
-  <div id="lead-toast" class="hidden fixed bottom-6 right-6 z-50 max-w-sm p-4 rounded-lg bg-raised border border-line shadow-pop">
+  <div id="lead-toast" class="hidden fixed bottom-4 left-3 right-3 sm:bottom-6 sm:right-6 sm:left-auto z-50 sm:max-w-sm p-4 rounded-lg bg-raised border border-line shadow-pop">
     <div class="flex items-start gap-3">
       <div id="lead-toast-icon" class="w-6 h-6 rounded-full flex items-center justify-center text-[13px] flex-shrink-0 mt-0.5"></div>
       <div class="flex-1 min-w-0">
