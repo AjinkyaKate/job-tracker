@@ -93,11 +93,12 @@
     </p>
   </div>
   {% else %}
-  <div class="space-y-2">
+  <div id="leads-list" class="space-y-2">
     {% for lead in leads %}
-    {# Card body is a link to LinkedIn (new tab); action buttons live as forms
-       outside the link so they don't trigger the LinkedIn navigation. #}
-    <div class="flex items-center gap-3 p-3 rounded-lg bg-raised border border-line hover:border-line2 transition group">
+    <div class="lead-card flex items-center gap-3 p-3 rounded-lg bg-raised border border-line hover:border-line2 transition group"
+         data-lead-id="{{ lead.id }}"
+         data-title="{{ lead.title or '' }}"
+         data-company="{{ lead.company or '' }}">
       <a href="{{ lead.link or '#' }}" {% if lead.link %}target="_blank" rel="noopener"{% endif %}
          class="flex items-center gap-3 flex-1 min-w-0">
         <div class="w-10 h-10 rounded-md bg-sunken flex items-center justify-center text-ink2 text-[13px] font-mono font-semibold flex-shrink-0">
@@ -117,13 +118,13 @@
       </a>
       <div class="flex gap-1.5 flex-shrink-0">
         {% if show_dismissed %}
-        <form method="POST" action="/leads/{{ lead.id }}/restore" class="inline">
+        <form method="POST" action="/leads/{{ lead.id }}/restore" class="inline lead-action" data-action="restore">
           <button type="submit" class="h-8 px-3 rounded-md border border-line bg-sunken hover:border-line2 text-ink2 hover:text-ink text-[12.5px] transition">
             Restore
           </button>
         </form>
         {% else %}
-        <form method="POST" action="/leads/{{ lead.id }}/applied" class="inline"
+        <form method="POST" action="/leads/{{ lead.id }}/applied" class="inline lead-action" data-action="applied"
               title="I already applied earlier — moves directly to Pipeline · Applied">
           <button type="submit" class="h-8 px-3 rounded-md border border-applied/40 bg-applied/10 hover:bg-applied/20 text-applied text-[12.5px] font-medium transition">
             ✓ Applied
@@ -135,7 +136,7 @@
             Pursue ↗
           </button>
         </form>
-        <form method="POST" action="/leads/{{ lead.id }}/dismiss" class="inline"
+        <form method="POST" action="/leads/{{ lead.id }}/dismiss" class="inline lead-action" data-action="dismiss"
               title="Not interested or job closed — hide this lead">
           <button type="submit" class="h-8 px-3 rounded-md border border-line bg-sunken hover:border-rejected/40 hover:text-rejected text-ink3 text-[12.5px] transition">
             Dismiss
@@ -147,6 +148,120 @@
     {% endfor %}
   </div>
   {% endif %}
+
+  {# Toast for action confirmation — fixed bottom-right, auto-dismisses. #}
+  <div id="lead-toast" class="hidden fixed bottom-6 right-6 z-50 max-w-sm p-4 rounded-lg bg-raised border border-line shadow-pop">
+    <div class="flex items-start gap-3">
+      <div id="lead-toast-icon" class="w-6 h-6 rounded-full flex items-center justify-center text-[13px] flex-shrink-0 mt-0.5"></div>
+      <div class="flex-1 min-w-0">
+        <div id="lead-toast-title" class="text-ink text-[13px] font-medium"></div>
+        <div id="lead-toast-body" class="text-ink2 text-[12px] mt-0.5"></div>
+        <button id="lead-toast-undo" class="hidden mt-2 text-accent-400 hover:text-accent-300 text-[12px] font-medium underline">Undo</button>
+      </div>
+      <button onclick="document.getElementById('lead-toast').classList.add('hidden')" class="text-ink3 hover:text-ink text-[14px] leading-none">×</button>
+    </div>
+  </div>
+
+  <script>
+  (function() {
+    const toast = document.getElementById('lead-toast');
+    if (!toast) return;
+    const toastTitle = document.getElementById('lead-toast-title');
+    const toastBody = document.getElementById('lead-toast-body');
+    const toastIcon = document.getElementById('lead-toast-icon');
+    const toastUndo = document.getElementById('lead-toast-undo');
+
+    function showToast(kind, title, body, undoUrl) {
+      toastTitle.textContent = title;
+      toastBody.textContent = body;
+      toastIcon.className = 'w-6 h-6 rounded-full flex items-center justify-center text-[13px] flex-shrink-0 mt-0.5 ' +
+        (kind === 'ok'      ? 'bg-applied/15 text-applied' :
+         kind === 'warn'    ? 'bg-replied/15 text-replied' :
+         kind === 'trash'   ? 'bg-rejected/15 text-rejected' :
+                              'bg-rejected/15 text-rejected');
+      toastIcon.textContent = kind === 'trash' ? '🗑' : (kind === 'ok' ? '✓' : (kind === 'warn' ? '!' : '✕'));
+      if (undoUrl) {
+        toastUndo.classList.remove('hidden');
+        toastUndo.onclick = async () => {
+          toastUndo.disabled = true;
+          toastUndo.textContent = 'Undoing…';
+          try {
+            await fetch(undoUrl, { method: 'POST', headers: { 'Accept': 'application/json' } });
+            // Simplest reset: reload so the restored lead is back in the list
+            window.location.reload();
+          } catch (e) {
+            toastUndo.textContent = 'Undo failed';
+          }
+        };
+      } else {
+        toastUndo.classList.add('hidden');
+      }
+      toast.classList.remove('hidden');
+      clearTimeout(toast._timer);
+      toast._timer = setTimeout(() => toast.classList.add('hidden'), 6000);
+    }
+
+    document.querySelectorAll('form.lead-action').forEach(form => {
+      form.addEventListener('submit', async (e) => {
+        const action = form.dataset.action;
+        // Only intercept actions that leave the user on /leads. 'pursue' uses
+        // the native redirect to /jobs/{id} (commit-mode) so don't intercept.
+        if (!['applied', 'dismiss', 'restore'].includes(action)) return;
+        e.preventDefault();
+
+        const card = form.closest('.lead-card');
+        const title = card.dataset.title || 'Lead';
+        const company = card.dataset.company || '';
+        const buttons = card.querySelectorAll('button');
+        buttons.forEach(b => b.disabled = true);
+        card.style.transition = 'opacity 0.25s ease, transform 0.25s ease, max-height 0.3s ease';
+        card.style.opacity = '0.45';
+
+        try {
+          const res = await fetch(form.action, { method: 'POST', headers: { 'Accept': 'application/json' } });
+          if (res.ok || res.redirected) {
+            // Slide the card out
+            card.style.opacity = '0';
+            card.style.transform = 'translateX(40px)';
+            setTimeout(() => {
+              card.style.maxHeight = card.offsetHeight + 'px';
+              requestAnimationFrame(() => {
+                card.style.maxHeight = '0';
+                card.style.marginTop = '0';
+                card.style.paddingTop = '0';
+                card.style.paddingBottom = '0';
+                card.style.borderWidth = '0';
+              });
+              setTimeout(() => card.remove(), 300);
+            }, 200);
+
+            const leadId = card.dataset.leadId;
+            const heading = title + (company ? ' @ ' + company : '');
+            if (action === 'applied') {
+              showToast('ok', '✓ Marked as Applied',
+                heading + ' — moved to Pipeline · Applied with today\'s date.');
+            } else if (action === 'dismiss') {
+              showToast('trash', '🗑 Dismissed',
+                heading + ' — moved to trash. Won\'t re-import.',
+                '/leads/' + leadId + '/restore');
+            } else if (action === 'restore') {
+              showToast('ok', '↩ Restored',
+                heading + ' — back in active leads.');
+            }
+          } else {
+            card.style.opacity = '1';
+            buttons.forEach(b => b.disabled = false);
+            showToast('err', 'Action failed', 'Server returned ' + res.status + '. Try again.');
+          }
+        } catch (err) {
+          card.style.opacity = '1';
+          buttons.forEach(b => b.disabled = false);
+          showToast('err', 'Network error', err.message);
+        }
+      });
+    });
+  })();
+  </script>
 
   <div class="mt-6 p-3 rounded-lg bg-raised border border-line text-[12px] text-ink3 font-mono">
     <strong class="text-ink2">Click the card title</strong> → opens the LinkedIn job in a new tab so you can read the full JD + check if you already applied.
