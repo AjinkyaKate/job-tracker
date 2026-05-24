@@ -17,6 +17,20 @@
 
 {% block content %}
 
+<style>
+  [data-st="saved"]     { --st: #9aa0a6; }
+  [data-st="applied"]   { --st: #4b8df8; }
+  [data-st="replied"]   { --st: #f5a524; }
+  [data-st="interview"] { --st: #22c55e; }
+  [data-st="offer"]     { --st: #10b981; }
+  [data-st="rejected"]  { --st: #ef4444; }
+  [data-st="backlog"]   { --st: #6b7280; }
+  .st-dot   { background: var(--st); }
+  .st-tint  { background: color-mix(in oklab, var(--st) 14%, transparent); color: var(--st); border-color: color-mix(in oklab, var(--st) 35%, transparent); }
+  .st-ring  { box-shadow: 0 0 0 2px color-mix(in oklab, var(--st) 35%, transparent); }
+  .status-btn:disabled { opacity: 0.5; cursor: wait; }
+</style>
+
 {# Compute fit-score visual from worth_pursuing #}
 {% set fit_score = 78 if job.worth_pursuing == 'yes' else (50 if job.worth_pursuing == 'unsure' else 22) %}
 {% set fit_color = 'interview' if fit_score >= 75 else ('applied' if fit_score >= 50 else ('replied' if fit_score >= 25 else 'rejected')) %}
@@ -97,6 +111,28 @@
     </div>
   </div>
 </header>
+
+{# ============ STATUS CHANGE — tap any button to move this job to that status ============ #}
+<section class="mb-5">
+  <div class="flex items-baseline justify-between mb-2">
+    <div class="text-[11px] font-mono text-ink3 uppercase tracking-[0.16em]">Move to</div>
+    <div class="text-[11px] font-mono text-ink3" id="status-hint">tap to change · POST /jobs/{{ job.id }}/status</div>
+  </div>
+  <div class="flex flex-wrap gap-2">
+    {% for s in statuses %}
+    {% set is_current = (job.status == s.key) %}
+    <button data-st="{{ s.key }}" data-target="{{ s.key }}"
+            onclick="changeJobStatus({{ job.id }}, '{{ s.key }}', this)"
+            class="status-btn h-10 px-3.5 rounded-lg text-[13px] font-medium border transition inline-flex items-center gap-2
+              {% if is_current %}st-tint st-ring{% else %}border-line-light dark:border-line bg-raised-light dark:bg-raised text-ink2 hover:text-ink hover:border-line2-light dark:hover:border-line2{% endif %}"
+            {% if is_current %}aria-current="true"{% endif %}>
+      <span class="w-1.5 h-1.5 rounded-full st-dot"></span>
+      <span>{{ s.label }}</span>
+      {% if is_current %}<span class="text-[10px] font-mono ml-0.5 opacity-70">current</span>{% endif %}
+    </button>
+    {% endfor %}
+  </div>
+</section>
 
 {# ============ NEXT ACTION ============ #}
 {% if job.next_action_at and not is_backlog %}
@@ -287,6 +323,31 @@
 
 {% block extra_scripts %}
 <script>
+  function changeJobStatus(jobId, newStatus, btn) {
+    const buttons = document.querySelectorAll('.status-btn');
+    buttons.forEach(b => b.disabled = true);
+    const origInner = btn.innerHTML;
+    btn.innerHTML = '<span class="w-1.5 h-1.5 rounded-full st-dot"></span><span>Saving…</span>';
+    fetch(`/jobs/${jobId}/status`, {
+      method: 'POST',
+      headers: {'Content-Type': 'application/json'},
+      body: JSON.stringify({status: newStatus})
+    }).then(res => {
+      if (!res.ok) throw new Error(`HTTP ${res.status}`);
+      return res.json();
+    }).then(data => {
+      // Brief success state then redirect to dashboard so user sees the card moved
+      btn.innerHTML = '<span class="w-1.5 h-1.5 rounded-full st-dot"></span><span>✓ Moved</span>';
+      setTimeout(() => { location.href = '/'; }, 500);
+    }).catch(err => {
+      console.error('Status change failed:', err);
+      btn.innerHTML = origInner;
+      buttons.forEach(b => b.disabled = false);
+      const hint = document.getElementById('status-hint');
+      if (hint) hint.textContent = 'Failed · retry';
+    });
+  }
+
   function copyDraft(id, btn) {
     const el = document.getElementById(id);
     if (!el) return;

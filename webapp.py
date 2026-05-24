@@ -310,6 +310,7 @@ def job_detail(job_id: int, request: Request):
             "contacts": contacts_dicts,
             "events": other_events,
             "drafts": drafts,
+            "statuses": PIPELINE_STATUSES,
         },
     )
 
