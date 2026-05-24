@@ -85,6 +85,68 @@ def healthz():
     return {"ok": True}
 
 
+@app.get("/debug/gmail-probe")
+def gmail_probe():
+    """Diagnostic: bypass our fetch wrapper and call Gmail directly.
+
+    Returns what Gmail's messages.list actually returns from inside Render.
+    Compare against the local result to localize where the bug is.
+    """
+    from datetime import datetime, timedelta, timezone
+    from google.auth.transport.requests import Request
+    from googleapiclient.discovery import build
+    out = {"steps": []}
+    try:
+        tracker.init_db()
+        with get_connection() as conn:
+            creds = gmail_integration.load_credentials(conn)
+        if not creds:
+            out["error"] = "no_credentials"
+            return out
+        out["steps"].append("loaded_credentials")
+        out["creds_expired_initial"] = creds.expired
+        out["creds_has_refresh"] = bool(creds.refresh_token)
+        out["creds_expiry"] = str(creds.expiry) if creds.expiry else None
+        # Force a fresh refresh
+        creds.refresh(Request())
+        out["steps"].append("refreshed_token")
+        out["creds_expired_after_refresh"] = creds.expired
+        out["new_expiry"] = str(creds.expiry)
+        # Build service
+        service = build("gmail", "v1", credentials=creds, cache_discovery=False)
+        out["steps"].append("built_service")
+        # Try same query as deployed sync
+        ts_7d = int((datetime.now(timezone.utc) - timedelta(days=7)).timestamp())
+        for q in [
+            f"in:inbox after:{ts_7d}",
+            f"after:{ts_7d}",
+            "newer_than:7d",
+            "in:inbox",
+        ]:
+            r = service.users().messages().list(
+                userId="me", q=q, maxResults=5,
+            ).execute()
+            out.setdefault("queries", []).append({
+                "q": q,
+                "resultSizeEstimate": r.get("resultSizeEstimate"),
+                "msg_count": len(r.get("messages", [])),
+                "first_id": r.get("messages", [{}])[0].get("id") if r.get("messages") else None,
+            })
+        out["steps"].append("ran_queries")
+        # Also pull profile to verify creds-> account binding
+        prof = service.users().getProfile(userId="me").execute()
+        out["profile"] = {
+            "emailAddress": prof.get("emailAddress"),
+            "messagesTotal": prof.get("messagesTotal"),
+            "historyId": prof.get("historyId"),
+        }
+        out["ok"] = True
+    except Exception as exc:
+        out["error"] = f"{type(exc).__name__}: {exc}"
+        out["ok"] = False
+    return out
+
+
 def _rows_to_dicts(rows):
     return [dict(r) for r in rows]
 
