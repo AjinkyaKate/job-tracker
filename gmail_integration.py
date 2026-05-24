@@ -224,75 +224,240 @@ def load_credentials(conn: Connection) -> Optional["Credentials"]:
 
 
 # ─────────────────────────────────────────────────────────────────────────────
-# LinkedIn email parsing (Phase 3 ship 3/3 will complete these)
+# Email parsing — LinkedIn relationship events + ATS application emails
 # ─────────────────────────────────────────────────────────────────────────────
 
-LINKEDIN_SENDER_PATTERNS = [
+# Sender filter — covers LinkedIn + the common ATS systems and role-based
+# recruiting addresses companies use (no-reply, careers, recruiting, etc.).
+RELEVANT_SENDER_PATTERNS = [
+    # LinkedIn
     r"@linkedin\.com",
     r"@e?\.?linkedin\.com",
     r"@em\.linkedin\.com",
+    # Generic role-based addresses
+    r"no-?reply@",
+    r"noreply@",
+    r"careers@",
+    r"recruiting@",
+    r"recruiter@",
+    r"hiring@",
+    r"jobs@",
+    r"talent@",
+    r"hr@",
+    r"applications@",
+    r"people-?ops@",
+    # Major ATS platforms
+    r"@greenhouse\.io",
+    r"@lever\.co",
+    r"@workable\.com",
+    r"@.*myworkdayjobs\.com",
+    r"@taleo\.net",
+    r"@icims\.com",
+    r"@bamboohr\.com",
+    r"@smartrecruiters\.com",
+    r"@jobvite\.com",
+    r"@successfactors\.com",
+    r"@ashbyhq\.com",
 ]
 
+# Pipeline status ranking — used to prevent auto-downgrades when an old email
+# arrives after status has advanced (e.g. don't reset interview -> applied).
+STATUS_RANK = {
+    "saved": 0,
+    "applied": 1,
+    "replied": 2,
+    "interview": 3,
+    "offer": 4,
+    "rejected": 5,    # terminal
+    "backlog": -1,    # never auto-promote into backlog
+}
+
+# Subject regex patterns. Each tuple: (regex, event_type, target_status).
+# target_status: if set, sync auto-advances jobs.status to this value (but
+# never moves backwards in the pipeline ordering above).
 SUBJECT_PATTERNS = [
-    # (regex, event_type, description)
-    (r"(?P<name>[\w\s'\-\.]+?) accepted your invitation", "connection_accepted",
-     "Connection request accepted"),
-    (r"New message from (?P<name>[\w\s'\-\.]+)", "message_received",
-     "Inbound LinkedIn message"),
-    (r"(?P<name>[\w\s'\-\.]+) sent you a message", "message_received",
-     "Inbound LinkedIn message"),
-    (r"InMail from (?P<name>[\w\s'\-\.]+)", "inmail_received",
-     "Inbound LinkedIn InMail"),
-    (r"Your application was sent to (?P<company>[\w\s'\-\.,&]+)", "application_sent",
-     "LinkedIn application confirmed"),
-    (r"(?P<company>[\w\s'\-\.,&]+) is interested in your application",
-     "application_interest", "Recruiter expressed interest"),
-    (r"Your application was viewed by (?P<viewer>[\w\s'\-\.]+)",
-     "application_viewed", "Application viewed by recruiter"),
-    (r"(?P<name>[\w\s'\-\.]+) viewed your profile", "profile_viewed",
-     "LinkedIn profile view"),
+    # ─── LinkedIn relationship events ──────────────────────────────────────
+    (r"(?P<name>[\w\s'\-\.]+?) accepted your invitation", "connection_accepted", None),
+    (r"New message from (?P<name>[\w\s'\-\.]+)", "message_received", None),
+    (r"(?P<name>[\w\s'\-\.]+) sent you a message", "message_received", None),
+    (r"InMail from (?P<name>[\w\s'\-\.]+)", "inmail_received", None),
+    (r"(?P<name>[\w\s'\-\.]+) viewed your profile", "profile_viewed", None),
+
+    # ─── Application acknowledged (ATS) ────────────────────────────────────
+    (r"Thank you for applying to (?P<company>[\w\s'\-\.,&]+)", "application_acknowledged", "applied"),
+    (r"Thank you for your application(?:.*?(?:to|at|with)\s+(?P<company>[\w\s'\-\.,&]+))?", "application_acknowledged", "applied"),
+    (r"We received your application", "application_acknowledged", "applied"),
+    (r"Your application(?:.*?(?:to|at|with|for))?\s+(?P<company>[\w\s'\-\.,&]+?)\s+(?:has been received|received|is being reviewed)", "application_acknowledged", "applied"),
+    (r"Application (?:received|confirmation)", "application_acknowledged", "applied"),
+    (r"Your application was sent to (?P<company>[\w\s'\-\.,&]+)", "application_sent", "applied"),
+
+    # ─── Recruiter interest / next steps ───────────────────────────────────
+    (r"(?P<company>[\w\s'\-\.,&]+) is interested in your application", "application_interest", "replied"),
+    (r"Next steps (?:on|for|in) (?:your|the)", "recruiter_interest", "replied"),
+    (r"Your application was viewed", "application_viewed", None),
+
+    # ─── Interview ─────────────────────────────────────────────────────────
+    (r"Interview invitation", "interview_invited", "interview"),
+    (r"Invitation to interview", "interview_invited", "interview"),
+    (r"Schedule (?:an? )?(?:initial |first |phone |video |onsite )?interview", "interview_invited", "interview"),
+    (r"(?:Phone|Video|Onsite|Tech|Technical)\s+interview", "interview_invited", "interview"),
+    (r"Interview scheduled", "interview_scheduled", "interview"),
+
+    # ─── Offer ─────────────────────────────────────────────────────────────
+    (r"(?:Job|Offer|Employment)\s+(?:offer|letter)", "offer_received", "offer"),
+    (r"Offer of employment", "offer_received", "offer"),
+
+    # ─── Rejection ─────────────────────────────────────────────────────────
+    (r"Unfortunately,?\s+we", "application_rejected", "rejected"),
+    (r"(?:will|won't)\s+not\s+be\s+(?:moving forward|proceeding|continuing)", "application_rejected", "rejected"),
+    (r"After (?:careful |thorough )?(?:consideration|review)", "application_rejected", "rejected"),
+    (r"Regretfully", "application_rejected", "rejected"),
+    (r"decided to (?:pursue|go with|move forward with) other", "application_rejected", "rejected"),
+    (r"(?:not |un)?selected", "application_rejected", "rejected"),
 ]
 
 
-def parse_linkedin_email(msg: dict) -> Optional[dict]:
-    """Extract structured event from a Gmail message dict.
+def _normalize_company(s: str) -> str:
+    """Normalize a company string for fuzzy comparison."""
+    if not s:
+        return ""
+    s = re.sub(r"[^\w\s]", " ", s)
+    return " ".join(s.lower().split())
 
-    Returns: {event_type, name_or_company, raw_subject, message_id} or None
-             if the message isn't a recognized LinkedIn pattern.
 
-    Phase 3 ship 3/3 will wire this against actual Gmail API responses.
+def parse_email(msg: dict) -> Optional[dict]:
+    """Extract a structured event from a Gmail message.
+
+    Returns dict with: event_type, target_status, matched_name, matched_company,
+    raw_subject, raw_sender, gmail_message_id, body_snippet — or None if the
+    sender/subject didn't match any pattern.
+
+    If subject didn't yield a company name, falls back to the sender's domain.
     """
     headers = {h["name"]: h["value"] for h in msg.get("payload", {}).get("headers", [])}
     sender = headers.get("From", "")
+    subject = headers.get("Subject", "")
 
-    if not any(re.search(p, sender, re.IGNORECASE) for p in LINKEDIN_SENDER_PATTERNS):
+    if not any(re.search(p, sender, re.IGNORECASE) for p in RELEVANT_SENDER_PATTERNS):
         return None
 
-    subject = headers.get("Subject", "")
-    for pattern, event_type, _desc in SUBJECT_PATTERNS:
+    matched_event_type = None
+    matched_target_status = None
+    matched_name = ""
+    matched_company = ""
+
+    for pattern, event_type, target_status in SUBJECT_PATTERNS:
         m = re.search(pattern, subject, re.IGNORECASE)
-        if m:
-            return {
-                "event_type": event_type,
-                "matched_name": m.groupdict().get("name") or m.groupdict().get("company") or "",
-                "raw_subject": subject,
-                "raw_sender": sender,
-                "gmail_message_id": msg.get("id"),
-            }
-    return None
+        if not m:
+            continue
+        matched_event_type = event_type
+        matched_target_status = target_status
+        groups = m.groupdict()
+        matched_name = (groups.get("name") or "").strip()
+        matched_company = (groups.get("company") or "").strip()
+        break
+
+    if matched_event_type is None:
+        return None
+
+    # If subject captured neither name nor company, fall back to sender's domain
+    # (e.g. no-reply@disco.com → "disco") so rejection / generic emails still match.
+    if not matched_company and not matched_name:
+        domain_match = re.search(r"@([\w\.-]+)", sender)
+        if domain_match:
+            domain_parts = domain_match.group(1).split(".")
+            if len(domain_parts) >= 2:
+                # Use the second-to-last label (the "brand" before TLD).
+                matched_company = domain_parts[-2]
+
+    return {
+        "event_type": matched_event_type,
+        "target_status": matched_target_status,
+        "matched_name": matched_name,
+        "matched_company": matched_company,
+        "raw_subject": subject,
+        "raw_sender": sender,
+        "gmail_message_id": msg.get("id"),
+        "body_snippet": (msg.get("snippet") or "")[:500],
+    }
 
 
-def fetch_linkedin_emails(creds: "Credentials", since_iso: Optional[str] = None,
-                          max_results: int = 50) -> list:
-    """Fetch LinkedIn notification emails since the given ISO timestamp.
+# Backwards-compat alias for any external code still importing the old name.
+parse_linkedin_email = parse_email
 
-    Returns a list of Gmail message dicts (headers only — From, Subject, Date).
-    Each dict has at least: {id, payload: {headers: [...]}}.
+
+def match_job_by_company(conn: Connection, company_name: str) -> Optional[dict]:
+    """Fuzzy-match a captured company string to a job in the tracker.
+
+    Tier 1: exact normalized match (case-insensitive, punctuation stripped).
+    Tier 2: prefix match either direction (e.g. captured "GHX - Product Owner"
+            matches tracker company "GHX India" via shared "ghx" prefix token).
+    Tier 3: token overlap with words ≥3 chars (avoids "of", "and").
+
+    Returns {id, company, status} dict for the best match, or None.
+    """
+    if not company_name or not company_name.strip():
+        return None
+    needle = _normalize_company(company_name)
+    if not needle:
+        return None
+    needle_tokens = {t for t in needle.split() if len(t) >= 3}
+
+    rows = conn.execute(
+        "SELECT id, company, status FROM jobs WHERE company IS NOT NULL"
+    ).fetchall()
+
+    candidates = []
+    for r in rows:
+        job_company = _normalize_company(r["company"])
+        if not job_company:
+            continue
+        job_tokens = {t for t in job_company.split() if len(t) >= 3}
+
+        if job_company == needle:
+            return dict(r)
+        if needle.startswith(job_company) or job_company.startswith(needle):
+            candidates.append((100, dict(r)))
+            continue
+        overlap = job_tokens & needle_tokens
+        if overlap:
+            candidates.append((len(overlap) * 10, dict(r)))
+
+    if not candidates:
+        return None
+    candidates.sort(reverse=True, key=lambda x: x[0])
+    return candidates[0][1]
+
+
+def fetch_relevant_emails(creds: "Credentials", since_iso: Optional[str] = None,
+                          max_results: int = 100) -> list:
+    """Fetch potentially-relevant emails (LinkedIn + ATS + recruiting addresses).
+
+    Returns Gmail message dicts with metadata headers + snippet (the first
+    ~200 chars of body). We don't fetch full body — snippet is enough for the
+    activity feed; user clicks the Gmail link if they want the full email.
     """
     service = build("gmail", "v1", credentials=creds)
 
-    # Build query: from:linkedin.com after:<unix_timestamp>
-    query = "from:linkedin.com"
+    sender_query = " OR ".join([
+        "from:linkedin.com",
+        "from:no-reply",
+        "from:noreply",
+        "from:careers",
+        "from:recruiting",
+        "from:recruiter",
+        "from:talent",
+        "from:hiring",
+        "from:jobs",
+        "from:hr",
+        "from:applications",
+        "from:greenhouse.io",
+        "from:lever.co",
+        "from:workable.com",
+        "from:myworkdayjobs.com",
+        "from:ashbyhq.com",
+    ])
+    query = f"({sender_query})"
     if since_iso:
         try:
             dt = datetime.fromisoformat(since_iso)
@@ -301,24 +466,25 @@ def fetch_linkedin_emails(creds: "Credentials", since_iso: Optional[str] = None,
             ts = int(dt.timestamp())
             query += f" after:{ts}"
         except ValueError:
-            pass  # ignore bad timestamp, fetch everything
+            pass
 
     result = service.users().messages().list(
-        userId="me",
-        q=query,
-        maxResults=max_results,
+        userId="me", q=query, maxResults=max_results,
     ).execute()
 
     fetched = []
     for m in result.get("messages", []):
         full = service.users().messages().get(
-            userId="me",
-            id=m["id"],
+            userId="me", id=m["id"],
             format="metadata",
             metadataHeaders=["From", "Subject", "Date"],
         ).execute()
         fetched.append(full)
     return fetched
+
+
+# Backwards-compat alias for any external code still importing the old name.
+fetch_linkedin_emails = fetch_relevant_emails
 
 
 def _normalize_name(name: str) -> str:
@@ -416,9 +582,21 @@ def _mark_processed(conn: Connection, gmail_message_id: str, event_id: Optional[
 
 
 def sync_to_tracker(conn: Connection) -> dict:
-    """Main sync entrypoint: pull new LinkedIn emails -> parse -> match -> log events.
+    """Pull recent emails → parse → match to contact or job → log events.
 
-    Returns: {ok, fetched, parsed, logged, unmatched, last_sync, duration_s}.
+    Tries two match paths per email:
+      1. matched_name → contact lookup (LinkedIn relationship events)
+      2. matched_company → job lookup (ATS application emails)
+    Whichever lands first wins. If both miss, the message goes to the
+    'unmatched' bucket and is NOT marked processed (so user can re-sync after
+    adding the missing contact/job).
+
+    Auto-advances jobs.status when an email's pattern carries a target_status
+    that's further along the pipeline than the job's current status. Never
+    moves backwards (won't reset interview → applied on stale acks).
+
+    Returns: {ok, fetched, parsed, logged, unmatched, status_changes, last_sync,
+              duration_s}.
     """
     started = datetime.now(timezone.utc)
 
@@ -430,14 +608,12 @@ def sync_to_tracker(conn: Connection) -> dict:
             "message": "Gmail not authorized yet. Visit /auth/gmail/start to connect.",
         }
 
-    # Determine since timestamp
     last_sync = _get_sync_state(conn, "last_gmail_sync")
     if not last_sync:
-        # First sync: look back 7 days
         last_sync = (datetime.now(timezone.utc) - timedelta(days=7)).isoformat(timespec="seconds")
 
     try:
-        messages = fetch_linkedin_emails(creds, since_iso=last_sync)
+        messages = fetch_relevant_emails(creds, since_iso=last_sync)
     except Exception as exc:
         return {
             "ok": False,
@@ -449,6 +625,7 @@ def sync_to_tracker(conn: Connection) -> dict:
     parsed_count = 0
     logged = []
     unmatched = []
+    status_changes = []
 
     now_iso = datetime.now(timezone.utc).isoformat(timespec="seconds")
 
@@ -457,50 +634,106 @@ def sync_to_tracker(conn: Connection) -> dict:
         if not gmail_id or _already_processed(conn, gmail_id):
             continue
 
-        parsed = parse_linkedin_email(msg)
+        parsed = parse_email(msg)
         if not parsed:
-            # Not a recognized LinkedIn pattern — mark processed anyway so we don't re-check
             _mark_processed(conn, gmail_id, None)
             continue
-
         parsed_count += 1
-        contact = match_contact_in_tracker(conn, parsed["matched_name"])
 
-        if contact:
-            # Log a real event tied to that contact + its job
-            new_event_id = insert_returning_id(
-                conn,
-                "INSERT INTO events (job_id, contact_id, event_type, body, occurred_at, recorded_at) "
-                "VALUES (?, ?, ?, ?, ?, ?)",
-                (
-                    contact["job_id"],
-                    contact["id"],
-                    parsed["event_type"],
-                    f"[Gmail] {parsed['raw_subject']}",
-                    now_iso,
-                    now_iso,
-                ),
-            )
-            # Touch the job's last_activity_at
-            conn.execute(
-                "UPDATE jobs SET last_activity_at = ? WHERE id = ?",
-                (now_iso, contact["job_id"]),
-            )
-            _mark_processed(conn, gmail_id, new_event_id)
-            logged.append({
-                "gmail_id": gmail_id,
-                "contact": contact["name"],
-                "job_id": contact["job_id"],
-                "event_type": parsed["event_type"],
-                "subject": parsed["raw_subject"],
-            })
-        else:
+        # Match priority: contact (LinkedIn) → job (ATS).
+        contact = None
+        job = None
+        if parsed["matched_name"]:
+            contact = match_contact_in_tracker(conn, parsed["matched_name"])
+            if contact:
+                job_row = conn.execute(
+                    "SELECT id, status, company FROM jobs WHERE id = ?",
+                    (contact["job_id"],),
+                ).fetchone()
+                if job_row:
+                    job = dict(job_row)
+        if not job and parsed["matched_company"]:
+            job = match_job_by_company(conn, parsed["matched_company"])
+
+        if not job:
             unmatched.append({
-                "name": parsed["matched_name"],
-                "event_type": parsed["event_type"],
                 "subject": parsed["raw_subject"],
+                "sender": parsed["raw_sender"],
+                "event_type": parsed["event_type"],
+                "tried_name": parsed["matched_name"] or None,
+                "tried_company": parsed["matched_company"] or None,
             })
-            # Don't mark as processed — user may add the contact later and we want to retry
+            # Intentionally NOT marked processed — user may add the missing
+            # contact/job later and re-trigger sync.
+            continue
+
+        # Multi-line event body so the activity feed shows real content + a
+        # link back to Gmail. The job_detail template renders body as plain
+        # text inside a <pre>-ish container, so newlines display naturally.
+        gmail_url = f"https://mail.google.com/mail/u/0/#inbox/{gmail_id}"
+        event_body = (
+            f"{parsed['raw_subject']}\n"
+            f"From: {parsed['raw_sender']}\n\n"
+            f"{parsed['body_snippet']}\n\n"
+            f"Open in Gmail: {gmail_url}"
+        )
+
+        new_event_id = insert_returning_id(
+            conn,
+            "INSERT INTO events (job_id, contact_id, event_type, body, occurred_at, recorded_at) "
+            "VALUES (?, ?, ?, ?, ?, ?)",
+            (
+                job["id"],
+                contact["id"] if contact else None,
+                parsed["event_type"],
+                event_body,
+                now_iso,
+                now_iso,
+            ),
+        )
+        conn.execute(
+            "UPDATE jobs SET last_activity_at = ? WHERE id = ?",
+            (now_iso, job["id"]),
+        )
+
+        # Auto-advance status if the pattern set a target and it's further
+        # along the pipeline than the job's current status.
+        if parsed["target_status"]:
+            current_rank = STATUS_RANK.get(job["status"], 0)
+            target_rank = STATUS_RANK.get(parsed["target_status"], 0)
+            if target_rank > current_rank:
+                conn.execute(
+                    "UPDATE jobs SET status = ?, last_activity_at = ? WHERE id = ?",
+                    (parsed["target_status"], now_iso, job["id"]),
+                )
+                conn.execute(
+                    "INSERT INTO events (job_id, event_type, body, occurred_at, recorded_at) "
+                    "VALUES (?, ?, ?, ?, ?)",
+                    (
+                        job["id"],
+                        "status_change",
+                        f"{job['status']} -> {parsed['target_status']} (auto from Gmail: {parsed['event_type']})",
+                        now_iso,
+                        now_iso,
+                    ),
+                )
+                status_changes.append({
+                    "job_id": job["id"],
+                    "company": job.get("company"),
+                    "from": job["status"],
+                    "to": parsed["target_status"],
+                    "reason": parsed["event_type"],
+                })
+
+        _mark_processed(conn, gmail_id, new_event_id)
+        logged.append({
+            "gmail_id": gmail_id,
+            "company": job.get("company"),
+            "contact": contact["name"] if contact else None,
+            "job_id": job["id"],
+            "event_type": parsed["event_type"],
+            "subject": parsed["raw_subject"],
+        })
 
     _set_sync_state(conn, "last_gmail_sync", now_iso)
     conn.commit()
@@ -514,6 +747,7 @@ def sync_to_tracker(conn: Connection) -> dict:
         "logged": len(logged),
         "logged_details": logged,
         "unmatched": unmatched,
+        "status_changes": status_changes,
         "last_sync": now_iso,
         "duration_s": round(duration_s, 2),
     }
