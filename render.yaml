@@ -13,7 +13,7 @@ services:
     region: singapore   # closest free-tier region for India
     buildCommand: pip install -r requirements.txt
     startCommand: uvicorn webapp:app --host 0.0.0.0 --port $PORT
-    healthCheckPath: /
+    healthCheckPath: /healthz
     envVars:
       # Auto-injected from the Postgres database below — single source of truth.
       - key: DATABASE_URL

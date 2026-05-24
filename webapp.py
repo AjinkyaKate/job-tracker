@@ -44,7 +44,15 @@ TEMPLATES = Jinja2Templates(directory=str(BASE_DIR / "templates"))
 security = HTTPBasic(auto_error=False)
 
 
-def require_auth(credentials: Optional[HTTPBasicCredentials] = Depends(security)):
+PUBLIC_PATHS = {"/healthz"}  # bypass auth — Render's probe doesn't send credentials
+
+
+def require_auth(
+    request: Request,
+    credentials: Optional[HTTPBasicCredentials] = Depends(security),
+):
+    if request.url.path in PUBLIC_PATHS:
+        return  # health check probe — let it through unauthenticated
     if not ADMIN_USERNAME or not ADMIN_PASSWORD:
         return  # local dev: no auth configured, allow all
     if credentials is None:
@@ -69,6 +77,12 @@ app = FastAPI(
     description="Personal job-application command center.",
     dependencies=[Depends(require_auth)],
 )
+
+
+@app.get("/healthz")
+def healthz():
+    """Public liveness probe for Render. Auth-bypassed via PUBLIC_PATHS."""
+    return {"ok": True}
 
 
 def _rows_to_dicts(rows):
