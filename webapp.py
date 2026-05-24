@@ -1051,15 +1051,22 @@ def _relative_time(iso_str: str) -> str:
 
 # Filter chip definitions — chips map to keyword sets that LIKE-match against
 # title or location. Multi-select within each row, combined AND across rows.
+# Chip keys also map to a tailored role-family resume via role_resumes.py.
 TITLE_CHIPS = [
-    ("po",   "Product Owner",      ["product owner"]),
-    ("pm",   "Product Manager",    ["product manager"]),
-    ("apm",  "APM",                ["associate product manager", "junior product manager"]),
-    ("spm",  "Senior PM",          ["senior product manager", "lead product manager",
-                                    "principal product manager", "staff product manager"]),
-    ("ai",   "AI / ML Product",    ["ai product", "ml product", "machine learning",
-                                    "llm product", "ai/ml"]),
-    ("ba",   "BA / Analyst",       ["business analyst", "product analyst"]),
+    ("po",       "Product Owner",         ["product owner"]),
+    ("pm",       "PM / APM",              ["product manager", "associate product manager",
+                                           "junior product manager"]),
+    ("spm",      "Senior PM",             ["senior product manager", "lead product manager",
+                                           "principal product manager", "staff product manager"]),
+    ("ai-pm",    "AI Product Manager",    ["ai product", "ml product", "machine learning",
+                                           "llm product", "ai/ml"]),
+    ("fd",       "Forward Deployed",      ["forward deployed", "forward-deployed"]),
+    ("ai-eng",   "Applied AI Engineer",   ["applied ai", "ai engineer"]),
+    ("founding", "Founding",              ["founding"]),
+    ("sol-eng",  "Solutions / Customer Eng", ["solutions engineer", "customer engineer",
+                                              "implementation engineer"]),
+    ("prod-eng", "Product Engineer",      ["product engineer"]),
+    ("ba",       "BA / Analyst",          ["business analyst", "product analyst"]),
 ]
 LOC_CHIPS = [
     ("pune",   "Pune",         ["pune"]),
@@ -1164,6 +1171,18 @@ def leads_inbox(request: Request, show: str = "", title: str = "", loc: str = ""
             out.append({"key": key, "label": label, "active": is_active, "url": url})
         return out
 
+    # If any title chip is active, surface the matching role-family resume
+    import role_resumes
+    role_resume_link = None
+    role_resume_label = None
+    if selected_titles:
+        # Use the FIRST selected title chip to pick the resume family
+        first_key = selected_titles[0]
+        family = role_resumes.CHIP_TO_RESUME_FAMILY.get(first_key)
+        if family:
+            role_resume_link = f"/resumes/role/{family}"
+            role_resume_label = role_resumes.FAMILY_LABELS.get(family, family)
+
     return TEMPLATES.TemplateResponse("leads.html", {
         "request": request, "leads": leads,
         "show_dismissed": show_dismissed,
@@ -1172,6 +1191,8 @@ def leads_inbox(request: Request, show: str = "", title: str = "", loc: str = ""
         "loc_chips": build_chip_state(LOC_CHIPS, selected_locs, "loc"),
         "active_filters_count": len(selected_titles) + len(selected_locs),
         "total_unfiltered": total_unfiltered,
+        "role_resume_link": role_resume_link,
+        "role_resume_label": role_resume_label,
     })
 
 
@@ -1261,3 +1282,30 @@ def leads_restore(lead_id: int):
             (now_iso, lead_id),
         )
     return RedirectResponse("/leads?show=dismissed", status_code=303)
+
+
+@app.get("/resumes/role/{family}", response_class=HTMLResponse)
+def role_resume_page(family: str, request: Request):
+    """Render a pre-tailored resume for a given role family."""
+    import role_resumes
+    md = role_resumes.render_role_resume(family)
+    if not md:
+        return HTMLResponse(
+            f"<h1>Unknown role family: {family}</h1>"
+            f"<p>Known: {', '.join(role_resumes.ROLE_RESUMES.keys())}</p>",
+            status_code=404,
+        )
+    resume_html = md_lib.markdown(md, extensions=["extra", "sane_lists"])
+    label = role_resumes.FAMILY_LABELS.get(family, family)
+    pdf_filename = f"Ajinkya_Kate_{label.replace(' / ', '_').replace(' ', '_')}.pdf"
+    # Reuse the existing resume.html template — pass a synthetic "job" dict
+    return TEMPLATES.TemplateResponse(
+        "resume.html",
+        {
+            "request": request,
+            "job": {"id": 0, "company": label, "title": label,
+                    "resume_md": md, "link": "", "company_slug": label},
+            "resume_html": resume_html,
+            "pdf_filename": pdf_filename,
+        },
+    )

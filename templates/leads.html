@@ -36,6 +36,19 @@
     </div>
   </header>
 
+  {# Pre-tailored resume for the active role family — shows when any title chip is on. #}
+  {% if role_resume_link %}
+  <a href="{{ role_resume_link }}" target="_blank" rel="noopener"
+     class="mb-4 flex items-center gap-3 p-3 rounded-lg bg-accent-500/10 border border-accent-500/40 hover:border-accent-500 hover:bg-accent-500/15 transition group">
+    <div class="w-10 h-10 rounded-md bg-accent-500/20 flex items-center justify-center text-accent-400 text-[18px] flex-shrink-0">📄</div>
+    <div class="flex-1">
+      <div class="text-ink text-[14px] font-medium">Resume tailored for {{ role_resume_label }} roles</div>
+      <div class="text-ink2 text-[12.5px]">Click to open → Print → Save as PDF. Generic per role family (no specific JD needed).</div>
+    </div>
+    <div class="text-accent-400 text-[14px] group-hover:translate-x-1 transition">→</div>
+  </a>
+  {% endif %}
+
   {# Filter chips — click to toggle. Combines AND across rows, OR within a row. #}
   <div class="mb-3 flex flex-wrap items-center gap-2">
     <div class="text-[11px] font-mono uppercase tracking-[0.16em] text-ink3 mr-1">Title:</div>
