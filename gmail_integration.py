@@ -89,26 +89,76 @@ def build_flow() -> "Flow":
     return flow
 
 
-def build_authorize_url(state: Optional[str] = None) -> str:
-    """Build the URL to send the user to Google's consent screen."""
+def build_authorize_url(conn: Connection) -> str:
+    """Build the URL to send the user to Google's consent screen.
+
+    Google's OAuth now requires PKCE end-to-end: the authorize step sends a
+    code_challenge derived from a random code_verifier, and the token-exchange
+    step must echo back the same code_verifier. Since each HTTP request creates
+    a fresh Flow object, we persist the code_verifier in sync_state keyed by
+    the state token that Google will echo back on /auth/gmail/callback.
+    """
     flow = build_flow()
-    auth_url, _ = flow.authorization_url(
+    flow.autogenerate_code_verifier = True  # enable PKCE
+    auth_url, returned_state = flow.authorization_url(
         access_type="offline",  # request a refresh_token
-        prompt="consent",       # force consent so we always get refresh_token
+        prompt="consent",       # force consent so we always get a refresh_token
         include_granted_scopes="true",
-        state=state or "",
     )
+    if flow.code_verifier:
+        _store_pkce_verifier(conn, returned_state, flow.code_verifier)
     return auth_url
 
 
-def exchange_code_for_token(code: str) -> "Credentials":
+def exchange_code_for_token(conn: Connection, code: str, state: str) -> "Credentials":
     """Exchange the OAuth callback code for credentials.
 
-    Phase 3 ship 2/3 will wire this into /auth/gmail/callback.
+    Pulls the persisted code_verifier for this state (set by build_authorize_url)
+    and feeds it to the token-exchange request so Google accepts the swap.
     """
     flow = build_flow()
+    verifier = _pop_pkce_verifier(conn, state) if state else None
+    if verifier:
+        flow.code_verifier = verifier
     flow.fetch_token(code=code)
     return flow.credentials
+
+
+def _pkce_key(state: str) -> str:
+    return f"oauth_pkce_{state}"
+
+
+def _store_pkce_verifier(conn: Connection, state: str, code_verifier: str) -> None:
+    """Persist PKCE code_verifier keyed by Google-supplied state token."""
+    now = datetime.now(timezone.utc).isoformat(timespec="seconds")
+    key = _pkce_key(state)
+    existing = conn.execute(
+        "SELECT key FROM sync_state WHERE key = ?", (key,)
+    ).fetchone()
+    if existing:
+        conn.execute(
+            "UPDATE sync_state SET value = ?, updated_at = ? WHERE key = ?",
+            (code_verifier, now, key),
+        )
+    else:
+        conn.execute(
+            "INSERT INTO sync_state (key, value, updated_at) VALUES (?, ?, ?)",
+            (key, code_verifier, now),
+        )
+    conn.commit()
+
+
+def _pop_pkce_verifier(conn: Connection, state: str) -> Optional[str]:
+    """Retrieve + delete the persisted code_verifier for this state."""
+    key = _pkce_key(state)
+    row = conn.execute(
+        "SELECT value FROM sync_state WHERE key = ?", (key,)
+    ).fetchone()
+    if not row or not row["value"]:
+        return None
+    conn.execute("DELETE FROM sync_state WHERE key = ?", (key,))
+    conn.commit()
+    return row["value"]
 
 
 # ─────────────────────────────────────────────────────────────────────────────

@@ -440,10 +440,16 @@ def _gmail_not_configured_response():
 
 @app.get("/auth/gmail/start")
 def gmail_oauth_start():
-    """Step 1 of OAuth: redirect the user to Google's consent screen."""
+    """Step 1 of OAuth: redirect the user to Google's consent screen.
+
+    Also persists the PKCE code_verifier so the /callback handler can complete
+    the token exchange.
+    """
     if not gmail_integration.is_configured():
         return _gmail_not_configured_response()
-    auth_url = gmail_integration.build_authorize_url()
+    tracker.init_db()
+    with get_connection() as conn:
+        auth_url = gmail_integration.build_authorize_url(conn)
     return RedirectResponse(url=auth_url, status_code=302)
 
 
@@ -467,12 +473,12 @@ def gmail_oauth_callback(code: str = "", state: str = "", error: str = ""):
     if not gmail_integration.is_configured():
         return _gmail_not_configured_response()
     try:
-        creds = gmail_integration.exchange_code_for_token(code)
         with get_connection() as conn:
+            creds = gmail_integration.exchange_code_for_token(conn, code, state)
             gmail_integration.store_credentials(conn, creds)
         return HTMLResponse(
             "<h1>Gmail connected ✓</h1>"
-            "<p>Tokens stored locally. <a href='/'>back to dashboard</a></p>",
+            "<p>Tokens stored. <a href='/'>back to dashboard</a></p>",
             status_code=200,
         )
     except Exception as exc:
