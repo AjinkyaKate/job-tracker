@@ -337,49 +337,44 @@ DIGITAL_OPS_RESUME = """# Ajinkya Kate
 Pune District, Maharashtra · Available immediately · CSPO Certified
 
 
-## Summary
+## About Me
 
-Operations-minded professional with 2+ years running cross-functional work at a B2B SaaS company. Daily-driver of CRMs, dashboards, and digital coordination tools. Built a personal job-search CRM in my downtime that I use every day. Open to Operations Coordinator, Digital Ops, or Product Ops roles where attention to detail and process-improvement instinct matter.
+I'm a B2B operations professional with 2+ years coordinating cross-functional work at a SaaS company. My day-to-day has been about keeping things moving across teams: tracking customer and operational data in CRMs, coordinating delivery schedules with engineering and customer success, working with vendor partners on integrations, and translating field feedback into actionable work for internal teams. I work best when I have clear systems and the autonomy to spot inefficiencies and fix them. Looking for Operations Coordinator and Digital Ops roles, especially in logistics. Available immediately.
 
 
 ## Experience
 
 **Product Owner, D·engage** (Jan 2025 - May 2026, remote from Pune)
 
-B2B SaaS customer engagement platform. The role spanned product, customer success coordination, and cross-team operations for enterprise customers in banking, retail, and telecom.
+B2B SaaS customer engagement platform. The role spanned operational coordination across product, customer success, and vendor partners for enterprise customers in banking, retail, and telecom.
 
-- Lived inside the platform's dashboards and CRM data daily. Tracked customer activity, campaign performance, support escalations. Kept records clean so the team could trust the numbers.
-- Coordinated across engineering, design, QA, customer success, and implementation. Ran 2-week sprint cadence. Made priority calls based on customer impact.
-- Translated customer feedback from support and CSM teams into prioritised work for engineering. Wrote PRDs, release notes, internal updates, customer briefs.
-- Used ChatGPT, Claude, and Gemini as part of normal work to speed up drafting, summarising, and analysis. Replaced a manual customer-feedback synthesis process with AI-assisted reports and saved about half a day per week.
-- Helped ship AI-powered features inside the platform (smart audience segmentation, personalised journeys) by working with engineering on requirements and rollout.
+- Tracked operational data across the platform daily. Customer activity, campaign delivery status, support escalations, integration progress. Maintained accurate records that the team and customers depended on.
+- Coordinated across engineering, design, QA, customer success, and implementation. Ran 2-week delivery cadence. Made priority calls when issues stacked up.
+- Worked with vendor partners and integration teams to onboard enterprise customers onto the platform. Tracked configuration progress, resolved blockers, kept stakeholders updated through every stage of onboarding.
+- Translated customer feedback from support, CSM, and sales teams into prioritised work. Wrote requirements documents, release notes, and stakeholder updates.
+- Used ChatGPT, Claude, and Gemini in normal work to speed up drafting and analysis. Saved about half a day per week by automating repetitive reporting tasks.
 
 **Product Analyst, Denner.in** (May 2024 - Dec 2024, hybrid in Pune)
 
-- Owned product analytics and competitive research for the PM team. Ran A/B tests, funnel deep-dives, user research syntheses. Built and maintained reporting dashboards.
+- Owned product analytics and competitive research. Ran A/B tests, funnel deep-dives, user research syntheses. Built and maintained reporting dashboards.
 
 
-## Projects
+## Logistics Operations Knowledge
 
-**Personal Job-Search CRM** (May 2026 - ongoing)
-[github.com/AjinkyaKate/job-tracker](https://github.com/AjinkyaKate/job-tracker)
+Working understanding of the end-to-end logistics workflow that powers a B2B logistics business:
 
-Built this during my current job search. Started as a way to stop losing track of applications and turned into a full CRM-style system I use daily.
+- **Survey**: assessing route feasibility, vehicle capacity, and load specifications before any commitment is made
+- **Route planning**: mapping the most efficient delivery paths, factoring in clearances, time windows, and vendor availability
+- **Vehicle onboarding**: registering, verifying, and qualifying vehicles into the network so they're ready to take orders
+- **Order-to-vehicle allocation**: matching the right vehicle to each shipment based on load type, route, and timing
+- **Shipment execution**: dispatching, real-time tracking, escalation handling, and delivery confirmation back to the customer
 
-- Python, FastAPI, PostgreSQL, deployed on Render. Pulls LinkedIn job-alert emails from Gmail and classifies them into a leads inbox.
-- Tracks application status, follow-up dates, contacts per role, communication history.
-- Generates 15 role-tailored resumes and drafts personalised outreach messages.
-- 100+ leads ingested. Daily use.
-
-**AI QA Agent** (2026, in progress)
-[github.com/AjinkyaKate/qa-agent](https://github.com/AjinkyaKate/qa-agent)
-
-- Small agent that reads acceptance criteria, browses the system being tested, and reports back. Side experiment in process automation.
+This complements my SaaS-side coordination experience: cross-team scheduling, vendor partner management, integration tracking, and escalation triage are the same coordination muscles applied to a different domain.
 
 
 ## Skills
 
-Daily-driver tools: Jira, Notion, Confluence, Figma, Mixpanel, Amplitude, Postman, GitHub. CRM hands-on at D·engage (B2B customer engagement platform). SQL for data pulls and reporting. Spreadsheets (Excel, Google Sheets). Python and FastAPI for small automation tools. Comfortable with ChatGPT, Claude, and Gemini from personal projects. Strong written and verbal communication. Process-improvement instinct.
+Daily-driver tools: Jira, Notion, Confluence, Mixpanel, Amplitude, Postman, GitHub. CRM hands-on at D·engage (B2B customer engagement platform). SQL for data pulls and reporting. Spreadsheets (Excel, Google Sheets) for ops reporting and analysis. Comfortable with ChatGPT, Claude, and Gemini for daily drafting, summarising, and automating repetitive tasks. Strong written and verbal communication. Process-improvement instinct.
 
 
 ## Education
