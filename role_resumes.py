@@ -67,7 +67,7 @@ CERTIFICATIONS = """## Certifications
 ROLE_RESUMES = {
     "product-owner": {
         "summary": (
-            "Product Owner with 2+ years building B2B SaaS. Did discovery, wrote PRDs, ran sprints, "
+            "Product Owner with 1.5 years building B2B SaaS. Did discovery, wrote PRDs, ran sprints, "
             "shipped features, measured what worked. Most recently at D·engage shipping marketing "
             "automation and AI-powered engagement features for enterprise customers in banking, retail, "
             "and telecom. CSPO certified. Open to Product Owner roles in B2B SaaS, Pune-local, immediate "
@@ -82,7 +82,7 @@ ROLE_RESUMES = {
     },
     "pm-apm": {
         "summary": (
-            "PM with 2+ years owning B2B SaaS product delivery. At D·engage shipped marketing-automation "
+            "PM with 1.5 years owning B2B SaaS product delivery. At D·engage shipped marketing-automation "
             "and AI-powered engagement features for enterprise customers in banking, retail, and telecom. "
             "CSPO certified. Open to APM, PM, or Senior PM seats in customer engagement, MarTech, or "
             "AI-product SaaS."
@@ -96,7 +96,7 @@ ROLE_RESUMES = {
     },
     "ai-product-manager": {
         "summary": (
-            "PM with 2+ years shipping AI features in production B2B SaaS. At D·engage built LLM-powered "
+            "PM with 1.5 years shipping AI features in production B2B SaaS. At D·engage built LLM-powered "
             "engagement journeys, content generation, and smart segmentation. Worked closely with "
             "engineers on which models to use, how to write prompts, and how to evaluate output. Building "
             "AI side projects too: a Gemini-based email classifier and an AI QA agent. Looking for AI "
@@ -111,7 +111,7 @@ ROLE_RESUMES = {
     },
     "forward-deployed": {
         "summary": (
-            "Forward-Deployed Product builder with 2+ years owning enterprise B2B SaaS outcomes "
+            "Forward-Deployed Product builder with 1.5 years owning enterprise B2B SaaS outcomes "
             "end-to-end. At D·engage worked with enterprise customers in banking, retail, and telecom: "
             "discovery, customization, AI features, training, retention. Active code-side builder too. "
             "Shipped a personal AI job tracker (FastAPI, PostgreSQL, Gemini, deployed) and an AI QA "
@@ -128,7 +128,7 @@ ROLE_RESUMES = {
     },
     "founding": {
         "summary": (
-            "Builder-PM exploring Founding PM seats at AI-native seed and Series-A startups. 2+ years "
+            "Builder-PM exploring Founding PM seats at AI-native seed and Series-A startups. 1.5 years "
             "shipping B2B SaaS at D·engage (customer engagement and MarTech for enterprise customers). "
             "On the side, shipped AI projects in production: personal job-search tracker (FastAPI, "
             "PostgreSQL, Gemini email classification, deployed on Render, in daily use) and a "
@@ -145,7 +145,7 @@ ROLE_RESUMES = {
     },
     "solutions-engineer": {
         "summary": (
-            "Customer-facing technical product professional with 2+ years at D·engage (B2B marketing "
+            "Customer-facing technical product professional with 1.5 years at D·engage (B2B marketing "
             "automation for enterprise clients in banking, retail, and telecom). Lived at the "
             "intersection of customer needs, engineering capacity, and AI capabilities. Translated "
             "customer pain into product specs, partnered with engineering on AI feature design, supported "
@@ -163,7 +163,7 @@ ROLE_RESUMES = {
     },
     "product-engineer": {
         "summary": (
-            "Product Engineer who owns features end-to-end. 2+ years at D·engage as Product Owner "
+            "Product Engineer who owns features end-to-end. 1.5 years at D·engage as Product Owner "
             "shipping B2B SaaS AI-powered engagement features for enterprise customers. Code on "
             "weekends: built a personal AI job tracker in Python, FastAPI, and PostgreSQL with Gemini "
             "integration, deployed on Render, currently in daily use "
@@ -181,7 +181,7 @@ ROLE_RESUMES = {
     },
     "business-analyst": {
         "summary": (
-            "Business and Product Analyst with 2+ years across product and analytics roles. At D·engage "
+            "Business and Product Analyst with 1.5 years across product and analytics roles. At D·engage "
             "as Product Owner: drove product discovery, A/B test analysis, funnel deep-dives, "
             "requirements writing. At Denner.in as Product Analyst: owned competitive research and "
             "analytics dashboards. CSPO certified. Open to BA or Product Analyst roles in B2B SaaS, "
@@ -195,7 +195,7 @@ ROLE_RESUMES = {
     },
     "senior-pm": {
         "summary": (
-            "Senior Product Manager candidate with 2+ years owning B2B SaaS product delivery at D·engage. "
+            "Senior Product Manager candidate with 1.5 years owning B2B SaaS product delivery at D·engage. "
             "Did discovery, wrote PRDs, ran sprints, shipped AI features for enterprise customers in "
             "banking, retail, and telecom. Ready to step up to Senior PM scope: own a product area "
             "end-to-end, mentor APMs, lead multi-team initiatives, set quarterly OKRs. CSPO certified. "
@@ -212,7 +212,7 @@ ROLE_RESUMES = {
     },
     "technical-pm": {
         "summary": (
-            "Technical Product Manager. PM with hands-on code comfort. 2+ years at D·engage as Product "
+            "Technical Product Manager. PM with hands-on code comfort. 1.5 years at D·engage as Product "
             "Owner shipping B2B SaaS marketing automation and AI-powered features for enterprise "
             "customers. Code on weekends: built a personal AI job tracker in Python, FastAPI, and "
             "PostgreSQL with Gemini email classification, deployed on Render, in daily use "
@@ -232,7 +232,7 @@ ROLE_RESUMES = {
     "forward-deployed-engineer": {
         "summary": (
             "Forward-Deployed Engineer candidate. Code-leaning generalist who lives with enterprise "
-            "customers and ships integrations end-to-end. 2+ years at D·engage on the product side "
+            "customers and ships integrations end-to-end. 1.5 years at D·engage on the product side "
             "(B2B SaaS, AI marketing automation for enterprise clients in banking, retail, and telecom) "
             "built strong customer-pain to product-fit instincts. Personal projects in production: AI "
             "job tracker (FastAPI, PostgreSQL, Gemini, deployed on Render, in daily use) and AI QA agent. "
@@ -251,7 +251,7 @@ ROLE_RESUMES = {
     },
     "founding-engineer": {
         "summary": (
-            "Founding Engineer candidate at AI-native seed or Series-A startups. 2+ years on the product "
+            "Founding Engineer candidate at AI-native seed or Series-A startups. 1.5 years on the product "
             "side at D·engage (B2B SaaS, enterprise customer engagement, AI feature shipping). "
             "Side-project track: built a personal AI job tracker solo (FastAPI, PostgreSQL, Gemini email "
             "classification, GitHub Actions cron, deployed on Render, in daily use at "
@@ -268,7 +268,7 @@ ROLE_RESUMES = {
     },
     "customer-engineer": {
         "summary": (
-            "Customer Engineer with 2+ years at the intersection of B2B SaaS product and enterprise "
+            "Customer Engineer with 1.5 years at the intersection of B2B SaaS product and enterprise "
             "customer support. At D·engage owned product delivery for cross-functional team serving "
             "enterprise clients in banking, retail, and telecom: discovery, customization scoping, AI "
             "feature design, customer onboarding, training, escalation triage. Comfortable reading code, "
@@ -285,7 +285,7 @@ ROLE_RESUMES = {
     },
     "implementation-consultant": {
         "summary": (
-            "Implementation Consultant or Engineer with 2+ years at D·engage owning the product side of "
+            "Implementation Consultant or Engineer with 1.5 years at D·engage owning the product side of "
             "enterprise B2B SaaS deployment. Did requirements gathering, customization scoping, AI "
             "feature configuration, onboarding and training, success monitoring. Worked with enterprise "
             "customers in banking, retail, and telecom. Translated business needs into product "
@@ -304,7 +304,7 @@ ROLE_RESUMES = {
     "applied-ai-engineer": {
         "summary": (
             "Applied AI Engineer. PM-engineer hybrid focused on shipping LLM-powered features into "
-            "production. 2+ years at D·engage shipping AI-powered marketing engagement features "
+            "production. 1.5 years at D·engage shipping AI-powered marketing engagement features "
             "(LLM-assisted content generation, smart segmentation, personalization journeys). Partnered "
             "with engineering on model selection, prompt design, and evaluation. Personal AI projects in "
             "production: job tracker using Gemini for email classification (deployed on Render, in daily "
@@ -339,7 +339,7 @@ Pune District, Maharashtra · Available immediately · CSPO Certified
 
 ## About Me
 
-I'm a B2B operations professional with 2+ years coordinating cross-functional work at a SaaS company. My day-to-day has been about keeping things moving across teams: tracking customer and operational data in CRMs, coordinating delivery schedules with engineering and customer success, working with vendor partners on integrations, and translating field feedback into actionable work for internal teams. I work best when I have clear systems and the autonomy to spot inefficiencies and fix them. Looking for Operations Coordinator and Digital Ops roles, especially in logistics. Available immediately.
+I'm a B2B operations professional with 1.5 years coordinating cross-functional work at a SaaS company. My day-to-day has been about keeping things moving across teams: tracking customer and operational data in CRMs, coordinating delivery schedules with engineering and customer success, working with vendor partners on integrations, and translating field feedback into actionable work for internal teams. I work best when I have clear systems and the autonomy to spot inefficiencies and fix them. Looking for Operations Coordinator and Digital Ops roles, especially in logistics. Available immediately.
 
 
 ## Experience
