@@ -323,11 +323,90 @@ ROLE_RESUMES = {
 }
 
 
+# ─── Standalone resume: Digital Operations Coordinator ──────────────────────
+# Different from the 15 PM-track families. This one is for ops/coordinator
+# roles that emphasize AI-tooling usage, CRM daily-driving, and process
+# automation. The Experience section is reframed away from PM language and
+# toward operations + AI-workflow building. Used for Skerion and any future
+# similar Digital Operations / Logistics Coordinator / Ops Associate roles.
+
+DIGITAL_OPS_RESUME = """# Ajinkya Kate
+
+[+91 77588 80580](tel:+917758880580) · [ajinkyakate2001@gmail.com](mailto:ajinkyakate2001@gmail.com) · [LinkedIn](https://linkedin.com/in/ajinkya-kate) · [GitHub](https://github.com/AjinkyaKate)
+
+Pune District, Maharashtra · Available immediately · CSPO Certified
+
+
+## Summary
+
+Operations-minded professional who lives in digital tools and uses AI to make repetitive work disappear. 2+ years running cross-functional work at D·engage (B2B SaaS customer engagement platform) with hands-on CRM, dashboard, and coordination work daily. Active builder of personal AI workflows: I built my own job-search CRM using Python, FastAPI, PostgreSQL, and the Gemini API for email classification. It is in daily use. Looking for Digital Operations and Coordinator roles where AI-fluency and process-improvement instinct matter, with a path toward Product Operations over time.
+
+
+## Experience
+
+**Cross-functional Product Owner, D·engage** (Jan 2025 - May 2026, remote from Pune)
+
+B2B SaaS customer engagement platform. The role spanned product, customer success coordination, and cross-team operations for enterprise customers in banking, retail, and telecom.
+
+- Worked inside the platform's CRM and dashboards every day. Tracked customer activity, campaign performance, integration status, support escalations. Kept records clean so the team and customers could trust the numbers.
+- Used AI tools (ChatGPT, Claude, Gemini) daily to draft customer communications, summarise customer feedback, generate evaluation reports, and automate repetitive analysis. Cut my weekly customer-feedback-synthesis time by about 60% by replacing manual summarisation with AI-assisted reports.
+- Coordinated across engineering, design, QA, customer success, implementation, and sales. Ran 2-week sprints. Made priority calls based on what was hurting customers most.
+- Translated stakeholder needs into clear written documentation: PRDs, release notes, customer briefs, internal updates.
+- Spotted manual processes and proposed automated replacements. Example: the AI-personalisation feature I helped ship replaced a manual customer-segmentation process the marketing team was doing in spreadsheets.
+
+**Product Analyst, Denner.in** (May 2024 - Dec 2024, hybrid in Pune)
+
+- Owned product analytics and competitive research. Ran A/B tests, funnel deep-dives, user research syntheses. Built reporting dashboards. Maintained clean data pipelines for PM decision-making.
+
+
+## Projects
+
+**Personal AI-Powered Job-Search CRM** (May 2026 - ongoing)
+[github.com/AjinkyaKate/job-tracker](https://github.com/AjinkyaKate/job-tracker)
+
+This is the direct proof point for "build AI-assisted workflows for business tasks." I noticed my own job-search was full of manual coordination (which contact to follow up with, which resume for which role, which jobs need a status update) so I built an AI-powered CRM to automate it.
+
+- FastAPI, PostgreSQL, Gemini for email classification, deployed on Render with a GitHub Actions cron for auto-sync.
+- Functions as a CRM: tracks job leads, contacts, application status, follow-up reminders, communication history.
+- Pulls LinkedIn job alerts from Gmail automatically. Classifies them, dedupes, surfaces only the relevant ones.
+- Generates 15 role-tailored resumes per job family. Drafts personalised LinkedIn DMs to recruiters using LLMs.
+- Daily-driver since launch. 100+ leads ingested, dozens of DM drafts sent.
+
+This is what "use AI to automate manual operational work" looks like when you actually do it.
+
+**AI QA Agent** (2026, in progress)
+[github.com/AjinkyaKate/qa-agent](https://github.com/AjinkyaKate/qa-agent)
+
+- AI agent that reads ticket acceptance criteria, browses the system being tested, checks UI and API behavior, attaches results back to the ticket. Pure process-automation experiment.
+
+
+## Skills
+
+Digital systems daily-driver: Jira, Notion, Confluence, Mixpanel, Amplitude, Figma, Postman, GitHub, Render. CRM platform experience: hands-on at D·engage (B2B customer engagement platform with CRM functionality). AI tools active use: ChatGPT, Claude, Gemini, used daily for drafting, summarising, and automating. SQL for data pulls and reporting. Spreadsheets (Excel, Google Sheets) for ops reporting. Python (intermediate) and FastAPI for building automation workflows. REST APIs, basic data mapping, ETL concepts. Strong written and verbal communication.
+
+
+## Education
+
+**Savitribai Phule Pune University**, Bachelor of Business Administration (BBA), Pune
+
+
+## Certifications
+
+**Certified Scrum Product Owner (CSPO)**, Scrum Alliance, Nov 2025
+"""
+
+
 def render_role_resume(family: str) -> str:
     """Compose the full markdown resume for the given role family.
 
     Returns empty string if family unknown.
     """
+    # Standalone (non-PM-track) resumes that bypass the shared HEADER +
+    # EXPERIENCE + PROJECTS blocks. Each is purpose-written for a different
+    # role family that needs its own framing.
+    if family == "digital-ops-coordinator":
+        return DIGITAL_OPS_RESUME
+
     config = ROLE_RESUMES.get(family)
     if not config:
         return ""
@@ -474,4 +553,6 @@ FAMILY_LABELS = {
     "product-engineer":          "Product Engineer",
     "applied-ai-engineer":       "Applied AI Engineer",
     "business-analyst":          "Business Analyst",
+    # Standalone (non-PM-track) resume for ops / coordinator roles.
+    "digital-ops-coordinator":   "Digital Operations Coordinator",
 }
