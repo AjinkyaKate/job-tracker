@@ -339,50 +339,47 @@ Pune District, Maharashtra · Available immediately · CSPO Certified
 
 ## Summary
 
-Operations-minded professional who lives in digital tools and uses AI to make repetitive work disappear. 2+ years running cross-functional work at D·engage (B2B SaaS customer engagement platform) with hands-on CRM, dashboard, and coordination work daily. Active builder of personal AI workflows: I built my own job-search CRM using Python, FastAPI, PostgreSQL, and the Gemini API for email classification. It is in daily use. Looking for Digital Operations and Coordinator roles where AI-fluency and process-improvement instinct matter, with a path toward Product Operations over time.
+Operations-minded professional with 2+ years running cross-functional work at a B2B SaaS company. Daily-driver of CRMs, dashboards, and digital coordination tools. Built a personal job-search CRM in my downtime that I use every day. Open to Operations Coordinator, Digital Ops, or Product Ops roles where attention to detail and process-improvement instinct matter.
 
 
 ## Experience
 
-**Cross-functional Product Owner, D·engage** (Jan 2025 - May 2026, remote from Pune)
+**Product Owner, D·engage** (Jan 2025 - May 2026, remote from Pune)
 
 B2B SaaS customer engagement platform. The role spanned product, customer success coordination, and cross-team operations for enterprise customers in banking, retail, and telecom.
 
-- Worked inside the platform's CRM and dashboards every day. Tracked customer activity, campaign performance, integration status, support escalations. Kept records clean so the team and customers could trust the numbers.
-- Used AI tools (ChatGPT, Claude, Gemini) daily to draft customer communications, summarise customer feedback, generate evaluation reports, and automate repetitive analysis. Cut my weekly customer-feedback-synthesis time by about 60% by replacing manual summarisation with AI-assisted reports.
-- Coordinated across engineering, design, QA, customer success, implementation, and sales. Ran 2-week sprints. Made priority calls based on what was hurting customers most.
-- Translated stakeholder needs into clear written documentation: PRDs, release notes, customer briefs, internal updates.
-- Spotted manual processes and proposed automated replacements. Example: the AI-personalisation feature I helped ship replaced a manual customer-segmentation process the marketing team was doing in spreadsheets.
+- Lived inside the platform's dashboards and CRM data daily. Tracked customer activity, campaign performance, support escalations. Kept records clean so the team could trust the numbers.
+- Coordinated across engineering, design, QA, customer success, and implementation. Ran 2-week sprint cadence. Made priority calls based on customer impact.
+- Translated customer feedback from support and CSM teams into prioritised work for engineering. Wrote PRDs, release notes, internal updates, customer briefs.
+- Used ChatGPT, Claude, and Gemini as part of normal work to speed up drafting, summarising, and analysis. Replaced a manual customer-feedback synthesis process with AI-assisted reports and saved about half a day per week.
+- Helped ship AI-powered features inside the platform (smart audience segmentation, personalised journeys) by working with engineering on requirements and rollout.
 
 **Product Analyst, Denner.in** (May 2024 - Dec 2024, hybrid in Pune)
 
-- Owned product analytics and competitive research. Ran A/B tests, funnel deep-dives, user research syntheses. Built reporting dashboards. Maintained clean data pipelines for PM decision-making.
+- Owned product analytics and competitive research for the PM team. Ran A/B tests, funnel deep-dives, user research syntheses. Built and maintained reporting dashboards.
 
 
 ## Projects
 
-**Personal AI-Powered Job-Search CRM** (May 2026 - ongoing)
+**Personal Job-Search CRM** (May 2026 - ongoing)
 [github.com/AjinkyaKate/job-tracker](https://github.com/AjinkyaKate/job-tracker)
 
-This is the direct proof point for "build AI-assisted workflows for business tasks." I noticed my own job-search was full of manual coordination (which contact to follow up with, which resume for which role, which jobs need a status update) so I built an AI-powered CRM to automate it.
+Built this during my current job search. Started as a way to stop losing track of applications and turned into a full CRM-style system I use daily.
 
-- FastAPI, PostgreSQL, Gemini for email classification, deployed on Render with a GitHub Actions cron for auto-sync.
-- Functions as a CRM: tracks job leads, contacts, application status, follow-up reminders, communication history.
-- Pulls LinkedIn job alerts from Gmail automatically. Classifies them, dedupes, surfaces only the relevant ones.
-- Generates 15 role-tailored resumes per job family. Drafts personalised LinkedIn DMs to recruiters using LLMs.
-- Daily-driver since launch. 100+ leads ingested, dozens of DM drafts sent.
-
-This is what "use AI to automate manual operational work" looks like when you actually do it.
+- Python, FastAPI, PostgreSQL, deployed on Render. Pulls LinkedIn job-alert emails from Gmail and classifies them into a leads inbox.
+- Tracks application status, follow-up dates, contacts per role, communication history.
+- Generates 15 role-tailored resumes and drafts personalised outreach messages.
+- 100+ leads ingested. Daily use.
 
 **AI QA Agent** (2026, in progress)
 [github.com/AjinkyaKate/qa-agent](https://github.com/AjinkyaKate/qa-agent)
 
-- AI agent that reads ticket acceptance criteria, browses the system being tested, checks UI and API behavior, attaches results back to the ticket. Pure process-automation experiment.
+- Small agent that reads acceptance criteria, browses the system being tested, and reports back. Side experiment in process automation.
 
 
 ## Skills
 
-Digital systems daily-driver: Jira, Notion, Confluence, Mixpanel, Amplitude, Figma, Postman, GitHub, Render. CRM platform experience: hands-on at D·engage (B2B customer engagement platform with CRM functionality). AI tools active use: ChatGPT, Claude, Gemini, used daily for drafting, summarising, and automating. SQL for data pulls and reporting. Spreadsheets (Excel, Google Sheets) for ops reporting. Python (intermediate) and FastAPI for building automation workflows. REST APIs, basic data mapping, ETL concepts. Strong written and verbal communication.
+Daily-driver tools: Jira, Notion, Confluence, Figma, Mixpanel, Amplitude, Postman, GitHub. CRM hands-on at D·engage (B2B customer engagement platform). SQL for data pulls and reporting. Spreadsheets (Excel, Google Sheets). Python and FastAPI for small automation tools. Comfortable with ChatGPT, Claude, and Gemini from personal projects. Strong written and verbal communication. Process-improvement instinct.
 
 
 ## Education
