@@ -18,7 +18,7 @@ We use Google's official Gmail API — safe, sanctioned, doesn't touch LinkedIn 
 
 ## Step 1 — Create a Google Cloud project
 
-1. Open **https://console.cloud.google.com/** (sign in with `ajinkyakate2001@gmail.com`)
+1. Open **https://console.cloud.google.com/** (sign in with `<your-gmail@example.com>`)
 2. At the top, click the project dropdown → **"New Project"**
 3. Project name: **"job-tracker"** (or anything). Skip the "Organization" field. Click **Create**.
 4. Wait ~10 seconds. Make sure the new project is **selected** in the top dropdown.
@@ -39,12 +39,12 @@ We use Google's official Gmail API — safe, sanctioned, doesn't touch LinkedIn 
 2. Pick **External** (you're not in a Google Workspace org). Click **Create**.
 3. Fill in:
    - **App name:** `Job Tracker (personal)`
-   - **User support email:** `ajinkyakate2001@gmail.com`
-   - **Developer contact email:** `ajinkyakate2001@gmail.com`
+   - **User support email:** `<your-gmail@example.com>`
+   - **Developer contact email:** `<your-gmail@example.com>`
    - Leave logo + domain fields blank.
 4. Click **Save and Continue**.
 5. **Scopes:** click **Add or Remove Scopes** → in the table, find and tick **`.../auth/gmail.readonly`** (search "gmail" if needed). Click **Update**, then **Save and Continue**.
-6. **Test users:** click **+ Add Users** → enter `ajinkyakate2001@gmail.com` → click Add → Save and Continue. (This means only you can use this app while it's in "Testing" status — fine for personal use forever.)
+6. **Test users:** click **+ Add Users** → enter `<your-gmail@example.com>` → click Add → Save and Continue. (This means only you can use this app while it's in "Testing" status — fine for personal use forever.)
 7. Final screen → click **Back to Dashboard**.
 
 ---

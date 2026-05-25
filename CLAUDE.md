@@ -56,7 +56,7 @@ Format: **[ID] As a seeker, I want X so that Y.**
 - **Ship 3** ✅ (commit `e5ea8e5`) — contacts table + multi-contact per job + `contact` command
 - **Ship 4** ✅ (commit `b63a69c`) — status transitions + events table + `next_action_at` + `today` view + `show <job>` + `pursue` + `event` + `status` + `action` commands
 
-**Outcome:** "Never Lose a Thread" anchor delivered in CLI form. Real data live: Presolv360 (active, call Monday) + Shailesh (backlog).
+**Outcome:** "Never Lose a Thread" anchor delivered in CLI form. Real job leads live in the local DB.
 
 ### 🟡 Sprint 2 — MVP Web Deployed (in progress)
 
@@ -70,7 +70,7 @@ Format: **[ID] As a seeker, I want X so that Y.**
   - Deploy backend to Railway (`*.up.railway.app` URL)
   - Phone-accessible. Add HTTP basic auth so it's not world-readable.
 
-**Sprint 2 goal: a real URL Ajinkya opens on his phone Monday to see Presolv360's call-prep card, mark status as he goes, and add new leads.**
+**Sprint 2 goal: a real URL opens on the phone showing today's call-prep card, lets the user mark status as they go, and add new leads.**
 
 ### ⏭ Sprint 3 — AI ingestion (Ship 5)
 

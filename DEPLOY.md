@@ -56,7 +56,7 @@ You'll see 5 env vars with **"Required"** badges that need values:
 |---|---|
 | `ADMIN_USERNAME` | `ajinkya` (or whatever you want) |
 | `ADMIN_PASSWORD` | A strong password. **Save it in your password manager.** |
-| `GOOGLE_CLIENT_ID` | `783422059264-0aof78coba8cipi11mluoa6288btf4do.apps.googleusercontent.com` |
+| `GOOGLE_CLIENT_ID` | `<YOUR_CLIENT_ID>.apps.googleusercontent.com` |
 | `GOOGLE_CLIENT_SECRET` | Paste your `GOCSPX-...` from local `.env` |
 | `GOOGLE_REDIRECT_URI` | `https://job-tracker.onrender.com/auth/gmail/callback` (use your actual Render URL once Step 5 confirms it) |
 

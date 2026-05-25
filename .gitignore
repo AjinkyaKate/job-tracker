@@ -33,3 +33,9 @@ jobs.json.*
 
 # Resumes are private + binary
 resumes/
+
+# Personal narrative + learning folders. Owner-only working notes
+# (FDE persona, requirements gathering, lesson journals) - not relevant
+# to anyone forking and running the app.
+business/
+tech/
