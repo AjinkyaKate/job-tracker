@@ -318,11 +318,84 @@ ROLE_RESUMES = {
 }
 
 
+# ─── Test: humanized rewrite for AI Product Manager ─────────────────────────
+# Standalone single-string resume that bypasses the templated HEADER +
+# EXPERIENCE + PROJECTS blocks. Goal: read like a human wrote it, not a
+# template. No em-dashes, varied bullet lengths, plain verbs, real numbers.
+# If approved, I'll roll out this style to all 15.
+
+NEW_AI_PM_RESUME = """# Ajinkya Kate
+
+[+91 77588 80580](tel:+917758880580) · [ajinkyakate2001@gmail.com](mailto:ajinkyakate2001@gmail.com) · [LinkedIn](https://linkedin.com/in/ajinkya-kate) · [GitHub](https://github.com/AjinkyaKate)
+
+Pune District, Maharashtra · Available immediately · CSPO Certified
+
+
+## Summary
+
+PM with 2+ years shipping AI features in production B2B SaaS. At D·engage built LLM-powered engagement journeys, content generation, and smart segmentation. Worked closely with engineers on which models to use, how to write prompts, and how to evaluate output. Building AI side projects too: a Gemini-based email classifier and an AI QA agent. Looking for AI Product Manager or Applied AI Product roles at AI-first B2B SaaS.
+
+
+## Experience
+
+**Product Owner, D·engage** (Jan 2025 - May 2026, remote from Pune)
+
+Marketing-automation SaaS for enterprise customers in banking, retail, and telecom.
+
+- Talked to customers, watched competitors, built quick prototypes. Wrote PRDs based on what I learned and picked what to build next sprint.
+- Shipped 3 AI features: LLM-generated email content, smart audience segmentation, personalization rules. Compared Gemini and OpenAI with engineers, wrote evaluation criteria, tested edge cases.
+- Ran 2-week sprints. Made calls on new build vs tech debt vs production support based on what was hurting customers most.
+- Took customer feedback from CSM and Implementation teams, turned it into roadmap items. Separated churn-causing problems from nice-to-haves.
+- Built prototypes with no-code tools and AI-assisted code to test ideas before engineering invested.
+
+**Product Analyst, Denner.in** (May 2024 - Dec 2024, hybrid in Pune)
+
+- Owned product analytics and competitive research for the PM team. Ran A/B tests, funnel deep-dives, user research syntheses.
+
+
+## Projects
+
+**Personal Job Tracker** (May 2026 - ongoing)
+github.com/AjinkyaKate/job-tracker
+
+- Built this during my current job search. FastAPI, PostgreSQL, Gemini for email classification, deployed on Render with a GitHub Actions cron.
+- Pulls LinkedIn job-alert emails into a leads inbox with filters. Generates 15 role-tailored resumes. Auto-advances job status as Gmail picks up applied / interview / offer signals. Drafts LinkedIn DMs to recruiters.
+- I use this daily. 100+ leads ingested so far.
+
+**AI QA Agent** (2026, in progress)
+github.com/AjinkyaKate/qa-agent
+
+- Small AI agent that reads a ticket's acceptance criteria, browses the app being tested, checks UI and API behavior, attaches results back to the ticket.
+- Inspired by the manual QA loop I watched at D·engage. Using my own job-tracker as the test target for v0.
+
+
+## Skills
+
+LLM feature design, prompt engineering, RAG basics, eval writing. PRDs, discovery, sprint planning, cross-functional delivery. SQL, A/B testing, funnel and cohort analysis, Amplitude, Mixpanel. Python (intermediate), FastAPI, PostgreSQL, Git/GitHub, Render. Worked with Gemini, OpenAI, and Anthropic Claude APIs through side projects.
+
+
+## Education
+
+**Savitribai Phule Pune University**, Bachelor of Business Administration (BBA), Pune
+
+
+## Certifications
+
+**Certified Scrum Product Owner (CSPO)**, Scrum Alliance, Nov 2025
+"""
+
+
 def render_role_resume(family: str) -> str:
     """Compose the full markdown resume for the given role family.
 
     Returns empty string if family unknown.
     """
+    # Test family: bypass templated composition, return the standalone
+    # human-style draft so the user can compare against the AI-templated
+    # version side-by-side before rolling it out to all 15.
+    if family == "ai-product-manager-v2":
+        return NEW_AI_PM_RESUME
+
     config = ROLE_RESUMES.get(family)
     if not config:
         return ""
@@ -469,4 +542,7 @@ FAMILY_LABELS = {
     "product-engineer":          "Product Engineer",
     "applied-ai-engineer":       "Applied AI Engineer",
     "business-analyst":          "Business Analyst",
+    # Test: humanized rewrite of AI Product Manager. Compare to the
+    # standard `ai-product-manager` version. Roll out style if approved.
+    "ai-product-manager-v2":     "AI Product Manager test",
 }
