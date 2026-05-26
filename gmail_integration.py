@@ -21,7 +21,6 @@ from datetime import datetime, timedelta, timezone
 from typing import Optional
 
 from db import Connection, insert_returning_id, upsert_processed_message
-import email_analyzer
 import linkedin_alerts
 
 # Google libs are optional at import time so the webapp doesn't crash if they
@@ -740,18 +739,10 @@ def sync_to_tracker(conn: Connection, user_id: int = 1) -> dict:
             "message": f"Gmail API call failed: {exc}",
         }
 
-    # NEW architecture: regex first, Gemini only for unmatched edge cases.
-    # Gemini free-tier is 20-30 RPM, so we can't afford to call it for every
-    # email — most are obvious ATS templates regex catches instantly.
-    gemini_available = email_analyzer.is_available()
-    gemini_quota_exhausted = False  # set to True after first 429 from Gemini
-    jobs_ctx = []
-    if gemini_available:
-        rows = conn.execute(
-            "SELECT id, company, title, status FROM jobs WHERE user_id = ? ORDER BY id",
-            (user_id,),
-        ).fetchall()
-        jobs_ctx = [dict(r) for r in rows]
+    # Regex-only classification. Subject patterns in SUBJECT_PATTERNS catch
+    # the common ATS / LinkedIn relationship / interview / offer / rejection
+    # email shapes. Intelligence beyond that (scoring, summarising, drafting)
+    # lives in the MCP-driven Claude flow, not in this sync loop.
 
     fetched = len(messages)
     parsed_count = 0
@@ -833,98 +824,12 @@ def sync_to_tracker(conn: Connection, user_id: int = 1) -> dict:
             _mark_processed(conn, gmail_id, None, user_id=user_id)
             continue
 
-        # ─── Regex pass first — fast + no quota ─────────────────────────
+        # ─── Regex pass: SUBJECT_PATTERNS match against subject line ─────
         parsed = parse_email(msg)
         if not parsed:
-            # Regex didn't match. Try Gemini if available + quota not exhausted.
-            if gemini_available and not gemini_quota_exhausted:
-                headers = {h["name"]: h["value"] for h in msg.get("payload", {}).get("headers", [])}
-                subject = headers.get("Subject", "")
-                sender = headers.get("From", "")
-                body = get_email_body(msg)
-                try:
-                    cls = email_analyzer.analyze_email(subject, sender, body, jobs_ctx)
-                except Exception as exc:
-                    # 429 quota errors typically surface as ClientError — flip the flag.
-                    if "429" in str(exc) or "RESOURCE_EXHAUSTED" in str(exc):
-                        gemini_quota_exhausted = True
-                    cls = None
-                if cls is None:
-                    _mark_processed(conn, gmail_id, None, user_id=user_id)
-                    continue
-                if not cls.is_job_related:
-                    _mark_processed(conn, gmail_id, None, user_id=user_id)
-                    continue
-                # Gemini said job-related — log it via Gemini's classification
-                parsed_count += 1
-                job_g = None
-                if cls.matched_job_id is not None:
-                    jr = conn.execute(
-                        "SELECT id, company, status FROM jobs WHERE id = ? AND user_id = ?",
-                        (cls.matched_job_id, user_id),
-                    ).fetchone()
-                    if jr:
-                        job_g = dict(jr)
-                if not job_g:
-                    unmatched.append({
-                        "gmail_id": gmail_id,
-                        "subject": subject,
-                        "sender": sender,
-                        "event_type": cls.event_type,
-                        "ai_summary": cls.summary,
-                        "confidence": cls.confidence,
-                        "gmail_url": f"https://mail.google.com/mail/u/0/#inbox/{gmail_id}",
-                    })
-                    continue
-                gmail_url = f"https://mail.google.com/mail/u/0/#inbox/{gmail_id}"
-                ev_body = (f"{subject}\nFrom: {sender}\n\n"
-                           f"AI summary (Gemini, conf {cls.confidence:.2f}):\n{cls.summary}\n\n"
-                           f"Snippet:\n{body[:500]}\n\nOpen in Gmail: {gmail_url}")
-                new_event_id = insert_returning_id(
-                    conn,
-                    "INSERT INTO events (job_id, event_type, body, occurred_at, recorded_at, user_id) "
-                    "VALUES (?, ?, ?, ?, ?, ?)",
-                    (job_g["id"], cls.event_type, ev_body, now_iso, now_iso, user_id),
-                )
-                conn.execute(
-                    "UPDATE jobs SET last_activity_at = ? WHERE id = ? AND user_id = ?",
-                    (now_iso, job_g["id"], user_id),
-                )
-                if cls.target_status:
-                    cr = STATUS_RANK.get(job_g["status"], 0)
-                    tr = STATUS_RANK.get(cls.target_status, 0)
-                    if tr > cr:
-                        conn.execute(
-                            "UPDATE jobs SET status = ?, last_activity_at = ? "
-                            "WHERE id = ? AND user_id = ?",
-                            (cls.target_status, now_iso, job_g["id"], user_id))
-                        conn.execute(
-                            "INSERT INTO events (job_id, event_type, body, "
-                            "occurred_at, recorded_at, user_id) "
-                            "VALUES (?, ?, ?, ?, ?, ?)",
-                            (job_g["id"], "status_change",
-                             f"{job_g['status']} -> {cls.target_status} (Gemini: {cls.event_type})",
-                             now_iso, now_iso, user_id))
-                        status_changes.append({
-                            "job_id": job_g["id"],
-                            "company": job_g.get("company"),
-                            "from": job_g["status"],
-                            "to": cls.target_status,
-                            "reason": cls.event_type,
-                            "ai_summary": cls.summary,
-                        })
-                _mark_processed(conn, gmail_id, new_event_id, user_id=user_id)
-                logged.append({
-                    "gmail_id": gmail_id,
-                    "company": job_g.get("company"),
-                    "job_id": job_g["id"],
-                    "event_type": cls.event_type,
-                    "summary": cls.summary,
-                    "confidence": cls.confidence,
-                    "via": "gemini",
-                })
-                continue
-            # No Gemini available (or quota exhausted) — just mark seen.
+            # Subject didn't match any known pattern. Mark seen and move on.
+            # Anything intelligent beyond regex (LLM scoring, summarising)
+            # lives in the MCP-driven Claude flow, not in this sync loop.
             _mark_processed(conn, gmail_id, None, user_id=user_id)
             continue
         parsed_count += 1
@@ -1015,9 +920,7 @@ def sync_to_tracker(conn: Connection, user_id: int = 1) -> dict:
 
     summary = {
         "ok": True,
-        "mode": "regex+gemini" if gemini_available and not gemini_quota_exhausted else (
-            "regex+gemini(quota_exhausted)" if gemini_quota_exhausted else "regex"
-        ),
+        "mode": "regex",
         "fetched": fetched,
         "parsed": parsed_count,
         "logged": len(logged),

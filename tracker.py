@@ -34,15 +34,16 @@ def init_db():
         # activity line + the "Stale 3d+ no reply" filter on Pipeline.
         # NULL for jobs that never went through Applied or pre-date this column.
         _ensure_column(conn, "jobs", "applied_at", "TEXT")
-        # JD analysis fields populated by jd_analyzer.analyze_jd(). NULL means
-        # the user hasn't clicked Analyze yet on this lead. Result is cached
-        # in these columns; re-analyze (force=True) overwrites.
-        _ensure_column(conn, "jobs", "ai_score", "TEXT")              # STRONG / MAYBE / SKIP
-        _ensure_column(conn, "jobs", "ai_score_reason", "TEXT")       # one-sentence why
-        _ensure_column(conn, "jobs", "ai_required_skills", "TEXT")    # comma-separated, max 8
-        _ensure_column(conn, "jobs", "ai_hr_email", "TEXT")           # extracted from JD if present
-        _ensure_column(conn, "jobs", "ai_jd_summary", "TEXT")         # 2-3 sentence plain summary
-        _ensure_column(conn, "jobs", "ai_analyzed_at", "TEXT")        # ISO timestamp of last analysis
+        # ai_* columns are dormant (the in-app Analyze button was removed
+        # in the 2026-05-26 cleanup). The columns remain so we don't need a
+        # destructive migration; the MCP-driven Claude flow may populate
+        # them later via a tool if we want persistent scoring.
+        _ensure_column(conn, "jobs", "ai_score", "TEXT")
+        _ensure_column(conn, "jobs", "ai_score_reason", "TEXT")
+        _ensure_column(conn, "jobs", "ai_required_skills", "TEXT")
+        _ensure_column(conn, "jobs", "ai_hr_email", "TEXT")
+        _ensure_column(conn, "jobs", "ai_jd_summary", "TEXT")
+        _ensure_column(conn, "jobs", "ai_analyzed_at", "TEXT")
 
 
 def _require_job(conn, job_id):
