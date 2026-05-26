@@ -230,6 +230,50 @@
 </section>
 {% endif %}
 
+{# ============ JOB DESCRIPTION ============ #}
+{% if job.jd_raw_text %}
+<section class="mb-8">
+  <div class="flex items-center justify-between mb-3">
+    <h2 class="text-[11px] font-mono text-ink3 uppercase tracking-[0.16em]">Job Description · {{ job.jd_raw_text|length }} chars</h2>
+    <button id="jd-toggle" type="button"
+            class="text-[12px] text-accent-400 hover:text-accent-300 transition">
+      Show full JD ↓
+    </button>
+  </div>
+  <div id="jd-body" class="rounded-xl border border-line-light dark:border-line bg-raised-light dark:bg-raised p-4">
+    <div id="jd-preview" class="text-[13px] leading-relaxed whitespace-pre-line text-ink2">{{ job.jd_raw_text[:600] }}{% if job.jd_raw_text|length > 600 %}...{% endif %}</div>
+    <div id="jd-full" class="hidden text-[13px] leading-relaxed whitespace-pre-line text-ink2">{{ job.jd_raw_text }}</div>
+  </div>
+  {% if job.link %}
+  <div class="mt-2 text-[11px] text-ink3">
+    Source: <a href="{{ job.link }}" target="_blank" rel="noopener" class="text-accent-400 hover:text-accent-300 underline">{{ job.link[:80] }}{% if job.link|length > 80 %}...{% endif %} ↗</a>
+  </div>
+  {% endif %}
+</section>
+
+<script>
+(function() {
+  const btn = document.getElementById('jd-toggle');
+  const preview = document.getElementById('jd-preview');
+  const full = document.getElementById('jd-full');
+  if (!btn || !preview || !full) return;
+  let isFull = false;
+  btn.addEventListener('click', function() {
+    isFull = !isFull;
+    if (isFull) {
+      preview.classList.add('hidden');
+      full.classList.remove('hidden');
+      btn.textContent = 'Show preview only ↑';
+    } else {
+      preview.classList.remove('hidden');
+      full.classList.add('hidden');
+      btn.textContent = 'Show full JD ↓';
+    }
+  });
+})();
+</script>
+{% endif %}
+
 {# ============ CONTACTS ============ #}
 <section class="mb-8">
   <h2 class="text-[11px] font-mono text-ink3 uppercase tracking-[0.16em] mb-3">Contacts · {{ contacts|length }}</h2>

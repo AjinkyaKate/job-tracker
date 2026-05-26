@@ -139,21 +139,30 @@ def column_exists(conn: Connection, table: str, column: str) -> bool:
 
 
 def upsert_processed_message(conn: Connection, gmail_message_id: str,
-                              event_id: Optional[int], processed_at: str) -> None:
-    """Cross-backend equivalent of SQLite's INSERT OR REPLACE on processed_messages."""
+                              event_id: Optional[int], processed_at: str,
+                              user_id: int = 1) -> None:
+    """Cross-backend upsert on processed_messages, tagged by user_id.
+
+    Known caveat: processed_messages.gmail_message_id is still the singleton
+    PK from the original schema. Two users could (in theory) have different
+    messages with colliding Gmail IDs — when the second user lands we'll
+    rebuild the PK to (user_id, gmail_message_id). Today, one user means no
+    collision possible.
+    """
     if IS_POSTGRES:
         conn.execute(
-            "INSERT INTO processed_messages (gmail_message_id, event_id, processed_at) "
-            "VALUES (?, ?, ?) "
+            "INSERT INTO processed_messages (gmail_message_id, event_id, processed_at, user_id) "
+            "VALUES (?, ?, ?, ?) "
             "ON CONFLICT (gmail_message_id) DO UPDATE SET "
-            "event_id = EXCLUDED.event_id, processed_at = EXCLUDED.processed_at",
-            (gmail_message_id, event_id, processed_at),
+            "event_id = EXCLUDED.event_id, processed_at = EXCLUDED.processed_at, "
+            "user_id = EXCLUDED.user_id",
+            (gmail_message_id, event_id, processed_at, user_id),
         )
     else:
         conn.execute(
             "INSERT OR REPLACE INTO processed_messages "
-            "(gmail_message_id, event_id, processed_at) VALUES (?, ?, ?)",
-            (gmail_message_id, event_id, processed_at),
+            "(gmail_message_id, event_id, processed_at, user_id) VALUES (?, ?, ?, ?)",
+            (gmail_message_id, event_id, processed_at, user_id),
         )
 
 
@@ -171,7 +180,8 @@ CREATE TABLE IF NOT EXISTS jobs (
     next_action_at TEXT,
     next_action_note TEXT,
     worth_pursuing TEXT DEFAULT 'unsure',
-    last_activity_at TEXT
+    last_activity_at TEXT,
+    user_id INTEGER
 );
 
 CREATE TABLE IF NOT EXISTS contacts (
@@ -184,6 +194,7 @@ CREATE TABLE IF NOT EXISTS contacts (
     linkedin_url TEXT,
     notes TEXT,
     added_at TEXT NOT NULL,
+    user_id INTEGER,
     FOREIGN KEY (job_id) REFERENCES jobs(id)
 );
 
@@ -195,6 +206,7 @@ CREATE TABLE IF NOT EXISTS events (
     body TEXT,
     occurred_at TEXT NOT NULL,
     recorded_at TEXT NOT NULL,
+    user_id INTEGER,
     FOREIGN KEY (job_id) REFERENCES jobs(id),
     FOREIGN KEY (contact_id) REFERENCES contacts(id)
 );
@@ -208,20 +220,33 @@ CREATE TABLE IF NOT EXISTS oauth_tokens (
     scopes TEXT,
     user_email TEXT,
     created_at TEXT NOT NULL,
-    updated_at TEXT NOT NULL
+    updated_at TEXT NOT NULL,
+    user_id INTEGER
 );
 
 CREATE TABLE IF NOT EXISTS sync_state (
     key TEXT PRIMARY KEY,
     value TEXT,
-    updated_at TEXT NOT NULL
+    updated_at TEXT NOT NULL,
+    user_id INTEGER
 );
 
 CREATE TABLE IF NOT EXISTS processed_messages (
     gmail_message_id TEXT PRIMARY KEY,
     event_id INTEGER,
     processed_at TEXT NOT NULL,
+    user_id INTEGER,
     FOREIGN KEY (event_id) REFERENCES events(id)
+);
+
+CREATE TABLE IF NOT EXISTS users (
+    id INTEGER PRIMARY KEY AUTOINCREMENT,
+    email TEXT NOT NULL UNIQUE,
+    google_user_id TEXT UNIQUE,
+    name TEXT,
+    picture_url TEXT,
+    created_at TEXT NOT NULL,
+    last_login_at TEXT
 );
 """
 
@@ -241,7 +266,8 @@ CREATE TABLE IF NOT EXISTS jobs (
     next_action_at TEXT,
     next_action_note TEXT,
     worth_pursuing TEXT DEFAULT 'unsure',
-    last_activity_at TEXT
+    last_activity_at TEXT,
+    user_id INTEGER
 );
 
 CREATE TABLE IF NOT EXISTS contacts (
@@ -254,6 +280,7 @@ CREATE TABLE IF NOT EXISTS contacts (
     linkedin_url TEXT,
     notes TEXT,
     added_at TEXT NOT NULL,
+    user_id INTEGER,
     FOREIGN KEY (job_id) REFERENCES jobs(id)
 );
 
@@ -265,6 +292,7 @@ CREATE TABLE IF NOT EXISTS events (
     body TEXT,
     occurred_at TEXT NOT NULL,
     recorded_at TEXT NOT NULL,
+    user_id INTEGER,
     FOREIGN KEY (job_id) REFERENCES jobs(id),
     FOREIGN KEY (contact_id) REFERENCES contacts(id)
 );
@@ -278,24 +306,88 @@ CREATE TABLE IF NOT EXISTS oauth_tokens (
     scopes TEXT,
     user_email TEXT,
     created_at TEXT NOT NULL,
-    updated_at TEXT NOT NULL
+    updated_at TEXT NOT NULL,
+    user_id INTEGER
 );
 
 CREATE TABLE IF NOT EXISTS sync_state (
     key TEXT PRIMARY KEY,
     value TEXT,
-    updated_at TEXT NOT NULL
+    updated_at TEXT NOT NULL,
+    user_id INTEGER
 );
 
 CREATE TABLE IF NOT EXISTS processed_messages (
     gmail_message_id TEXT PRIMARY KEY,
     event_id INTEGER,
     processed_at TEXT NOT NULL,
+    user_id INTEGER,
     FOREIGN KEY (event_id) REFERENCES events(id)
+);
+
+CREATE TABLE IF NOT EXISTS users (
+    id BIGSERIAL PRIMARY KEY,
+    email TEXT NOT NULL UNIQUE,
+    google_user_id TEXT UNIQUE,
+    name TEXT,
+    picture_url TEXT,
+    created_at TEXT NOT NULL,
+    last_login_at TEXT
 );
 """
 
 
 def init_schema(conn: Connection) -> None:
-    """Create base tables. Idempotent — safe on every app start."""
+    """Create base tables + run migrations. Idempotent — safe on every app start."""
     conn.executescript(SCHEMA_POSTGRES if IS_POSTGRES else SCHEMA_SQLITE)
+    migrate_add_user_id(conn)
+
+
+def migrate_add_user_id(conn: Connection) -> None:
+    """Phase 2 multi-tenancy: tag every row with its owning user_id.
+
+    Adds a user_id column to all per-user data tables (idempotent via
+    column_exists), then backfills any NULLs to user_id=1. The single-user
+    backfill is the safe path because the project was strictly single-tenant
+    before this migration — there is only one user whose Gmail was ever
+    synced, and they own all existing rows.
+
+    Constraint changes (e.g. dropping the UNIQUE on oauth_tokens.provider so
+    multiple users can each connect Gmail) are deferred until the query
+    layer is rewired in the next step.
+    """
+    per_user_tables = [
+        "jobs", "contacts", "events",
+        "oauth_tokens", "sync_state", "processed_messages",
+    ]
+    for table in per_user_tables:
+        if not column_exists(conn, table, "user_id"):
+            conn.execute(f"ALTER TABLE {table} ADD COLUMN user_id INTEGER")
+        conn.execute(f"UPDATE {table} SET user_id = 1 WHERE user_id IS NULL")
+
+    # sync_state keys were global before multi-tenancy; the new code reads
+    # and writes them under a per-user prefix ("u1:last_gmail_sync"). Rename
+    # the legacy bare keys so user 1's sync history isn't lost — otherwise
+    # the first post-deploy sync would re-fetch 7 days of email.
+    for old_key, new_key in [
+        ("last_gmail_sync",   "u1:last_gmail_sync"),
+        ("last_sync_summary", "u1:last_sync_summary"),
+    ]:
+        old = conn.execute(
+            "SELECT value, updated_at FROM sync_state WHERE key = ?",
+            (old_key,),
+        ).fetchone()
+        if not old:
+            continue
+        already_new = conn.execute(
+            "SELECT 1 FROM sync_state WHERE key = ?", (new_key,),
+        ).fetchone()
+        if already_new:
+            conn.execute("DELETE FROM sync_state WHERE key = ?", (old_key,))
+            continue
+        conn.execute(
+            "INSERT INTO sync_state (key, value, updated_at, user_id) "
+            "VALUES (?, ?, ?, 1)",
+            (new_key, old["value"], old["updated_at"]),
+        )
+        conn.execute("DELETE FROM sync_state WHERE key = ?", (old_key,))

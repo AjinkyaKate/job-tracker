@@ -43,12 +43,6 @@ PROJECTS = """## Projects
 - Built this during my current job search. FastAPI, PostgreSQL, Gemini for email classification, deployed on Render with a GitHub Actions cron.
 - Pulls LinkedIn job-alert emails into a leads inbox with filters. Generates 15 role-tailored resumes. Auto-advances job status as Gmail picks up applied / interview / offer signals. Drafts LinkedIn DMs to recruiters.
 - I use this daily. 100+ leads ingested so far.
-
-**AI QA Agent** (2026, in progress)
-[github.com/AjinkyaKate/qa-agent](https://github.com/AjinkyaKate/qa-agent)
-
-- Small AI agent that reads a ticket's acceptance criteria, browses the app being tested, checks UI and API behavior, attaches results back to the ticket.
-- Inspired by the manual QA loop I watched at D·engage. Using my own job-tracker as the test target for v0.
 """
 
 EDUCATION = """## Education
@@ -99,7 +93,8 @@ ROLE_RESUMES = {
             "PM with 1.5 years shipping AI features in production B2B SaaS. At D·engage built LLM-powered "
             "engagement journeys, content generation, and smart segmentation. Worked closely with "
             "engineers on which models to use, how to write prompts, and how to evaluate output. Building "
-            "AI side projects too: a Gemini-based email classifier and an AI QA agent. Looking for AI "
+            "AI side projects too: a personal AI-powered job tracker built end-to-end in Python with a "
+            "Gemini email classifier. Looking for AI "
             "Product Manager or Applied AI Product roles at AI-first B2B SaaS."
         ),
         "skills": (
@@ -131,8 +126,8 @@ ROLE_RESUMES = {
             "Builder-PM exploring Founding PM seats at AI-native seed and Series-A startups. 1.5 years "
             "shipping B2B SaaS at D·engage (customer engagement and MarTech for enterprise customers). "
             "On the side, shipped AI projects in production: personal job-search tracker (FastAPI, "
-            "PostgreSQL, Gemini email classification, deployed on Render, in daily use) and a "
-            "ticket-native AI QA agent. Comfortable wearing PM, engineer, and customer-success hats "
+            "PostgreSQL, Gemini email classification, GitHub Actions cron for auto-sync, deployed on "
+            "Render, in daily use). Comfortable wearing PM, engineer, and customer-success hats "
             "together. CSPO certified. Pune-based, immediate joiner."
         ),
         "skills": (
@@ -235,7 +230,7 @@ ROLE_RESUMES = {
             "customers and ships integrations end-to-end. 1.5 years at D·engage on the product side "
             "(B2B SaaS, AI marketing automation for enterprise clients in banking, retail, and telecom) "
             "built strong customer-pain to product-fit instincts. Personal projects in production: AI "
-            "job tracker (FastAPI, PostgreSQL, Gemini, deployed on Render, in daily use) and AI QA agent. "
+            "job tracker (FastAPI, PostgreSQL, Gemini, deployed on Render, in daily use). "
             "Looking for Forward Deployed Engineer roles at AI-native vendors where I own 2 to 3 "
             "enterprise accounts and ship code alongside the customer."
         ),
@@ -255,7 +250,7 @@ ROLE_RESUMES = {
             "side at D·engage (B2B SaaS, enterprise customer engagement, AI feature shipping). "
             "Side-project track: built a personal AI job tracker solo (FastAPI, PostgreSQL, Gemini email "
             "classification, GitHub Actions cron, deployed on Render, in daily use at "
-            "github.com/AjinkyaKate/job-tracker), plus an AI QA agent in progress. Wear engineer, PM, "
+            "github.com/AjinkyaKate/job-tracker). Wear engineer, PM, "
             "and customer-success hats simultaneously. CSPO certified. Pune-based, immediate joiner."
         ),
         "skills": (
@@ -308,7 +303,7 @@ ROLE_RESUMES = {
             "(LLM-assisted content generation, smart segmentation, personalization journeys). Partnered "
             "with engineering on model selection, prompt design, and evaluation. Personal AI projects in "
             "production: job tracker using Gemini for email classification (deployed on Render, in daily "
-            "use) and an AI QA agent for ticket-native testing. Looking for Applied AI Engineer, AI "
+            "use). Looking for Applied AI Engineer, AI "
             "Engineer (Product-leaning), or GenAI Engineer roles at AI-native B2B SaaS."
         ),
         "skills": (
@@ -339,7 +334,9 @@ Pune District, Maharashtra · Available immediately · CSPO Certified
 
 ## About Me
 
-I'm a B2B operations professional with 1.5 years coordinating cross-functional work at a SaaS company. My day-to-day has been about keeping things moving across teams: tracking customer and operational data in CRMs, coordinating delivery schedules with engineering and customer success, working with vendor partners on integrations, and translating field feedback into actionable work for internal teams. I work best when I have clear systems and the autonomy to spot inefficiencies and fix them. Looking for Operations Coordinator and Digital Ops roles, especially in logistics. Available immediately.
+I'm a B2B operations professional with 1.5 years coordinating cross-functional work at a SaaS company. My day-to-day has been about keeping things moving across teams: tracking operational data in CRMs and dashboards, coordinating delivery schedules across engineering and customer success, and working with vendor partners on integrations.
+
+I have a working understanding of how renewable energy and ODC logistics flow end-to-end: route surveys, vehicle onboarding, order-to-vehicle allocation, multi-modal handoffs, dispatch, real-time tracking, and delivery confirmation. Comfortable taking ownership and spotting inefficiencies to fix. Available immediately.
 
 
 ## Experience
@@ -372,9 +369,81 @@ Working understanding of the end-to-end logistics workflow that powers a B2B log
 This complements my SaaS-side coordination experience: cross-team scheduling, vendor partner management, integration tracking, and escalation triage are the same coordination muscles applied to a different domain.
 
 
-## Skills
+## Education
 
-Daily-driver tools: Jira, Notion, Confluence, Mixpanel, Amplitude, Postman, GitHub. CRM hands-on at D·engage (B2B customer engagement platform). SQL for data pulls and reporting. Spreadsheets (Excel, Google Sheets) for ops reporting and analysis. Comfortable with ChatGPT, Claude, and Gemini for daily drafting, summarising, and automating repetitive tasks. Strong written and verbal communication. Process-improvement instinct.
+**Savitribai Phule Pune University**, Bachelor of Business Administration (BBA), Pune
+
+
+## Certifications
+
+**Certified Scrum Product Owner (CSPO)**, Scrum Alliance, Nov 2025
+"""
+
+
+# ─── Standalone resume: Vibe Coding Engineer ────────────────────────────────
+# For roles that hire engineers who ship working apps fast using AI-assisted
+# development (Claude Code, Cursor, Lovable, Emergent etc). Different from the
+# 15 PM-track families: leads with a Featured Project (the job-tracker itself,
+# live link + GitHub link), has a "How I Work" section about vibe-coding
+# rhythm + engineering judgment, then Experience.
+
+VIBE_CODING_ENGINEER_RESUME = """# Ajinkya Kate
+
+[+91 77588 80580](tel:+917758880580) · [ajinkyakate2001@gmail.com](mailto:ajinkyakate2001@gmail.com) · [LinkedIn](https://linkedin.com/in/ajinkya-kate) · [GitHub](https://github.com/AjinkyaKate)
+
+Pune District, Maharashtra · Available immediately · CSPO Certified
+
+
+## About Me
+
+I'm a product-engineer hybrid who ships working applications fast using AI-assisted development. 1.5 years as Product Owner at D·engage shipping AI-powered features in production B2B SaaS, plus a personal AI-powered job tracker I built end-to-end with Claude Code as my main dev environment. The tracker is in daily use. Looking for Vibe Coding Engineer or rapid-prototyping engineer roles where the work is "make this idea a real working app this week, not next quarter." Available immediately.
+
+
+## Featured Project
+
+**Personal AI Job-Search CRM** (May 2026 - ongoing)
+
+Live: [job-tracker-bmhy.onrender.com](https://job-tracker-bmhy.onrender.com) (demo access on request)
+Code: [github.com/AjinkyaKate/job-tracker](https://github.com/AjinkyaKate/job-tracker)
+
+Built solo using Claude Code as my primary dev environment during my current job search. Started from a blank repo and shipped a working production app within about 3 weeks. ~50 commits. In daily use.
+
+Stack: FastAPI, PostgreSQL, Tailwind, Jinja2, Gemini API for email classification, Render for hosting, GitHub Actions for the auto-sync cron, HTTP Basic Auth for access control.
+
+What it does end-to-end:
+
+- Ingests LinkedIn job-alert emails from Gmail, classifies them, dedupes by URL
+- Surfaces 100+ leads in a filtered inbox with chip-based filters
+- Generates 15 role-tailored resumes with stable PDF filenames per role family
+- Drafts personalised LinkedIn DMs to recruiters using LLMs
+- Auto-advances pipeline status as Gmail picks up applied / interview / offer / rejected signals
+- Multi-stage Kanban-style pipeline with stale-deal tracking, activity timeline, 1-click PDF download
+
+Engineering choices made along the way: a dual-backend DB layer so the same code runs SQLite locally and Postgres in production. OAuth with PKCE for Gmail consent flow. html2pdf.js for client-side PDF generation so I didn't need server-side rendering libs. Idempotent ALTER TABLE migrations baked into init_db so deploys don't need a DBA gate. Single config-driven role-family system that drove all 15 resume variants from one Python file.
+
+
+## How I Work
+
+I work in a vibe-coding rhythm: AI as the engineering partner, me as the judgment layer. Default mode is "code, ship, see what breaks, iterate." Day-to-day I use Claude Code as my main dev environment, Cursor for spot edits, Render for deploys, GitHub Actions for automation, and the browser as my QA tool.
+
+Where I apply careful engineering vs fast hacks: schema, auth flows, OAuth, and anything that touches user data gets built carefully. UI tweaks, copy, one-off scripts get shipped fast and iterated. The judgment call on "hack vs build clean" is what separates production-grade prototypes from throwaway demo code. I try to build things that can survive the day I hand them over.
+
+
+## Experience
+
+**Product Owner, D·engage** (Jan 2025 - May 2026, remote from Pune)
+
+B2B SaaS marketing-automation platform for enterprise customers in banking, retail, and telecom.
+
+- Shipped 3 AI features end-to-end: LLM-generated email content, smart audience segmentation, personalisation rules. Worked with engineers on model selection, prompt design, evaluation criteria.
+- Translated customer feedback from CSM, support, and sales teams into prioritised engineering work. Wrote PRDs, release notes, customer briefs.
+- Ran 2-week sprints. Made tradeoff calls on new build vs tech debt vs production support based on customer impact.
+- Used ChatGPT, Claude, Gemini in daily work for drafting, summarising, and automating repetitive analysis. Saved about half a day per week.
+- Built quick prototypes with no-code tools and AI-assisted code to validate ideas before engineering invested heavily.
+
+**Product Analyst, Denner.in** (May 2024 - Dec 2024, hybrid in Pune)
+
+- Owned product analytics and competitive research for the PM team. Ran A/B tests, funnel deep-dives, user research syntheses.
 
 
 ## Education
@@ -398,6 +467,8 @@ def render_role_resume(family: str) -> str:
     # role family that needs its own framing.
     if family == "digital-ops-coordinator":
         return DIGITAL_OPS_RESUME
+    if family == "vibe-coding-engineer":
+        return VIBE_CODING_ENGINEER_RESUME
 
     config = ROLE_RESUMES.get(family)
     if not config:
@@ -547,4 +618,6 @@ FAMILY_LABELS = {
     "business-analyst":          "Business Analyst",
     # Standalone (non-PM-track) resume for ops / coordinator roles.
     "digital-ops-coordinator":   "Digital Operations Coordinator",
+    # Standalone resume for vibe-coding / rapid-prototyping engineer roles.
+    "vibe-coding-engineer":      "Vibe Coding Engineer",
 }

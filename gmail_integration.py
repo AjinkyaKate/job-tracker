@@ -35,8 +35,37 @@ except ImportError:
     GOOGLE_LIBS_AVAILABLE = False
 
 
-SCOPES = ["https://www.googleapis.com/auth/gmail.readonly"]
+SCOPES = [
+    "https://www.googleapis.com/auth/gmail.readonly",
+    # Identity scopes — added so the OAuth callback can identify WHO
+    # the user is (email, name) for session creation + user upsert.
+    "openid",
+    "https://www.googleapis.com/auth/userinfo.email",
+    "https://www.googleapis.com/auth/userinfo.profile",
+]
 TOKEN_PROVIDER_KEY = "gmail"
+
+
+def fetch_userinfo(creds) -> dict:
+    """Hit Google's userinfo endpoint with the access token to get the user's
+    identity (email, name, sub, picture). Returns a dict like:
+        {"sub": "1234...", "email": "x@y.com", "name": "Ajinkya Kate",
+         "picture": "https://...", "email_verified": true}
+    Returns empty dict on any failure — caller should handle that case.
+    """
+    import urllib.request
+    import json as _json
+    try:
+        req = urllib.request.Request(
+            "https://www.googleapis.com/oauth2/v3/userinfo",
+            headers={"Authorization": f"Bearer {creds.token}"},
+        )
+        with urllib.request.urlopen(req, timeout=10) as resp:
+            if resp.status != 200:
+                return {}
+            return _json.loads(resp.read().decode("utf-8", errors="replace"))
+    except Exception:
+        return {}
 
 
 # ─────────────────────────────────────────────────────────────────────────────
@@ -169,15 +198,26 @@ def _pop_pkce_verifier(conn: Connection, state: str) -> Optional[str]:
 # Token storage (Phase 3 ship 2/3 will complete these)
 # ─────────────────────────────────────────────────────────────────────────────
 
-def store_credentials(conn: Connection, creds: "Credentials", user_email: str = "") -> None:
-    """Save creds to oauth_tokens table (upsert on provider key)."""
+def store_credentials(conn: Connection, creds: "Credentials",
+                      user_email: str = "", user_id: int = 1) -> None:
+    """Save creds to oauth_tokens table (upsert on provider+user_id).
+
+    user_id is the row owner (FK to users.id). Defaults to 1 — the legacy
+    single-tenant value — for older callers that pre-date multi-tenancy.
+
+    Known limitation: oauth_tokens.provider still has a UNIQUE constraint
+    from the original single-tenant schema. With one user (today) the upsert
+    works. When a second user signs in, the INSERT path will collide. The
+    fix is a one-shot SQLite/Postgres migration to replace UNIQUE(provider)
+    with UNIQUE(provider, user_id) — deferred until needed.
+    """
     now = datetime.now(timezone.utc).isoformat(timespec="seconds")
     expires_at = creds.expiry.isoformat(timespec="seconds") if creds.expiry else None
     scopes_str = " ".join(creds.scopes or [])
 
     existing = conn.execute(
-        "SELECT id FROM oauth_tokens WHERE provider = ?",
-        (TOKEN_PROVIDER_KEY,),
+        "SELECT id FROM oauth_tokens WHERE provider = ? AND user_id = ?",
+        (TOKEN_PROVIDER_KEY, user_id),
     ).fetchone()
 
     if existing:
@@ -186,37 +226,31 @@ def store_credentials(conn: Connection, creds: "Credentials", user_email: str = 
             UPDATE oauth_tokens
             SET access_token = ?, refresh_token = COALESCE(?, refresh_token),
                 expires_at = ?, scopes = ?, user_email = ?, updated_at = ?
-            WHERE provider = ?
+            WHERE provider = ? AND user_id = ?
             """,
             (creds.token, creds.refresh_token, expires_at, scopes_str,
-             user_email, now, TOKEN_PROVIDER_KEY),
+             user_email, now, TOKEN_PROVIDER_KEY, user_id),
         )
     else:
         conn.execute(
             """
             INSERT INTO oauth_tokens
               (provider, access_token, refresh_token, expires_at, scopes,
-               user_email, created_at, updated_at)
-            VALUES (?, ?, ?, ?, ?, ?, ?, ?)
+               user_email, created_at, updated_at, user_id)
+            VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?)
             """,
             (TOKEN_PROVIDER_KEY, creds.token, creds.refresh_token,
-             expires_at, scopes_str, user_email, now, now),
+             expires_at, scopes_str, user_email, now, now, user_id),
         )
     conn.commit()
 
 
-def load_credentials(conn: Connection) -> Optional["Credentials"]:
-    """Load stored Gmail creds, force-refresh if expired, persist new token.
-
-    Without this, an expired access_token would silently fail subsequent Gmail
-    API calls (returning empty lists or 401s). We pass expiry to Credentials
-    so the SDK can self-evaluate creds.expired, then explicitly refresh when
-    needed so the returned creds object always has a live token.
-    """
+def load_credentials(conn: Connection, user_id: int = 1) -> Optional["Credentials"]:
+    """Load stored Gmail creds for one user, force-refresh if expired."""
     row = conn.execute(
         "SELECT access_token, refresh_token, expires_at, scopes "
-        "FROM oauth_tokens WHERE provider = ?",
-        (TOKEN_PROVIDER_KEY,),
+        "FROM oauth_tokens WHERE provider = ? AND user_id = ?",
+        (TOKEN_PROVIDER_KEY, user_id),
     ).fetchone()
     if not row or not row["access_token"]:
         return None
@@ -252,7 +286,7 @@ def load_credentials(conn: Connection) -> Optional["Credentials"]:
             from google.auth.transport.requests import Request
             creds.refresh(Request())
             # Persist the new token so future loads start fresh.
-            store_credentials(conn, creds)
+            store_credentials(conn, creds, user_id=user_id)
         except Exception as exc:
             print(f"[gmail_integration] token refresh failed: {exc}")
             return None
@@ -487,16 +521,9 @@ def parse_email(msg: dict) -> Optional[dict]:
 parse_linkedin_email = parse_email
 
 
-def match_job_by_company(conn: Connection, company_name: str) -> Optional[dict]:
-    """Fuzzy-match a captured company string to a job in the tracker.
-
-    Tier 1: exact normalized match (case-insensitive, punctuation stripped).
-    Tier 2: prefix match either direction (e.g. captured "GHX - Product Owner"
-            matches tracker company "GHX India" via shared "ghx" prefix token).
-    Tier 3: token overlap with words ≥3 chars (avoids "of", "and").
-
-    Returns {id, company, status} dict for the best match, or None.
-    """
+def match_job_by_company(conn: Connection, company_name: str,
+                         user_id: int = 1) -> Optional[dict]:
+    """Fuzzy-match a captured company string to a job belonging to user_id."""
     if not company_name or not company_name.strip():
         return None
     needle = _normalize_company(company_name)
@@ -505,7 +532,8 @@ def match_job_by_company(conn: Connection, company_name: str) -> Optional[dict]:
     needle_tokens = {t for t in needle.split() if len(t) >= 3}
 
     rows = conn.execute(
-        "SELECT id, company, status FROM jobs WHERE company IS NOT NULL"
+        "SELECT id, company, status FROM jobs WHERE user_id = ? AND company IS NOT NULL",
+        (user_id,),
     ).fetchall()
 
     candidates = []
@@ -586,11 +614,9 @@ def _normalize_name(name: str) -> str:
     return " ".join(name.lower().split())
 
 
-def match_contact_in_tracker(conn: Connection, matched_name: str) -> Optional[dict]:
-    """Tiered fuzzy match: exact -> case-insensitive -> last-name -> first-name.
-
-    Returns dict with keys: id, job_id, name (or None if no match).
-    """
+def match_contact_in_tracker(conn: Connection, matched_name: str,
+                             user_id: int = 1) -> Optional[dict]:
+    """Tiered fuzzy match among contacts belonging to user_id."""
     if not matched_name or not matched_name.strip():
         return None
 
@@ -599,7 +625,8 @@ def match_contact_in_tracker(conn: Connection, matched_name: str) -> Optional[di
         return None
 
     rows = conn.execute(
-        "SELECT id, job_id, name FROM contacts ORDER BY id"
+        "SELECT id, job_id, name FROM contacts WHERE user_id = ? ORDER BY id",
+        (user_id,),
     ).fetchall()
 
     # Tier 1: exact case-insensitive
@@ -635,68 +662,64 @@ def match_contact_in_tracker(conn: Connection, matched_name: str) -> Optional[di
     return None
 
 
-def _get_sync_state(conn: Connection, key: str) -> Optional[str]:
+def _user_scoped_key(key: str, user_id: int) -> str:
+    """Per-user sync_state key. The table has a global PK on `key`, so we
+    namespace by user_id at the application layer to avoid collisions until
+    the PK is rebuilt to (user_id, key)."""
+    return f"u{user_id}:{key}"
+
+
+def _get_sync_state(conn: Connection, key: str, user_id: int = 1) -> Optional[str]:
     row = conn.execute(
-        "SELECT value FROM sync_state WHERE key = ?", (key,)
+        "SELECT value FROM sync_state WHERE key = ? AND user_id = ?",
+        (_user_scoped_key(key, user_id), user_id),
     ).fetchone()
     return row["value"] if row else None
 
 
-def _set_sync_state(conn: Connection, key: str, value: str) -> None:
+def _set_sync_state(conn: Connection, key: str, value: str, user_id: int = 1) -> None:
     now = datetime.now(timezone.utc).isoformat(timespec="seconds")
+    scoped = _user_scoped_key(key, user_id)
     existing = conn.execute(
-        "SELECT key FROM sync_state WHERE key = ?", (key,)
+        "SELECT key FROM sync_state WHERE key = ? AND user_id = ?",
+        (scoped, user_id),
     ).fetchone()
     if existing:
         conn.execute(
-            "UPDATE sync_state SET value = ?, updated_at = ? WHERE key = ?",
-            (value, now, key),
+            "UPDATE sync_state SET value = ?, updated_at = ? WHERE key = ? AND user_id = ?",
+            (value, now, scoped, user_id),
         )
     else:
         conn.execute(
-            "INSERT INTO sync_state (key, value, updated_at) VALUES (?, ?, ?)",
-            (key, value, now),
+            "INSERT INTO sync_state (key, value, updated_at, user_id) VALUES (?, ?, ?, ?)",
+            (scoped, value, now, user_id),
         )
 
 
-def _already_processed(conn: Connection, gmail_message_id: str) -> bool:
+def _already_processed(conn: Connection, gmail_message_id: str,
+                       user_id: int = 1) -> bool:
     row = conn.execute(
-        "SELECT 1 FROM processed_messages WHERE gmail_message_id = ?",
-        (gmail_message_id,),
+        "SELECT 1 FROM processed_messages WHERE gmail_message_id = ? AND user_id = ?",
+        (gmail_message_id, user_id),
     ).fetchone()
     return row is not None
 
 
-def _mark_processed(conn: Connection, gmail_message_id: str, event_id: Optional[int]) -> None:
+def _mark_processed(conn: Connection, gmail_message_id: str,
+                    event_id: Optional[int], user_id: int = 1) -> None:
     now = datetime.now(timezone.utc).isoformat(timespec="seconds")
-    upsert_processed_message(conn, gmail_message_id, event_id, now)
+    upsert_processed_message(conn, gmail_message_id, event_id, now, user_id=user_id)
 
 
-def sync_to_tracker(conn: Connection) -> dict:
-    """Pull recent emails → classify → match to a tracker job → log event.
+def sync_to_tracker(conn: Connection, user_id: int = 1) -> dict:
+    """Pull recent emails for ONE user → classify → match → log events.
 
-    Two classification paths, picked at sync time:
-      • **Gemini (preferred)** — when GEMINI_API_KEY is set + google-genai is
-        installed. Sends each email's subject + sender + cleaned body + the
-        tracker's job list to Gemini 2.5 Flash; gets back a structured
-        classification (is_job_related, matched_job_id, event_type,
-        target_status, summary, confidence).
-      • **Regex (fallback)** — when no LLM key is available. Pattern-matches
-        subject lines against SUBJECT_PATTERNS and matches names/companies
-        to contacts/jobs via the older deterministic logic.
-
-    In both paths:
-      - Job-related emails with NO matching tracker job → 'unmatched' bucket
-        for user review (NOT marked processed, so re-sync after adding the
-        job catches it).
-      - Status auto-advances forward in the pipeline only — never backward.
-
-    Returns: {ok, mode, fetched, parsed, logged, unmatched, status_changes,
-              last_sync, duration_s}.
+    Every read and every write is scoped to user_id, so each signed-in user's
+    Gmail inbox flows into their own pipeline only.
     """
     started = datetime.now(timezone.utc)
 
-    creds = load_credentials(conn)
+    creds = load_credentials(conn, user_id=user_id)
     if not creds:
         return {
             "ok": False,
@@ -704,7 +727,7 @@ def sync_to_tracker(conn: Connection) -> dict:
             "message": "Gmail not authorized yet. Visit /auth/gmail/start to connect.",
         }
 
-    last_sync = _get_sync_state(conn, "last_gmail_sync")
+    last_sync = _get_sync_state(conn, "last_gmail_sync", user_id=user_id)
     if not last_sync:
         last_sync = (datetime.now(timezone.utc) - timedelta(days=7)).isoformat(timespec="seconds")
 
@@ -725,7 +748,8 @@ def sync_to_tracker(conn: Connection) -> dict:
     jobs_ctx = []
     if gemini_available:
         rows = conn.execute(
-            "SELECT id, company, title, status FROM jobs ORDER BY id"
+            "SELECT id, company, title, status FROM jobs WHERE user_id = ? ORDER BY id",
+            (user_id,),
         ).fetchall()
         jobs_ctx = [dict(r) for r in rows]
 
@@ -742,7 +766,7 @@ def sync_to_tracker(conn: Connection) -> dict:
 
     for msg in messages:
         gmail_id = msg.get("id")
-        if not gmail_id or _already_processed(conn, gmail_id):
+        if not gmail_id or _already_processed(conn, gmail_id, user_id=user_id):
             continue
 
         # ─── LinkedIn job-alert ingestion (Phase 1 discovery path) ──────
@@ -752,25 +776,61 @@ def sync_to_tracker(conn: Connection) -> dict:
             body = get_raw_html_body(msg)
             jobs_in_alert = linkedin_alerts.parse_alert(body)
             for j in jobs_in_alert:
-                # Dedup on link (canonical URL with no tracking params)
+                # Dedup on link, per user (two users can independently track the same URL)
                 existing = conn.execute(
-                    "SELECT id FROM jobs WHERE link = ?", (j["link"],),
+                    "SELECT id FROM jobs WHERE link = ? AND user_id = ?",
+                    (j["link"], user_id),
                 ).fetchone()
                 if existing:
                     continue
                 location = j["location"] or ""
                 company = j["company"] or "(unknown)"
                 title = j["title"] or "(untitled)"
-                insert_returning_id(
+                new_lead_id = insert_returning_id(
                     conn,
                     "INSERT INTO jobs (title, company, link, status, worth_pursuing, "
-                    "location, source, added_at, last_activity_at) "
-                    "VALUES (?, ?, ?, 'lead', 'unsure', ?, 'linkedin-alert', ?, ?)",
-                    (title, company, j["link"], location, now_iso, now_iso),
+                    "location, source, added_at, last_activity_at, user_id) "
+                    "VALUES (?, ?, ?, 'lead', 'unsure', ?, 'linkedin-alert', ?, ?, ?)",
+                    (title, company, j["link"], location, now_iso, now_iso, user_id),
                 )
                 leads_ingested += 1
+
+                # Auto-fetch the JD body from the LinkedIn guest endpoint
+                # right when the lead is created. Adds 1-2 seconds per lead
+                # but means the user opens a brand-new lead and immediately
+                # sees the full JD, not just title/company.
+                # Failures are silent — the lead still exists; just no JD.
+                try:
+                    import linkedin_fetch
+                    details = linkedin_fetch.fetch_job_details(j["link"])
+                    if details:
+                        jd_text = (details.get("jd_text") or "")[:80000]
+                        # Guest endpoint sometimes has richer values than
+                        # the email-parsed fields. Use them if available.
+                        better_title = (details.get("title") or "").strip() or title
+                        better_company = (details.get("company") or "").strip() or company
+                        better_location = (details.get("location") or "").strip() or location
+                        if jd_text:
+                            conn.execute(
+                                "UPDATE jobs SET jd_raw_text = ?, title = ?, "
+                                "company = ?, location = ? WHERE id = ? AND user_id = ?",
+                                (jd_text, better_title, better_company,
+                                 better_location, new_lead_id, user_id),
+                            )
+                            conn.execute(
+                                "INSERT INTO events (job_id, event_type, body, "
+                                "occurred_at, recorded_at, user_id) "
+                                "VALUES (?, ?, ?, ?, ?, ?)",
+                                (new_lead_id, "note",
+                                 f"Auto-fetched JD from LinkedIn guest endpoint "
+                                 f"({len(jd_text)} chars). Triggered during email "
+                                 f"ingestion, not waiting for manual Pursue.",
+                                 now_iso, now_iso, user_id),
+                            )
+                except Exception:
+                    pass
             # Mark email as processed regardless of whether jobs were new
-            _mark_processed(conn, gmail_id, None)
+            _mark_processed(conn, gmail_id, None, user_id=user_id)
             continue
 
         # ─── Regex pass first — fast + no quota ─────────────────────────
@@ -790,18 +850,18 @@ def sync_to_tracker(conn: Connection) -> dict:
                         gemini_quota_exhausted = True
                     cls = None
                 if cls is None:
-                    _mark_processed(conn, gmail_id, None)
+                    _mark_processed(conn, gmail_id, None, user_id=user_id)
                     continue
                 if not cls.is_job_related:
-                    _mark_processed(conn, gmail_id, None)
+                    _mark_processed(conn, gmail_id, None, user_id=user_id)
                     continue
                 # Gemini said job-related — log it via Gemini's classification
                 parsed_count += 1
                 job_g = None
                 if cls.matched_job_id is not None:
                     jr = conn.execute(
-                        "SELECT id, company, status FROM jobs WHERE id = ?",
-                        (cls.matched_job_id,),
+                        "SELECT id, company, status FROM jobs WHERE id = ? AND user_id = ?",
+                        (cls.matched_job_id, user_id),
                     ).fetchone()
                     if jr:
                         job_g = dict(jr)
@@ -822,25 +882,29 @@ def sync_to_tracker(conn: Connection) -> dict:
                            f"Snippet:\n{body[:500]}\n\nOpen in Gmail: {gmail_url}")
                 new_event_id = insert_returning_id(
                     conn,
-                    "INSERT INTO events (job_id, event_type, body, occurred_at, recorded_at) "
-                    "VALUES (?, ?, ?, ?, ?)",
-                    (job_g["id"], cls.event_type, ev_body, now_iso, now_iso),
+                    "INSERT INTO events (job_id, event_type, body, occurred_at, recorded_at, user_id) "
+                    "VALUES (?, ?, ?, ?, ?, ?)",
+                    (job_g["id"], cls.event_type, ev_body, now_iso, now_iso, user_id),
                 )
-                conn.execute("UPDATE jobs SET last_activity_at = ? WHERE id = ?",
-                             (now_iso, job_g["id"]))
+                conn.execute(
+                    "UPDATE jobs SET last_activity_at = ? WHERE id = ? AND user_id = ?",
+                    (now_iso, job_g["id"], user_id),
+                )
                 if cls.target_status:
                     cr = STATUS_RANK.get(job_g["status"], 0)
                     tr = STATUS_RANK.get(cls.target_status, 0)
                     if tr > cr:
                         conn.execute(
-                            "UPDATE jobs SET status = ?, last_activity_at = ? WHERE id = ?",
-                            (cls.target_status, now_iso, job_g["id"]))
+                            "UPDATE jobs SET status = ?, last_activity_at = ? "
+                            "WHERE id = ? AND user_id = ?",
+                            (cls.target_status, now_iso, job_g["id"], user_id))
                         conn.execute(
-                            "INSERT INTO events (job_id, event_type, body, occurred_at, recorded_at) "
-                            "VALUES (?, ?, ?, ?, ?)",
+                            "INSERT INTO events (job_id, event_type, body, "
+                            "occurred_at, recorded_at, user_id) "
+                            "VALUES (?, ?, ?, ?, ?, ?)",
                             (job_g["id"], "status_change",
                              f"{job_g['status']} -> {cls.target_status} (Gemini: {cls.event_type})",
-                             now_iso, now_iso))
+                             now_iso, now_iso, user_id))
                         status_changes.append({
                             "job_id": job_g["id"],
                             "company": job_g.get("company"),
@@ -849,7 +913,7 @@ def sync_to_tracker(conn: Connection) -> dict:
                             "reason": cls.event_type,
                             "ai_summary": cls.summary,
                         })
-                _mark_processed(conn, gmail_id, new_event_id)
+                _mark_processed(conn, gmail_id, new_event_id, user_id=user_id)
                 logged.append({
                     "gmail_id": gmail_id,
                     "company": job_g.get("company"),
@@ -861,23 +925,23 @@ def sync_to_tracker(conn: Connection) -> dict:
                 })
                 continue
             # No Gemini available (or quota exhausted) — just mark seen.
-            _mark_processed(conn, gmail_id, None)
+            _mark_processed(conn, gmail_id, None, user_id=user_id)
             continue
         parsed_count += 1
 
         contact = None
         job = None
         if parsed["matched_name"]:
-            contact = match_contact_in_tracker(conn, parsed["matched_name"])
+            contact = match_contact_in_tracker(conn, parsed["matched_name"], user_id=user_id)
             if contact:
                 job_row = conn.execute(
-                    "SELECT id, status, company FROM jobs WHERE id = ?",
-                    (contact["job_id"],),
+                    "SELECT id, status, company FROM jobs WHERE id = ? AND user_id = ?",
+                    (contact["job_id"], user_id),
                 ).fetchone()
                 if job_row:
                     job = dict(job_row)
         if not job and parsed["matched_company"]:
-            job = match_job_by_company(conn, parsed["matched_company"])
+            job = match_job_by_company(conn, parsed["matched_company"], user_id=user_id)
 
         if not job:
             unmatched.append({
@@ -899,14 +963,15 @@ def sync_to_tracker(conn: Connection) -> dict:
 
         new_event_id = insert_returning_id(
             conn,
-            "INSERT INTO events (job_id, contact_id, event_type, body, occurred_at, recorded_at) "
-            "VALUES (?, ?, ?, ?, ?, ?)",
+            "INSERT INTO events (job_id, contact_id, event_type, body, "
+            "occurred_at, recorded_at, user_id) "
+            "VALUES (?, ?, ?, ?, ?, ?, ?)",
             (job["id"], contact["id"] if contact else None,
-             parsed["event_type"], event_body, now_iso, now_iso),
+             parsed["event_type"], event_body, now_iso, now_iso, user_id),
         )
         conn.execute(
-            "UPDATE jobs SET last_activity_at = ? WHERE id = ?",
-            (now_iso, job["id"]),
+            "UPDATE jobs SET last_activity_at = ? WHERE id = ? AND user_id = ?",
+            (now_iso, job["id"], user_id),
         )
 
         if parsed["target_status"]:
@@ -914,15 +979,17 @@ def sync_to_tracker(conn: Connection) -> dict:
             target_rank = STATUS_RANK.get(parsed["target_status"], 0)
             if target_rank > current_rank:
                 conn.execute(
-                    "UPDATE jobs SET status = ?, last_activity_at = ? WHERE id = ?",
-                    (parsed["target_status"], now_iso, job["id"]),
+                    "UPDATE jobs SET status = ?, last_activity_at = ? "
+                    "WHERE id = ? AND user_id = ?",
+                    (parsed["target_status"], now_iso, job["id"], user_id),
                 )
                 conn.execute(
-                    "INSERT INTO events (job_id, event_type, body, occurred_at, recorded_at) "
-                    "VALUES (?, ?, ?, ?, ?)",
+                    "INSERT INTO events (job_id, event_type, body, "
+                    "occurred_at, recorded_at, user_id) "
+                    "VALUES (?, ?, ?, ?, ?, ?)",
                     (job["id"], "status_change",
                      f"{job['status']} -> {parsed['target_status']} (regex: {parsed['event_type']})",
-                     now_iso, now_iso),
+                     now_iso, now_iso, user_id),
                 )
                 status_changes.append({
                     "job_id": job["id"],
@@ -932,7 +999,7 @@ def sync_to_tracker(conn: Connection) -> dict:
                     "reason": parsed["event_type"],
                 })
 
-        _mark_processed(conn, gmail_id, new_event_id)
+        _mark_processed(conn, gmail_id, new_event_id, user_id=user_id)
         logged.append({
             "gmail_id": gmail_id,
             "company": job.get("company"),
@@ -942,7 +1009,7 @@ def sync_to_tracker(conn: Connection) -> dict:
             "subject": parsed["raw_subject"],
         })
 
-    _set_sync_state(conn, "last_gmail_sync", now_iso)
+    _set_sync_state(conn, "last_gmail_sync", now_iso, user_id=user_id)
 
     duration_s = (datetime.now(timezone.utc) - started).total_seconds()
 
@@ -973,22 +1040,21 @@ def sync_to_tracker(conn: Connection) -> dict:
         "status_changes": len(status_changes),
         "duration_s": round(duration_s, 2),
     }
-    _set_sync_state(conn, "last_sync_summary", json.dumps(compact))
+    _set_sync_state(conn, "last_sync_summary", json.dumps(compact), user_id=user_id)
     conn.commit()
 
     return summary
 
 
-def get_last_sync(conn: Connection) -> Optional[str]:
-    """Returns the ISO timestamp of the most recent successful Gmail sync, or None."""
-    return _get_sync_state(conn, "last_gmail_sync")
+def get_last_sync(conn: Connection, user_id: int = 1) -> Optional[str]:
+    """Returns the ISO timestamp of this user's most recent successful sync."""
+    return _get_sync_state(conn, "last_gmail_sync", user_id=user_id)
 
 
-def get_last_sync_summary(conn: Connection) -> Optional[dict]:
+def get_last_sync_summary(conn: Connection, user_id: int = 1) -> Optional[dict]:
     """Returns the compact summary dict (leads, events, fetched, status_changes,
-    duration_s, ts) of the most recent successful sync, or None if never synced
-    (or summary was written by an older code path that pre-dates this field)."""
-    raw = _get_sync_state(conn, "last_sync_summary")
+    duration_s, ts) of this user's most recent successful sync."""
+    raw = _get_sync_state(conn, "last_sync_summary", user_id=user_id)
     if not raw:
         return None
     try:

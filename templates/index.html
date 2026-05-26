@@ -48,6 +48,29 @@
 {% block content %}
 <div class="max-w-6xl mx-auto py-6">
 
+  {# ─── Agent paste bar: any URL → fetched + added as a lead ───────────── #}
+  <div class="mb-5 bg-raised border border-line rounded-2xl p-3 sm:p-4">
+    <div class="flex items-center gap-2 mb-1">
+      <span class="text-[18px]">🪄</span>
+      <div class="text-[11px] font-mono uppercase tracking-[0.14em] text-ink3">Quick Capture</div>
+    </div>
+    <div class="flex flex-col sm:flex-row items-stretch gap-2">
+      <input id="url-input"
+             type="url"
+             placeholder="Paste a job URL (LinkedIn, Naukri, Wellfound, anywhere)..."
+             class="flex-1 bg-sunken border border-line rounded-md px-3 py-2.5 text-ink placeholder-ink3 text-[13px] focus:border-accent-500 focus:outline-none transition"
+             autocomplete="off">
+      <button id="fetch-btn"
+              class="h-10 px-5 rounded-md bg-accent-500 hover:bg-accent-400 text-white text-[13px] font-medium transition flex items-center justify-center gap-2 disabled:opacity-60 disabled:cursor-wait">
+        <svg id="fetch-spinner" class="hidden w-3.5 h-3.5 animate-spin" viewBox="0 0 16 16" fill="none" stroke="currentColor" stroke-width="2">
+          <path d="M13.5 7.5a5.5 5.5 0 1 1-1.6-3.9M13.5 2v4h-4"/>
+        </svg>
+        <span id="fetch-label">Fetch</span>
+      </button>
+    </div>
+    <div id="fetch-status" class="hidden mt-2 text-[12.5px] leading-snug"></div>
+  </div>
+
   {# ─── Header ──────────────────────────────────────────────────────────── #}
   <header class="mb-5">
     <div class="text-[11px] font-mono uppercase tracking-[0.16em] text-ink3 mb-1">Pipeline · {{ today }}</div>
@@ -83,6 +106,35 @@
       <div class="text-2xl font-semibold text-ink tabular">{{ offer_count }}</div>
     </div>
   </div>
+
+  {# ─── New-leads banner ───────────────────────────────────────────────────
+     Shows whenever there are leads waiting in the inbox. Surfaces the result
+     of post-login Gmail sync (and ongoing cron syncs) so the user lands here
+     and immediately knows there's something to triage — vs. discovering the
+     /leads page on their own. #}
+  {% if leads_waiting and leads_waiting > 0 %}
+  <a href="/leads" class="block mb-3 p-4 rounded-lg bg-accent-500/10 border border-accent-500/40 hover:bg-accent-500/15 hover:border-accent-500/60 transition group">
+    <div class="flex items-center gap-3">
+      <div class="w-10 h-10 rounded-md bg-accent-500/20 flex items-center justify-center text-[20px] flex-shrink-0">🆕</div>
+      <div class="flex-1 min-w-0">
+        <div class="text-ink text-[14px] font-medium">
+          {{ leads_waiting }} new lead{% if leads_waiting != 1 %}s{% endif %} from your Gmail ready to triage
+          {% if gmail.last_sync_summary and gmail.last_sync_summary.leads %}
+            <span class="text-ink2 text-[12px] font-normal ml-1">
+              · {{ gmail.last_sync_summary.leads }} just arrived in the last sync
+            </span>
+          {% endif %}
+        </div>
+        <div class="text-ink3 text-[12px] mt-0.5">
+          Open the Leads inbox to pursue or dismiss them — they don't appear in your pipeline columns until you pursue.
+        </div>
+      </div>
+      <div class="text-accent-400 text-[13px] font-medium group-hover:translate-x-0.5 transition-transform flex-shrink-0">
+        Open Leads →
+      </div>
+    </div>
+  </a>
+  {% endif %}
 
   {# ─── Gmail sync widget ───────────────────────────────────────────────── #}
   {% if gmail.configured %}
@@ -324,4 +376,91 @@
   {% endif %}
 
 </div>
+
+<!-- Quick Capture (paste URL → backend agent fetches the page → new lead) -->
+<script>
+(function() {
+  const input = document.getElementById('url-input');
+  const btn = document.getElementById('fetch-btn');
+  const spinner = document.getElementById('fetch-spinner');
+  const label = document.getElementById('fetch-label');
+  const statusEl = document.getElementById('fetch-status');
+
+  if (!input || !btn) return;
+
+  function showStatus(msg, kind) {
+    statusEl.textContent = msg;
+    statusEl.className = 'mt-2 text-[12.5px] leading-snug ' + (
+      kind === 'ok'   ? 'text-interview' :
+      kind === 'err'  ? 'text-rejected'  :
+      kind === 'warn' ? 'text-replied'   :
+                        'text-ink2'
+    );
+    statusEl.classList.remove('hidden');
+  }
+
+  async function fetchUrl() {
+    const url = input.value.trim();
+    if (!url) {
+      input.focus();
+      return;
+    }
+    if (!url.startsWith('http')) {
+      showStatus('URL must start with http or https.', 'err');
+      return;
+    }
+
+    btn.disabled = true;
+    label.textContent = 'Fetching...';
+    spinner.classList.remove('hidden');
+    showStatus('Reaching the page and parsing it. Up to 15 seconds...', 'info');
+
+    try {
+      const res = await fetch('/jobs/from-url', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ url }),
+      });
+
+      const data = await res.json().catch(() => ({ error: 'invalid_response' }));
+
+      if (!res.ok || !data.ok) {
+        const errMsg = data.message || data.error || ('HTTP ' + res.status);
+        showStatus('Could not capture: ' + errMsg, 'err');
+        return;
+      }
+
+      const title = data.title || 'Untitled';
+      const company = data.company || 'unknown company';
+
+      if (data.deduped) {
+        showStatus(
+          'Already in your tracker: Job #' + data.job_id + ' (' + title + ' at ' + company + ').',
+          'warn'
+        );
+      } else {
+        showStatus(
+          'Captured! Job #' + data.job_id + ': ' + title + ' at ' + company + '. Refreshing...',
+          'ok'
+        );
+        // Reload so the new lead shows up in the pipeline
+        setTimeout(function() { window.location.reload(); }, 1200);
+      }
+      input.value = '';
+    } catch (e) {
+      showStatus('Error: ' + (e.message || e), 'err');
+    } finally {
+      btn.disabled = false;
+      label.textContent = 'Fetch';
+      spinner.classList.add('hidden');
+    }
+  }
+
+  btn.addEventListener('click', fetchUrl);
+  input.addEventListener('keydown', function(e) {
+    if (e.key === 'Enter') fetchUrl();
+  });
+})();
+</script>
+
 {% endblock %}

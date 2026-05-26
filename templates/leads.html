@@ -95,57 +95,165 @@
   {% else %}
   <div id="leads-list" class="space-y-2">
     {% for lead in leads %}
-    <div class="lead-card flex flex-col sm:flex-row sm:items-center gap-3 p-3 rounded-lg bg-raised border border-line hover:border-line2 transition group"
+    <div class="lead-card rounded-lg bg-raised border border-line hover:border-line2 transition overflow-hidden"
          data-lead-id="{{ lead.id }}"
          data-title="{{ lead.title or '' }}"
          data-company="{{ lead.company or '' }}">
-      <a href="{{ lead.link or '#' }}" {% if lead.link %}target="_blank" rel="noopener"{% endif %}
-         class="flex items-center gap-3 flex-1 min-w-0">
+
+      {# ─── Compact header — always visible, click to expand JD details ─── #}
+      <div class="lead-head flex flex-col sm:flex-row sm:items-center gap-3 p-3 cursor-pointer select-none"
+           role="button" tabindex="0" aria-expanded="false">
         <div class="w-10 h-10 rounded-md bg-sunken flex items-center justify-center text-ink2 text-[13px] font-mono font-semibold flex-shrink-0">
           {{ lead.ini or '?' }}
         </div>
         <div class="flex-1 min-w-0">
-          <div class="text-ink text-[14px] font-medium truncate group-hover:text-accent-400 transition">
-            {{ lead.title }}{% if lead.link %} <span class="text-ink3 text-[11px] font-mono ml-1">↗ LinkedIn</span>{% endif %}
+          <div class="text-ink text-[14px] font-medium truncate">
+            {{ lead.title }}
           </div>
           <div class="text-ink2 text-[12.5px] truncate">
             {{ lead.company }}{% if lead.location %} · {{ lead.location }}{% endif %}
           </div>
-          <div class="text-ink3 text-[11px] font-mono mt-0.5">
-            added {{ lead.added_rel }} · #{{ lead.id }}
+          <div class="text-ink3 text-[11px] font-mono mt-0.5 flex items-center gap-2 flex-wrap">
+            <span>added {{ lead.added_rel }}</span>
+            <span>·</span>
+            <span>#{{ lead.id }}</span>
+            {% if lead.has_jd %}<span class="text-applied">· ✓ JD fetched</span>{% else %}<span class="text-replied">· JD not yet fetched</span>{% endif %}
           </div>
         </div>
-      </a>
-      <div class="flex flex-wrap gap-1.5 sm:flex-shrink-0">
-        {% if show_dismissed %}
-        <form method="POST" action="/leads/{{ lead.id }}/restore" class="inline lead-action" data-action="restore">
-          <button type="submit" class="h-8 px-3 rounded-md border border-line bg-sunken hover:border-line2 text-ink2 hover:text-ink text-[12.5px] transition">
-            Restore
-          </button>
-        </form>
-        {% else %}
-        {# Per-lead resume hint — tells the user WHICH file to grab from
-           Downloads. Click opens the resume page if they need to re-download
-           (one-time per family). The filename is stable per family so
-           downloading the same family twice overwrites instead of duplicating. #}
-        <a href="{{ lead.resume_url }}" target="_blank" rel="noopener"
-           title="Use {{ lead.resume_filename }} from your Downloads folder. Click to view / re-download if you don't have it yet."
-           class="h-8 px-2.5 sm:px-3 rounded-md border border-line bg-sunken hover:border-accent-500/50 hover:text-accent-400 text-ink2 text-[11.5px] sm:text-[12px] transition inline-flex items-center gap-1.5 font-mono max-w-full truncate">
-          📄 <span class="text-ink hidden md:inline truncate">{{ lead.resume_filename }}</span><span class="text-ink md:hidden truncate">{{ lead.resume_label }}</span> <span class="text-ink3">↗</span>
-        </a>
-        <form method="POST" action="/leads/{{ lead.id }}/applied" class="inline lead-action" data-action="applied"
-              title="Mark as Applied — moves directly to Pipeline · Applied with today's date">
-          <button type="submit" class="h-8 px-3 rounded-md border border-applied/40 bg-applied/10 hover:bg-applied/20 text-applied text-[12.5px] font-medium transition">
-            ✓ Applied
-          </button>
-        </form>
-        <form method="POST" action="/leads/{{ lead.id }}/dismiss" class="inline lead-action" data-action="dismiss"
-              title="Not interested or job closed — move to trash">
-          <button type="submit" class="h-8 px-3 rounded-md border border-rejected/40 bg-rejected/10 hover:bg-rejected/20 text-rejected text-[12.5px] font-medium transition">
-            ✕ Dismiss
-          </button>
-        </form>
-        {% endif %}
+        <div class="flex items-center gap-2 flex-shrink-0">
+          <svg class="lead-chev w-4 h-4 text-ink3 transition-transform" viewBox="0 0 16 16" fill="none" stroke="currentColor" stroke-width="2">
+            <path d="M4 6l4 4 4-4"/>
+          </svg>
+        </div>
+      </div>
+
+      {# ─── Expanded panel — JD details + actions. Hidden by default. ─── #}
+      <div class="lead-body hidden border-t border-line">
+        <div class="p-4 space-y-3">
+
+          {# Meta row: experience, level, source link #}
+          <div class="flex flex-wrap items-center gap-2 text-[12px]">
+            {% if lead.level %}
+            <span class="px-2 py-0.5 rounded bg-sunken border border-line text-ink2 font-mono uppercase tracking-wider text-[10.5px]">
+              {{ lead.level }}
+            </span>
+            {% endif %}
+            {% if lead.yoe_required %}
+            <span class="px-2 py-0.5 rounded bg-sunken border border-line text-ink2 text-[11px]">
+              {{ lead.yoe_required }} experience
+            </span>
+            {% endif %}
+            {% if lead.link %}
+            <a href="{{ lead.link }}" target="_blank" rel="noopener"
+               class="ml-auto text-accent-400 hover:text-accent-300 text-[12px] underline">
+              View original posting ↗
+            </a>
+            {% endif %}
+          </div>
+
+          {# Must-have / nice-to-have skills #}
+          {% if lead.must_have_list or lead.nice_to_have_list %}
+          <div class="space-y-1.5">
+            {% if lead.must_have_list %}
+            <div class="text-[11px] font-mono uppercase tracking-[0.16em] text-ink3">Must-have skills</div>
+            <div class="flex flex-wrap gap-1.5">
+              {% for skill in lead.must_have_list %}
+              <span class="px-2 py-0.5 rounded bg-accent-500/10 border border-accent-500/30 text-accent-400 text-[11.5px]">{{ skill }}</span>
+              {% endfor %}
+            </div>
+            {% endif %}
+            {% if lead.nice_to_have_list %}
+            <div class="text-[11px] font-mono uppercase tracking-[0.16em] text-ink3 mt-2">Nice to have</div>
+            <div class="flex flex-wrap gap-1.5">
+              {% for skill in lead.nice_to_have_list %}
+              <span class="px-2 py-0.5 rounded bg-sunken border border-line text-ink2 text-[11.5px]">{{ skill }}</span>
+              {% endfor %}
+            </div>
+            {% endif %}
+          </div>
+          {% endif %}
+
+          {# AI summary (if Gemini extracted one) #}
+          {% if lead.jd_summary_text %}
+          <div>
+            <div class="text-[11px] font-mono uppercase tracking-[0.16em] text-ink3 mb-1.5">AI summary</div>
+            <div class="text-ink2 text-[13px] leading-relaxed bg-accent-500/5 border border-accent-500/20 rounded-md p-3">{{ lead.jd_summary_text }}</div>
+          </div>
+          {% endif %}
+
+          {# Full JD — collapsible. Default state shows first ~6 lines, click
+             "Show full JD" to expand the scrollable box. #}
+          {% if lead.jd_full %}
+          <div>
+            <div class="flex items-center justify-between mb-1.5">
+              <div class="text-[11px] font-mono uppercase tracking-[0.16em] text-ink3">
+                Job description
+                <span class="text-ink3/70 normal-case font-sans ml-1">· {{ lead.jd_char_count }} chars</span>
+              </div>
+              <button type="button"
+                      class="jd-toggle text-[12px] text-accent-400 hover:text-accent-300 font-medium"
+                      data-state="collapsed">
+                Show full JD ↓
+              </button>
+            </div>
+            <div class="jd-text text-ink2 text-[13px] leading-relaxed bg-sunken/60 border border-line rounded-md p-3 max-h-32 overflow-y-auto whitespace-pre-wrap transition-[max-height] duration-200">{{ lead.jd_full }}</div>
+          </div>
+          {% elif not lead.jd_summary_text %}
+          <div class="text-ink3 text-[12px] italic">
+            No JD captured yet. Open the original posting → after the next sync the JD will be fetched and shown here.
+          </div>
+          {% endif %}
+
+          {# Resume hint #}
+          <div class="flex items-center gap-2 p-2.5 rounded-md bg-accent-500/5 border border-accent-500/20">
+            <div class="text-[16px]">📄</div>
+            <div class="flex-1 text-[12px] text-ink2">
+              Tailored resume for this role family:
+              <a href="{{ lead.resume_url }}" target="_blank" rel="noopener"
+                 class="text-accent-400 hover:text-accent-300 font-mono ml-0.5">
+                {{ lead.resume_filename }} ↗
+              </a>
+            </div>
+          </div>
+
+          {# Actions #}
+          {% if show_dismissed %}
+          <div class="flex justify-end">
+            <form method="POST" action="/leads/{{ lead.id }}/restore" class="inline lead-action" data-action="restore">
+              <button type="submit" class="h-9 px-4 rounded-md border border-line bg-sunken hover:border-line2 text-ink2 hover:text-ink text-[13px] transition">
+                Restore
+              </button>
+            </form>
+          </div>
+          {% else %}
+          <div class="flex flex-col sm:flex-row gap-2 pt-1 border-t border-line">
+            <div class="pt-3 flex-1 text-[12px] text-ink3">
+              Apply on the original site, then come back and confirm.
+            </div>
+            <div class="flex flex-wrap gap-2 pt-3">
+              {% if lead.link %}
+              <a href="{{ lead.link }}" target="_blank" rel="noopener"
+                 class="lead-open-link h-9 px-4 rounded-md border border-line bg-sunken hover:border-accent-500/50 hover:text-accent-400 text-ink2 text-[13px] inline-flex items-center gap-1.5 transition">
+                🔗 Open & apply on LinkedIn
+              </a>
+              {% endif %}
+              <form method="POST" action="/leads/{{ lead.id }}/applied" class="inline lead-action" data-action="applied"
+                    title="Confirm you applied — moves to Applied with today's date">
+                <button type="submit" class="h-9 px-4 rounded-md border border-applied/50 bg-applied/15 hover:bg-applied/25 text-applied text-[13px] font-medium transition">
+                  ✓ I Applied
+                </button>
+              </form>
+              <form method="POST" action="/leads/{{ lead.id }}/dismiss" class="inline lead-action" data-action="dismiss"
+                    title="Not interested — hide this lead">
+                <button type="submit" class="h-9 px-4 rounded-md border border-rejected/40 bg-rejected/10 hover:bg-rejected/20 text-rejected text-[13px] font-medium transition">
+                  ✕ Remove
+                </button>
+              </form>
+            </div>
+          </div>
+          {% endif %}
+
+        </div>
       </div>
     </div>
     {% endfor %}
@@ -204,6 +312,59 @@
       toast._timer = setTimeout(() => toast.classList.add('hidden'), 6000);
     }
 
+    // Expand/collapse on header click. Cards start collapsed; first card on
+    // the page opens automatically so the user lands and instantly sees what
+    // a triage card looks like (no hunting for the chevron).
+    document.querySelectorAll('.lead-head').forEach((head, idx) => {
+      const card = head.closest('.lead-card');
+      const body = card.querySelector('.lead-body');
+      const chev = head.querySelector('.lead-chev');
+      const toggle = () => {
+        const open = !body.classList.contains('hidden');
+        if (open) {
+          body.classList.add('hidden');
+          chev.style.transform = 'rotate(0deg)';
+          head.setAttribute('aria-expanded', 'false');
+        } else {
+          body.classList.remove('hidden');
+          chev.style.transform = 'rotate(180deg)';
+          head.setAttribute('aria-expanded', 'true');
+        }
+      };
+      head.addEventListener('click', toggle);
+      head.addEventListener('keydown', (e) => {
+        if (e.key === 'Enter' || e.key === ' ') {
+          e.preventDefault();
+          toggle();
+        }
+      });
+      if (idx === 0) toggle();  // auto-open the first card
+    });
+
+    // JD show-more toggle — collapsed default ~128px, expanded ~560px with
+    // internal scroll. Inline maxHeight avoids depending on Tailwind JIT for
+    // arbitrary values, which the CDN build sometimes doesn't compile.
+    document.querySelectorAll('.jd-toggle').forEach(btn => {
+      btn.addEventListener('click', (e) => {
+        e.stopPropagation();  // don't collapse the parent card
+        const wrapper = btn.closest('div').parentElement;
+        const txt = wrapper.querySelector('.jd-text');
+        if (!txt) return;
+        const collapsed = btn.dataset.state === 'collapsed';
+        if (collapsed) {
+          txt.classList.remove('max-h-32');
+          txt.style.maxHeight = '560px';
+          btn.textContent = 'Collapse ↑';
+          btn.dataset.state = 'expanded';
+        } else {
+          txt.style.maxHeight = '';
+          txt.classList.add('max-h-32');
+          btn.textContent = 'Show full JD ↓';
+          btn.dataset.state = 'collapsed';
+        }
+      });
+    });
+
     document.querySelectorAll('form.lead-action').forEach(form => {
       form.addEventListener('submit', async (e) => {
         const action = form.dataset.action;
@@ -242,10 +403,10 @@
             const heading = title + (company ? ' @ ' + company : '');
             if (action === 'applied') {
               showToast('ok', '✓ Marked as Applied',
-                heading + ' — moved to Pipeline · Applied with today\'s date.');
+                heading + ' — see it on your Pipeline under Applied.');
             } else if (action === 'dismiss') {
-              showToast('trash', '🗑 Dismissed',
-                heading + ' — moved to trash. Won\'t re-import.',
+              showToast('trash', '🗑 Removed',
+                heading + ' — won\'t re-import.',
                 '/leads/' + leadId + '/restore');
             } else if (action === 'restore') {
               showToast('ok', '↩ Restored',
@@ -267,10 +428,10 @@
   </script>
 
   <div class="mt-6 p-3 rounded-lg bg-raised border border-line text-[12px] text-ink3 font-mono">
-    <strong class="text-ink2">Click the card title</strong> → opens the LinkedIn job in a new tab so you can read the full JD and apply.
-    <br><strong class="text-ink2">📄 Resume hint</strong> → the filename to use from your Downloads folder for this LinkedIn application. Filename is stable per role family — download each ONCE from <a href="/resumes" class="underline hover:text-accent-400">Resume Library</a> and reuse for every matching lead.
-    <br><strong class="text-applied">✓ Applied</strong> → moves the lead directly to Pipeline · Applied with today's date.
-    <br><strong class="text-rejected">✕ Dismiss</strong> → not interested or job closed. Won't re-import if LinkedIn sends the same URL again (dedup by URL).
+    <strong class="text-ink2">Click a card</strong> → expand to read the JD, required skills, and experience level in-app.
+    <br><strong class="text-ink2">🔗 Open & apply</strong> → opens the job posting in a new tab. Apply on LinkedIn, then click ✓ I Applied to record it.
+    <br><strong class="text-applied">✓ I Applied</strong> → confirms you applied. Job moves to Pipeline · Applied with today's date.
+    <br><strong class="text-rejected">✕ Remove</strong> → not interested or job closed. Won't re-import.
   </div>
 
 </div>

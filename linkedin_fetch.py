@@ -18,11 +18,24 @@ USER_AGENT = (
 
 
 def _to_guest_url(link: str) -> str:
-    """Convert any LinkedIn job URL to the guest-detail endpoint."""
+    """Convert any LinkedIn job URL to the guest-detail endpoint.
+
+    Handles four URL shapes LinkedIn uses:
+      1. linkedin.com/jobs/view/12345 (canonical job detail)
+      2. linkedin.com/comm/jobs/view/12345 (email-tracking variant)
+      3. linkedin.com/jobs/search-results/?currentJobId=12345 (search list)
+      4. linkedin.com/jobs/collections/.../?currentJobId=12345 (saved/etc)
+    All four contain the same job ID, just at different positions.
+    """
+    # Patterns 1 + 2: /jobs/view/{id} or /comm/jobs/view/{id}
     m = re.search(r"linkedin\.com/(?:comm/)?jobs/view/(\d+)", link)
-    if not m:
-        return link
-    return f"https://www.linkedin.com/jobs-guest/jobs/api/jobPosting/{m.group(1)}"
+    if m:
+        return f"https://www.linkedin.com/jobs-guest/jobs/api/jobPosting/{m.group(1)}"
+    # Patterns 3 + 4: ?currentJobId={id} (search-results, collections, etc.)
+    m = re.search(r"[?&]currentJobId=(\d+)", link)
+    if m:
+        return f"https://www.linkedin.com/jobs-guest/jobs/api/jobPosting/{m.group(1)}"
+    return link
 
 
 def fetch_job_details(link: str, timeout: int = 15) -> Optional[Dict[str, str]]:

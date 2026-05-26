@@ -16,6 +16,7 @@ from fastapi import Body, Depends, FastAPI, HTTPException, Request, status
 from fastapi.responses import HTMLResponse, JSONResponse, RedirectResponse
 from fastapi.security import HTTPBasic, HTTPBasicCredentials
 from fastapi.templating import Jinja2Templates
+from starlette.middleware.sessions import SessionMiddleware
 
 import gmail_integration
 import llm_helpers
@@ -46,17 +47,39 @@ TEMPLATES = Jinja2Templates(directory=str(BASE_DIR / "templates"))
 security = HTTPBasic(auto_error=False)
 
 
-PUBLIC_PATHS = {"/healthz"}  # bypass auth — Render's probe doesn't send credentials
+PUBLIC_PATHS = {
+    "/healthz",                  # Render liveness probe
+    "/login",                    # public sign-in screen
+    "/extension/capture",        # has its own X-Extension-Token auth
+    "/auth/gmail/start",         # OAuth handshake start (user not signed in yet)
+    "/auth/gmail/callback",      # OAuth handshake return (user authenticating)
+}
 
 
 def require_auth(
     request: Request,
     credentials: Optional[HTTPBasicCredentials] = Depends(security),
 ):
+    """Auth gate. Checks in this order:
+      1. Public paths (healthz, login, OAuth start/callback, extension capture)
+      2. Session cookie set by Google OAuth callback — primary auth in v2
+      3. HTTP Basic Auth fallback — admin/legacy only
+    If none match, raise 401 (browsers will show Basic Auth dialog) — or
+    we could redirect to /login. For now keep 401 to avoid breaking API calls.
+    """
     if request.url.path in PUBLIC_PATHS:
-        return  # health check probe — let it through unauthenticated
+        return
+
+    # 1. Session-cookie auth (the new path: user signed in via Google OAuth)
+    user_id = request.session.get("user_id")
+    if user_id:
+        return  # session valid; allow through
+
+    # 2. Local dev escape hatch: no admin creds configured
     if not ADMIN_USERNAME or not ADMIN_PASSWORD:
-        return  # local dev: no auth configured, allow all
+        return
+
+    # 3. HTTP Basic Auth fallback (legacy / admin debugging)
     if credentials is None:
         raise HTTPException(
             status_code=status.HTTP_401_UNAUTHORIZED,
@@ -80,11 +103,530 @@ app = FastAPI(
     dependencies=[Depends(require_auth)],
 )
 
+# Session middleware — must be added BEFORE any route is hit so request.session
+# is available in require_auth. Uses itsdangerous under the hood. SESSION_SECRET
+# env var should be a long random string in production; for local dev we
+# generate a stable one from the ADMIN_PASSWORD if not set.
+SESSION_SECRET = (
+    os.environ.get("SESSION_SECRET")
+    or (ADMIN_PASSWORD or "local-dev-session-secret-change-me") + "::session-key"
+)
+app.add_middleware(
+    SessionMiddleware,
+    secret_key=SESSION_SECRET,
+    session_cookie="jt_session",
+    max_age=60 * 60 * 24 * 30,   # 30 days
+    # Force HTTPS-only cookie in production (Render sets $PORT) so the
+    # session ID can never leak over plain HTTP. In local dev we leave it
+    # off so http://localhost:8000 sessions actually work.
+    https_only=bool(PORT_ENV),
+    same_site="lax",
+)
+
+
+def current_user_id(request: Request) -> int:
+    """Return the logged-in user's id for query-scoping.
+
+    Defaults to 1 when a request has no session — this keeps two paths working:
+      (a) HTTP Basic Auth fallback (legacy / admin), where there is no OAuth
+          session but all existing data belongs to user 1.
+      (b) Local dev with no admin creds configured (require_auth lets through).
+    When the project goes truly multi-tenant (constraint rework on
+    oauth_tokens) the default can be tightened to raise instead of returning 1.
+    """
+    return request.session.get("user_id") or 1
+
 
 @app.get("/healthz")
 def healthz():
     """Public liveness probe for Render. Auth-bypassed via PUBLIC_PATHS."""
     return {"ok": True}
+
+
+@app.get("/login", response_class=HTMLResponse)
+def login_page(request: Request):
+    """Public sign-in screen. Auth-bypassed via PUBLIC_PATHS so users can
+    actually reach it. Renders the Welcome card with the Continue-with-Google
+    button. Once Google OAuth wiring lands, the button will route to
+    /auth/google/start which exchanges the code for tokens, creates a user
+    row, sets a session cookie, and redirects to the homepage."""
+    return TEMPLATES.TemplateResponse("login.html", {"request": request})
+
+
+def _find_job_posting_in_ld(node):
+    """Recurse into JSON-LD data (which can be nested in @graph arrays)
+    to find a JobPosting schema entry. Returns the JobPosting dict or None."""
+    if isinstance(node, dict):
+        t = node.get("@type")
+        if t == "JobPosting" or (isinstance(t, list) and "JobPosting" in t):
+            return node
+        for v in node.values():
+            found = _find_job_posting_in_ld(v)
+            if found:
+                return found
+    elif isinstance(node, list):
+        for item in node:
+            found = _find_job_posting_in_ld(item)
+            if found:
+                return found
+    return None
+
+
+@app.post("/jobs/from-url")
+def jobs_from_url(request: Request, payload: dict = Body(...)):
+    """Agent endpoint: paste any URL, the backend fetches the page,
+    parses structured data (JSON-LD JobPosting if present), falls back to
+    raw text + Gemini extraction. Creates a lead with all fields populated.
+
+    No Chrome extension needed. User pastes URL, gets a lead.
+
+    Flow:
+      1. Dedup by URL (skip if already in tracker)
+      2. If LinkedIn URL: use linkedin_fetch.py (public guest endpoint)
+      3. Otherwise: HTTP GET with browser User-Agent, parse JSON-LD
+      4. If structured data still thin, use Gemini to extract from raw text
+      5. Insert into jobs with status=lead, source=agent
+    """
+    import urllib.request
+    import urllib.error
+    import re
+    import json as _json
+
+    url = (payload.get("url") or "").strip()
+    if not url:
+        return JSONResponse(status_code=400, content={"error": "missing_url"})
+    if not (url.startswith("http://") or url.startswith("https://")):
+        return JSONResponse(status_code=400, content={"error": "invalid_url",
+                            "message": "URL must start with http or https."})
+
+    tracker.init_db()
+    uid = current_user_id(request)
+
+    # Dedup: same URL already a job for THIS user? Return existing.
+    # Scoped by user_id so two users can each save the same URL independently.
+    with get_connection() as conn:
+        existing = conn.execute(
+            "SELECT id, title, company, status FROM jobs WHERE link = ? AND user_id = ? LIMIT 1",
+            (url, uid),
+        ).fetchone()
+        if existing:
+            return {
+                "ok": True,
+                "job_id": existing["id"],
+                "title": existing["title"],
+                "company": existing["company"],
+                "status": existing["status"],
+                "deduped": True,
+                "message": "Already in your tracker. Returning existing job.",
+            }
+
+    # Extraction state
+    extracted_title = ""
+    extracted_company = ""
+    extracted_location = ""
+    extracted_jd = ""
+    source_used = []
+
+    # ── LinkedIn-specific path: use the guest endpoint we already have ──
+    is_linkedin_job = (
+        "linkedin.com/jobs/view/" in url
+        or "linkedin.com/comm/jobs/view/" in url
+        or ("linkedin.com/jobs" in url and "currentJobId=" in url)
+    )
+    if is_linkedin_job:
+        try:
+            import linkedin_fetch
+            ln = linkedin_fetch.fetch_job_details(url)
+            if ln:
+                extracted_title = (ln.get("title") or "").strip()
+                extracted_company = (ln.get("company") or "").strip()
+                extracted_location = (ln.get("location") or "").strip()
+                extracted_jd = (ln.get("jd_text") or "")[:80000]
+                source_used.append("linkedin_guest")
+        except Exception:
+            pass
+
+    # ── Generic path: HTTP GET + JSON-LD parsing ──
+    if not extracted_jd or not extracted_title:
+        try:
+            req = urllib.request.Request(url, headers={
+                "User-Agent": "Mozilla/5.0 (Macintosh; Intel Mac OS X 13_5) "
+                              "AppleWebKit/537.36 (KHTML, like Gecko) "
+                              "Chrome/120.0.0.0 Safari/537.36",
+                "Accept": "text/html,application/xhtml+xml,application/xml;q=0.9",
+                "Accept-Language": "en-US,en;q=0.9",
+            })
+            with urllib.request.urlopen(req, timeout=15) as resp:
+                if resp.status != 200:
+                    return JSONResponse(
+                        status_code=502,
+                        content={"error": "fetch_failed",
+                                 "message": f"Target site returned HTTP {resp.status}"},
+                    )
+                html = resp.read().decode("utf-8", errors="replace")
+
+            # Parse all JSON-LD <script> blocks and look for a JobPosting
+            ld_pattern = r'<script[^>]*type=["\']application/ld\+json["\'][^>]*>(.*?)</script>'
+            for raw_block in re.findall(ld_pattern, html, re.DOTALL | re.IGNORECASE):
+                try:
+                    data = _json.loads(raw_block.strip())
+                    jp = _find_job_posting_in_ld(data)
+                    if jp:
+                        if not extracted_title:
+                            extracted_title = (jp.get("title") or "").strip()
+                        if not extracted_company:
+                            org = jp.get("hiringOrganization") or {}
+                            if isinstance(org, dict):
+                                extracted_company = (org.get("name") or "").strip()
+                            elif isinstance(org, str):
+                                extracted_company = org.strip()
+                        if not extracted_location:
+                            loc = jp.get("jobLocation")
+                            loc_to_parse = None
+                            if isinstance(loc, dict):
+                                loc_to_parse = loc
+                            elif isinstance(loc, list) and loc:
+                                first = loc[0]
+                                if isinstance(first, dict):
+                                    loc_to_parse = first
+                            if loc_to_parse:
+                                addr = loc_to_parse.get("address") or {}
+                                if isinstance(addr, dict):
+                                    parts = [addr.get("addressLocality"),
+                                             addr.get("addressRegion"),
+                                             addr.get("addressCountry")]
+                                    extracted_location = ", ".join(p for p in parts if p)
+                        if not extracted_jd:
+                            desc = jp.get("description") or ""
+                            if desc:
+                                # Strip HTML from the description string
+                                desc_clean = re.sub(r"<[^>]+>", " ", desc)
+                                desc_clean = re.sub(r"\s+", " ", desc_clean).strip()
+                                extracted_jd = desc_clean[:80000]
+                        source_used.append("html_jsonld")
+                        break
+                except (ValueError, TypeError):
+                    continue
+
+            # If still no JD text, fall back to stripping all HTML and using body text
+            if not extracted_jd:
+                html_text = re.sub(r"<script[^>]*>.*?</script>", " ",
+                                   html, flags=re.DOTALL | re.IGNORECASE)
+                html_text = re.sub(r"<style[^>]*>.*?</style>", " ",
+                                   html_text, flags=re.DOTALL | re.IGNORECASE)
+                html_text = re.sub(r"<[^>]+>", " ", html_text)
+                html_text = re.sub(r"\s+", " ", html_text).strip()
+                extracted_jd = html_text[:80000]
+                source_used.append("html_text")
+
+            # Title fallback: <title> tag from HTML
+            if not extracted_title:
+                title_match = re.search(r"<title>([^<]+)</title>", html, re.IGNORECASE)
+                if title_match:
+                    extracted_title = title_match.group(1).strip()
+
+            # Company fallback: og:site_name meta tag
+            if not extracted_company:
+                site_match = re.search(
+                    r'<meta\s+property=["\']og:site_name["\']\s+content=["\']([^"\']+)["\']',
+                    html, re.IGNORECASE,
+                )
+                if site_match:
+                    extracted_company = site_match.group(1).strip()
+
+        except urllib.error.HTTPError as e:
+            return JSONResponse(
+                status_code=502,
+                content={"error": "fetch_failed",
+                         "message": f"Target site returned HTTP {e.code}"},
+            )
+        except urllib.error.URLError as e:
+            return JSONResponse(
+                status_code=502,
+                content={"error": "fetch_failed",
+                         "message": f"Could not reach target site: {str(e.reason)[:120]}"},
+            )
+        except Exception as e:
+            return JSONResponse(
+                status_code=500,
+                content={"error": "fetch_failed", "message": str(e)[:200]},
+            )
+
+    # ── Gemini fallback for structured extraction if title/company still empty ──
+    if (not extracted_title or not extracted_company) and extracted_jd and llm_helpers.is_available():
+        try:
+            llm_data = llm_helpers.gemini_json(
+                JD_EXTRACT_PROMPT,
+                f"JD text:\n\n{extracted_jd[:30000]}",
+                schema=ExtractedJob,
+            )
+            if not extracted_title:
+                extracted_title = llm_data.title or ""
+            if not extracted_company:
+                extracted_company = llm_data.company or ""
+            if not extracted_location:
+                extracted_location = llm_data.location or ""
+            source_used.append("gemini")
+        except Exception:
+            pass
+
+    # Defaults for required fields
+    final_title = (extracted_title or "Untitled job").strip()[:200]
+    final_company = (extracted_company or "").strip()[:200]
+    final_location = (extracted_location or "").strip()[:200]
+    source_label = "+".join(source_used) if source_used else "unknown"
+
+    now = datetime.now().isoformat(timespec="seconds")
+    with get_connection() as conn:
+        new_id = insert_returning_id(
+            conn,
+            "INSERT INTO jobs (title, company, link, jd_raw_text, location, status, "
+            "source, added_at, last_activity_at, user_id) "
+            "VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?)",
+            (final_title, final_company, url, extracted_jd[:80000], final_location,
+             "lead", f"agent:{source_label}", now, now, uid),
+        )
+        conn.execute(
+            "INSERT INTO events (job_id, event_type, body, occurred_at, recorded_at, user_id) "
+            "VALUES (?, ?, ?, ?, ?, ?)",
+            (new_id, "note",
+             f"Captured via /jobs/from-url. Sources: {source_label}. "
+             f"JD length: {len(extracted_jd)} chars.",
+             now, now),
+        )
+
+    return {
+        "ok": True,
+        "job_id": new_id,
+        "title": final_title,
+        "company": final_company,
+        "location": final_location,
+        "source": source_label,
+        "jd_chars": len(extracted_jd),
+        "deduped": False,
+    }
+
+
+@app.post("/extension/capture")
+def extension_capture(request: Request, payload: dict = Body(...)):
+    """Chrome extension capture endpoint.
+
+    Captures any job posting the user is browsing. Receives URL + title +
+    page text from the extension popup, stores as a new lead in the jobs
+    table with status='lead' and the raw page text in jd_raw_text. The user
+    can then open the job detail page and run resume tailoring or pursue
+    actions.
+
+    Auth: validates X-Extension-Token header against EXTENSION_API_TOKEN env
+    var. This is a single shared token for now — when per-user auth lands,
+    we'll move to per-user tokens that map to user_id.
+    """
+    # Auth: single shared token via header
+    token = request.headers.get("X-Extension-Token", "")
+    expected = os.environ.get("EXTENSION_API_TOKEN", "")
+    if not expected:
+        return JSONResponse(
+            status_code=503,
+            content={"error": "extension_not_configured",
+                     "message": "EXTENSION_API_TOKEN env var is not set on the server."},
+        )
+    if token != expected:
+        return JSONResponse(
+            status_code=401,
+            content={"error": "invalid_token",
+                     "message": "X-Extension-Token header is missing or wrong."},
+        )
+
+    url = (payload.get("url") or "").strip()
+    title = (payload.get("title") or "").strip() or "Captured job"
+    text = (payload.get("text") or "").strip()  # innerText - clean formatting
+    text_all = (payload.get("text_all") or "").strip()  # textContent - includes hidden DOM
+    json_ld = payload.get("json_ld") or []  # structured JobPosting data, when site provides it
+    meta = payload.get("meta") or {}  # OpenGraph + meta tags
+
+    if not url:
+        return JSONResponse(status_code=400, content={"error": "missing_url"})
+    if not text and not text_all:
+        return JSONResponse(status_code=400, content={"error": "missing_text"})
+
+    # Pick the richest text we got. textContent (text_all) includes hidden DOM
+    # content like "Show more" JD blocks that LinkedIn collapses by default,
+    # so it's usually a richer signal than innerText. Prefer it when present.
+    if text_all and len(text_all) > len(text):
+        primary_text = text_all
+    else:
+        primary_text = text
+
+    # Look for a JobPosting in the JSON-LD blocks. schema.org JobPosting is
+    # the cleanest source: most major job sites (LinkedIn, Indeed, Wellfound,
+    # most company career pages on Greenhouse/Lever/Ashby) embed this.
+    extracted_title = title
+    extracted_company = ""
+    extracted_location = ""
+    extracted_jd = primary_text
+    structured_source = None
+
+    def _find_job_posting(node):
+        """Recurse into JSON-LD blocks (sometimes nested in @graph arrays)
+        to find a JobPosting schema entry."""
+        if isinstance(node, dict):
+            t = node.get("@type")
+            if t == "JobPosting" or (isinstance(t, list) and "JobPosting" in t):
+                return node
+            for v in node.values():
+                found = _find_job_posting(v)
+                if found:
+                    return found
+        elif isinstance(node, list):
+            for item in node:
+                found = _find_job_posting(item)
+                if found:
+                    return found
+        return None
+
+    for block in json_ld:
+        jp = _find_job_posting(block)
+        if jp:
+            extracted_title = (jp.get("title") or extracted_title).strip()
+            hiring_org = jp.get("hiringOrganization") or {}
+            if isinstance(hiring_org, dict):
+                extracted_company = (hiring_org.get("name") or "").strip()
+            elif isinstance(hiring_org, str):
+                extracted_company = hiring_org.strip()
+            loc = jp.get("jobLocation")
+            if isinstance(loc, dict):
+                addr = loc.get("address") or {}
+                if isinstance(addr, dict):
+                    parts = [addr.get("addressLocality"), addr.get("addressRegion"),
+                             addr.get("addressCountry")]
+                    extracted_location = ", ".join(p for p in parts if p)
+            elif isinstance(loc, list) and loc:
+                first = loc[0]
+                if isinstance(first, dict):
+                    addr = first.get("address") or {}
+                    if isinstance(addr, dict):
+                        parts = [addr.get("addressLocality"), addr.get("addressRegion"),
+                                 addr.get("addressCountry")]
+                        extracted_location = ", ".join(p for p in parts if p)
+            desc = jp.get("description") or ""
+            if desc:
+                # JSON-LD description is often HTML; we keep it raw, can strip later
+                extracted_jd = desc[:80000]
+                structured_source = "json_ld"
+            break
+
+    # Cap the raw text we store
+    extracted_jd = (extracted_jd or "")[:80000]
+
+    # Fallback: if no JSON-LD company, try OpenGraph site_name as a hint
+    if not extracted_company:
+        extracted_company = (meta.get("og:site_name") or "").strip()
+
+    # LinkedIn-specific backend fallback: LinkedIn's signed-in /jobs/view/
+    # pages don't always expose clean JSON-LD or full JD text (the page is
+    # heavily React-rendered and lazy-loads). We already have a working
+    # public-guest-endpoint fetcher in linkedin_fetch.py — use it to
+    # supplement whatever the extension captured. The guest endpoint
+    # returns clean title, company, location, full JD.
+    # URL shapes LinkedIn uses for jobs:
+    #   /jobs/view/12345
+    #   /comm/jobs/view/12345
+    #   /jobs/search-results/?currentJobId=12345
+    #   /jobs/collections/.../?currentJobId=12345
+    is_linkedin_job = (
+        "linkedin.com/jobs/view/" in url
+        or "linkedin.com/comm/jobs/view/" in url
+        or ("linkedin.com/jobs" in url and "currentJobId=" in url)
+    )
+    if is_linkedin_job:
+        try:
+            import linkedin_fetch
+            guest = linkedin_fetch.fetch_job_details(url)
+            if guest:
+                # Use guest data to fill in gaps. Prefer extension extraction
+                # when extension data is richer (e.g. user is signed in and
+                # sees fields guest doesn't), otherwise use guest.
+                if not extracted_company and guest.get("company"):
+                    extracted_company = guest["company"]
+                if not extracted_location and guest.get("location"):
+                    extracted_location = guest["location"]
+                # If extension's JD looks too thin (< 500 chars), guest is
+                # almost certainly richer
+                if guest.get("jd_text") and len(guest["jd_text"]) > len(extracted_jd):
+                    extracted_jd = guest["jd_text"][:80000]
+                    structured_source = (structured_source or "") + "+linkedin_guest"
+                # Use guest title if extension's title is just "LinkedIn" or
+                # the generic page title
+                ext_title_low = extracted_title.lower()
+                if guest.get("title") and ("linkedin" in ext_title_low or len(extracted_title) < 10):
+                    extracted_title = guest["title"]
+        except Exception:
+            # Non-fatal: extension data alone is fine, just less rich
+            pass
+
+    tracker.init_db()
+    # Extension uses a single shared token, not a per-user session — so we
+    # tag captures to user_id=1 (Ajinkya, the only token holder today).
+    # When per-user extension tokens land, this becomes a token→user_id lookup.
+    uid = 1
+    now = datetime.now().isoformat(timespec="seconds")
+    with get_connection() as conn:
+        # Dedup: same URL already a job for this user? Return existing.
+        existing = conn.execute(
+            "SELECT id, title, company, status FROM jobs WHERE link = ? AND user_id = ? LIMIT 1",
+            (url, uid),
+        ).fetchone()
+        if existing:
+            return {
+                "ok": True,
+                "job_id": existing["id"],
+                "title": existing["title"],
+                "company": existing["company"],
+                "status": existing["status"],
+                "deduped": True,
+                "message": "Already captured. Returning existing job.",
+            }
+
+        # Try to infer location from text if JSON-LD didn't have it.
+        # Cheap heuristic: most JDs mention city + (Hybrid)/(Remote)/(On-site)
+        # in the top section.
+        location = extracted_location
+
+        new_id = insert_returning_id(
+            conn,
+            "INSERT INTO jobs (title, company, link, jd_raw_text, location, status, source, "
+            "notes, added_at, last_activity_at, user_id) "
+            "VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)",
+            (extracted_title, extracted_company, url, extracted_jd, location,
+             "lead", "extension",
+             f"Captured via Chrome extension. Extraction source: "
+             f"{structured_source or 'page text'}. "
+             f"Length of JD captured: {len(extracted_jd)} chars.",
+             now, now, uid),
+        )
+        event_body = (
+            f"Captured from {url} via Chrome extension. "
+            f"{'Structured data (JSON-LD JobPosting) found.' if structured_source else 'Used page text fallback.'} "
+            f"Title: {extracted_title}. "
+            f"Company: {extracted_company or 'unknown (will extract later)'}. "
+            f"Location: {location or 'unknown'}."
+        )
+        conn.execute(
+            "INSERT INTO events (job_id, event_type, body, occurred_at, recorded_at, user_id) "
+            "VALUES (?, ?, ?, ?, ?, ?)",
+            (new_id, "note", event_body, now, now, uid),
+        )
+
+    return {
+        "ok": True,
+        "job_id": new_id,
+        "title": extracted_title,
+        "company": extracted_company,
+        "location": location,
+        "deduped": False,
+        "structured_source": structured_source,
+        "message": f"Captured. Job #{new_id} added to your leads.",
+    }
 
 
 @app.get("/debug/gemini-probe")
@@ -400,6 +942,7 @@ def _build_chip(label, key, qs_param, active_keys, base_query, single_select=Fal
 def homepage(request: Request):
     tracker.init_db()
     today = datetime.now().date().isoformat()
+    uid = current_user_id(request)
 
     # Filter state from URL: ?status=applied,saved&flag=stale
     qp = request.query_params
@@ -407,15 +950,21 @@ def homepage(request: Request):
     active_flags = [f for f in (qp.get("flag", "").split(",")) if f]
 
     with get_connection() as conn:
-        jobs_rows = conn.execute("SELECT * FROM jobs ORDER BY id").fetchall()
-        contacts_rows = conn.execute("SELECT * FROM contacts ORDER BY job_id, id").fetchall()
+        jobs_rows = conn.execute(
+            "SELECT * FROM jobs WHERE user_id = ? ORDER BY id", (uid,)
+        ).fetchall()
+        contacts_rows = conn.execute(
+            "SELECT * FROM contacts WHERE user_id = ? ORDER BY job_id, id", (uid,)
+        ).fetchall()
         drafts_rows = conn.execute(
             """
             SELECT job_id, COUNT(*) AS n FROM events
-            WHERE event_type = 'note'
+            WHERE user_id = ?
+              AND event_type = 'note'
               AND (body LIKE 'SUGGESTED%' OR body LIKE 'OPTIONAL%')
             GROUP BY job_id
-            """
+            """,
+            (uid,),
         ).fetchall()
 
     contacts_by_job = {}
@@ -456,6 +1005,11 @@ def homepage(request: Request):
 
     backlog_count = status_counts.get("backlog", 0)
     total_active = sum(c for s, c in status_counts.items() if s != "backlog")
+
+    # Leads waiting in the inbox — surfaced as a top banner on the pipeline so
+    # the user lands after login and immediately sees "you have N to triage"
+    # rather than discovering the leads page on their own.
+    leads_waiting = sum(1 for j in jobs if j["status"] == "lead")
 
     # Count for the "Stale 3d+" chip — must be from the UNFILTERED set,
     # otherwise the count drops to 0 the moment you toggle on the filter.
@@ -512,12 +1066,12 @@ def homepage(request: Request):
     }
     if gmail_state["configured"]:
         with get_connection() as conn:
-            creds = gmail_integration.load_credentials(conn)
+            creds = gmail_integration.load_credentials(conn, user_id=uid)
             gmail_state["authorized"] = creds is not None
-            last_sync = gmail_integration.get_last_sync(conn)
+            last_sync = gmail_integration.get_last_sync(conn, user_id=uid)
             gmail_state["last_sync"] = last_sync
             gmail_state["last_sync_rel"] = _format_relative_time(last_sync)
-            gmail_state["last_sync_summary"] = gmail_integration.get_last_sync_summary(conn)
+            gmail_state["last_sync_summary"] = gmail_integration.get_last_sync_summary(conn, user_id=uid)
 
     return TEMPLATES.TemplateResponse(
         "index.html",
@@ -541,6 +1095,7 @@ def homepage(request: Request):
             "any_filter_active": any_filter_active,
             "filtered_total": len(filtered_jobs),
             "gmail": gmail_state,
+            "leads_waiting": leads_waiting,
         },
     )
 
@@ -548,19 +1103,23 @@ def homepage(request: Request):
 @app.get("/jobs/{job_id}", response_class=HTMLResponse)
 def job_detail(job_id: int, request: Request):
     tracker.init_db()
+    uid = current_user_id(request)
     with get_connection() as conn:
-        job = conn.execute("SELECT * FROM jobs WHERE id = ?", (job_id,)).fetchone()
+        job = conn.execute(
+            "SELECT * FROM jobs WHERE id = ? AND user_id = ?", (job_id, uid),
+        ).fetchone()
         if not job:
             return HTMLResponse(
                 f"<h1>Job #{job_id} not found</h1><a href='/'>back</a>",
                 status_code=404,
             )
         contacts = conn.execute(
-            "SELECT * FROM contacts WHERE job_id = ? ORDER BY id", (job_id,)
+            "SELECT * FROM contacts WHERE job_id = ? AND user_id = ? ORDER BY id",
+            (job_id, uid),
         ).fetchall()
         events = conn.execute(
-            "SELECT * FROM events WHERE job_id = ? ORDER BY occurred_at",
-            (job_id,),
+            "SELECT * FROM events WHERE job_id = ? AND user_id = ? ORDER BY occurred_at",
+            (job_id, uid),
         ).fetchall()
 
     contacts_dicts = _rows_to_dicts(contacts)
@@ -604,8 +1163,11 @@ def _slugify_for_filename(value: str) -> str:
 @app.get("/jobs/{job_id}/resume", response_class=HTMLResponse)
 def job_resume(job_id: int, request: Request):
     tracker.init_db()
+    uid = current_user_id(request)
     with get_connection() as conn:
-        job = conn.execute("SELECT * FROM jobs WHERE id = ?", (job_id,)).fetchone()
+        job = conn.execute(
+            "SELECT * FROM jobs WHERE id = ? AND user_id = ?", (job_id, uid),
+        ).fetchone()
         if not job:
             return HTMLResponse(
                 f"<h1>Job #{job_id} not found</h1><a href='/'>back</a>",
@@ -644,7 +1206,7 @@ def job_resume(job_id: int, request: Request):
 
 
 @app.post("/jobs/{job_id}/status")
-def update_job_status(job_id: int, payload: dict = Body(...)):
+def update_job_status(job_id: int, request: Request, payload: dict = Body(...)):
     """Change a job's status — used by drag-and-drop in the kanban view.
 
     Body: {"status": "applied"}.
@@ -660,11 +1222,12 @@ def update_job_status(job_id: int, payload: dict = Body(...)):
     new_status = new_status.strip()
 
     tracker.init_db()
+    uid = current_user_id(request)
     now = datetime.now().isoformat(timespec="seconds")
 
     with get_connection() as conn:
         job = conn.execute(
-            "SELECT id, status FROM jobs WHERE id = ?", (job_id,)
+            "SELECT id, status FROM jobs WHERE id = ? AND user_id = ?", (job_id, uid),
         ).fetchone()
         if not job:
             return JSONResponse(
@@ -682,18 +1245,18 @@ def update_job_status(job_id: int, payload: dict = Body(...)):
         if new_status == "applied":
             conn.execute(
                 "UPDATE jobs SET status = ?, last_activity_at = ?, "
-                "applied_at = COALESCE(applied_at, ?) WHERE id = ?",
-                (new_status, now, today, job_id),
+                "applied_at = COALESCE(applied_at, ?) WHERE id = ? AND user_id = ?",
+                (new_status, now, today, job_id, uid),
             )
         else:
             conn.execute(
-                "UPDATE jobs SET status = ?, last_activity_at = ? WHERE id = ?",
-                (new_status, now, job_id),
+                "UPDATE jobs SET status = ?, last_activity_at = ? WHERE id = ? AND user_id = ?",
+                (new_status, now, job_id, uid),
             )
         conn.execute(
-            "INSERT INTO events (job_id, event_type, body, occurred_at, recorded_at) "
-            "VALUES (?, ?, ?, ?, ?)",
-            (job_id, "status_change", f"{old_status} -> {new_status}", now, now),
+            "INSERT INTO events (job_id, event_type, body, occurred_at, recorded_at, user_id) "
+            "VALUES (?, ?, ?, ?, ?, ?)",
+            (job_id, "status_change", f"{old_status} -> {new_status}", now, now, uid),
         )
 
     return {
@@ -738,7 +1301,7 @@ def gmail_oauth_start():
 
 
 @app.get("/auth/gmail/callback")
-def gmail_oauth_callback(code: str = "", state: str = "", error: str = ""):
+def gmail_oauth_callback(request: Request, code: str = "", state: str = "", error: str = ""):
     """Step 2 of OAuth: Google redirects back with a code. We exchange + store.
 
     Phase 3 ship 2/3 will complete the token-storage path. Right now we just
@@ -759,12 +1322,75 @@ def gmail_oauth_callback(code: str = "", state: str = "", error: str = ""):
     try:
         with get_connection() as conn:
             creds = gmail_integration.exchange_code_for_token(conn, code, state)
-            gmail_integration.store_credentials(conn, creds)
-        return HTMLResponse(
-            "<h1>Gmail connected ✓</h1>"
-            "<p>Tokens stored. <a href='/'>back to dashboard</a></p>",
-            status_code=200,
-        )
+
+            # Fetch user identity from Google's userinfo endpoint. This is
+            # what makes "Sign in with Google" actually identify a user
+            # (separate from Gmail access). With the new openid+email+profile
+            # scopes, the access_token is authorized for userinfo.
+            userinfo = gmail_integration.fetch_userinfo(creds)
+            email = (userinfo.get("email") or "").strip().lower()
+            google_sub = (userinfo.get("sub") or "").strip()
+            name = (userinfo.get("name") or "").strip()
+            picture = (userinfo.get("picture") or "").strip()
+
+            if not email:
+                return JSONResponse(
+                    status_code=500,
+                    content={"error": "userinfo_failed",
+                             "message": "Could not read user identity from Google. Try again."},
+                )
+
+            # Upsert user row. We dedupe by email first (the most stable
+            # identifier from the user's perspective); google_sub is the
+            # cryptographically stable identifier per Google docs.
+            now = datetime.now().isoformat(timespec="seconds")
+            existing = conn.execute(
+                "SELECT id FROM users WHERE email = ? OR google_user_id = ?",
+                (email, google_sub),
+            ).fetchone()
+            if existing:
+                user_id = existing["id"]
+                conn.execute(
+                    "UPDATE users SET google_user_id = ?, name = ?, "
+                    "picture_url = ?, last_login_at = ? WHERE id = ?",
+                    (google_sub, name, picture, now, user_id),
+                )
+            else:
+                user_id = insert_returning_id(
+                    conn,
+                    "INSERT INTO users (email, google_user_id, name, "
+                    "picture_url, created_at, last_login_at) "
+                    "VALUES (?, ?, ?, ?, ?, ?)",
+                    (email, google_sub, name, picture, now, now),
+                )
+
+            # Store OAuth credentials tagged with the user_id so Gmail sync
+            # can load the right tokens per user.
+            gmail_integration.store_credentials(
+                conn, creds, user_email=email, user_id=user_id,
+            )
+
+        # Set the session cookie. From this point, the user is "logged in"
+        # and require_auth will allow every request through without the
+        # HTTP Basic Auth prompt.
+        request.session["user_id"] = user_id
+        request.session["email"] = email
+        request.session["name"] = name
+
+        # Best-effort: kick off an initial sync so the user lands on the
+        # leads inbox with their Gmail-derived jobs already populated.
+        # Swallow errors — the login itself succeeded, sync failures
+        # shouldn't bounce the user back to the OAuth screen.
+        try:
+            with get_connection() as conn:
+                gmail_integration.sync_to_tracker(conn, user_id=user_id)
+        except Exception as sync_exc:
+            print(f"[oauth_callback] initial sync failed (non-fatal): {sync_exc}")
+
+        # Send the user to the Leads inbox — that's the actionable view of
+        # "jobs you can apply to" derived from your Gmail. The Pipeline is
+        # the secondary view (everything you've already started pursuing).
+        return RedirectResponse(url="/leads", status_code=303)
     except Exception as exc:
         return JSONResponse(
             status_code=500,
@@ -773,23 +1399,17 @@ def gmail_oauth_callback(code: str = "", state: str = "", error: str = ""):
 
 
 @app.post("/gmail/sync")
-def gmail_sync_now():
-    """Manually trigger a Gmail → tracker sync of LinkedIn notification emails.
-
-    Steps (handled inside gmail_integration.sync_to_tracker):
-    1. Load Gmail credentials from oauth_tokens table
-    2. Read last_gmail_sync from sync_state (default: 7 days ago)
-    3. Gmail API messages.list with q='from:linkedin.com after:{ts}'
-    4. For each new message: parse subject, fuzzy-match person to contact,
-       INSERT event into events table, mark message processed
-    5. Update last_gmail_sync
+def gmail_sync_now(request: Request):
+    """Manually trigger a Gmail → tracker sync of LinkedIn notification emails
+    for the currently-signed-in user.
     """
     if not gmail_integration.is_configured():
         return _gmail_not_configured_response()
     try:
         tracker.init_db()
+        uid = current_user_id(request)
         with get_connection() as conn:
-            result = gmail_integration.sync_to_tracker(conn)
+            result = gmail_integration.sync_to_tracker(conn, user_id=uid)
         if not result.get("ok"):
             return JSONResponse(status_code=400, content=result)
         return result
@@ -801,17 +1421,18 @@ def gmail_sync_now():
 
 
 @app.get("/gmail/status")
-def gmail_status():
+def gmail_status(request: Request):
     """Reports Gmail integration state — used by the dashboard's Sync widget."""
     configured = gmail_integration.is_configured()
     authorized = False
     last_sync = None
     if configured:
         tracker.init_db()
+        uid = current_user_id(request)
         with get_connection() as conn:
-            creds = gmail_integration.load_credentials(conn)
+            creds = gmail_integration.load_credentials(conn, user_id=uid)
             authorized = creds is not None
-            last_sync = gmail_integration.get_last_sync(conn)
+            last_sync = gmail_integration.get_last_sync(conn, user_id=uid)
     return {
         "configured": configured,
         "authorized": authorized,
@@ -881,6 +1502,7 @@ def add_job_submit(
             "error": "JD text is too short — paste the full job description.",
         })
 
+    uid = current_user_id(request)
     if not llm_helpers.is_available():
         # Fall back: just insert with whatever the user typed manually
         try:
@@ -890,9 +1512,9 @@ def add_job_submit(
                 new_id = insert_returning_id(
                     conn,
                     "INSERT INTO jobs (title, company, link, status, worth_pursuing, source, "
-                    "jd_raw_text, added_at, last_activity_at) "
-                    "VALUES (?, ?, ?, 'saved', 'unsure', 'manual', ?, ?, ?)",
-                    (title or "(untitled)", company or "(unknown)", link, jd_text, now_iso, now_iso),
+                    "jd_raw_text, added_at, last_activity_at, user_id) "
+                    "VALUES (?, ?, ?, 'saved', 'unsure', 'manual', ?, ?, ?, ?)",
+                    (title or "(untitled)", company or "(unknown)", link, jd_text, now_iso, now_iso, uid),
                 )
             return RedirectResponse(f"/jobs/{new_id}", status_code=303)
         except Exception as exc:
@@ -926,17 +1548,17 @@ def add_job_submit(
                 conn,
                 "INSERT INTO jobs (title, company, link, status, worth_pursuing, location, level, "
                 "yoe_required, source, must_have_skills, nice_to_have_skills, comp_range, "
-                "jd_raw_text, jd_summary, added_at, last_activity_at) "
-                "VALUES (?, ?, ?, 'saved', 'unsure', ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)",
+                "jd_raw_text, jd_summary, added_at, last_activity_at, user_id) "
+                "VALUES (?, ?, ?, 'saved', 'unsure', ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)",
                 (title_final, company_final, link, extracted.location, extracted.level,
                  extracted.yoe_required, extracted.source or "linkedin",
                  extracted.must_have_skills, extracted.nice_to_have_skills,
-                 extracted.comp_range, jd_text, extracted.jd_summary, now_iso, now_iso),
+                 extracted.comp_range, jd_text, extracted.jd_summary, now_iso, now_iso, uid),
             )
             conn.execute(
-                "INSERT INTO events (job_id, event_type, body, occurred_at, recorded_at) "
-                "VALUES (?, ?, ?, ?, ?)",
-                (new_id, "job_added", f"Added via /jobs/new — Gemini-extracted from JD", now_iso, now_iso),
+                "INSERT INTO events (job_id, event_type, body, occurred_at, recorded_at, user_id) "
+                "VALUES (?, ?, ?, ?, ?, ?)",
+                (new_id, "job_added", f"Added via /jobs/new — Gemini-extracted from JD", now_iso, now_iso, uid),
             )
     except Exception as exc:
         return TEMPLATES.TemplateResponse("add_job.html", {
@@ -968,8 +1590,11 @@ The candidate is Ajinkya Kate. Use the provided base resume as the source of tru
 @app.get("/jobs/{job_id}/resume-studio", response_class=HTMLResponse)
 def resume_studio_page(job_id: int, request: Request):
     tracker.init_db()
+    uid = current_user_id(request)
     with get_connection() as conn:
-        job_row = conn.execute("SELECT * FROM jobs WHERE id = ?", (job_id,)).fetchone()
+        job_row = conn.execute(
+            "SELECT * FROM jobs WHERE id = ? AND user_id = ?", (job_id, uid),
+        ).fetchone()
     if not job_row:
         return HTMLResponse(f"<h1>Job #{job_id} not found</h1><a href='/'>back</a>", status_code=404)
     job = dict(job_row)
@@ -987,8 +1612,11 @@ def resume_studio_submit(
     new_resume_md: str = Form(""),
 ):
     tracker.init_db()
+    uid = current_user_id(request)
     with get_connection() as conn:
-        job_row = conn.execute("SELECT * FROM jobs WHERE id = ?", (job_id,)).fetchone()
+        job_row = conn.execute(
+            "SELECT * FROM jobs WHERE id = ? AND user_id = ?", (job_id, uid),
+        ).fetchone()
     if not job_row:
         return HTMLResponse(f"<h1>Job #{job_id} not found</h1>", status_code=404)
     job = dict(job_row)
@@ -1004,13 +1632,13 @@ def resume_studio_submit(
         now_iso = datetime.now().isoformat(timespec="seconds")
         with get_connection() as conn:
             conn.execute(
-                "UPDATE jobs SET resume_md = ?, last_activity_at = ? WHERE id = ?",
-                (new_resume_md, now_iso, job_id),
+                "UPDATE jobs SET resume_md = ?, last_activity_at = ? WHERE id = ? AND user_id = ?",
+                (new_resume_md, now_iso, job_id, uid),
             )
             conn.execute(
-                "INSERT INTO events (job_id, event_type, body, occurred_at, recorded_at) "
-                "VALUES (?, ?, ?, ?, ?)",
-                (job_id, "note", f"Resume saved via Resume Studio ({len(new_resume_md)} chars)", now_iso, now_iso),
+                "INSERT INTO events (job_id, event_type, body, occurred_at, recorded_at, user_id) "
+                "VALUES (?, ?, ?, ?, ?, ?)",
+                (job_id, "note", f"Resume saved via Resume Studio ({len(new_resume_md)} chars)", now_iso, now_iso, uid),
             )
         return RedirectResponse(f"/jobs/{job_id}/resume", status_code=303)
 
@@ -1031,9 +1659,12 @@ def resume_studio_submit(
             "error": "GEMINI_API_KEY not configured.",
         })
 
-    # Use peopleHum's resume (Job #19) as canonical base if this job has no current resume
+    # Use peopleHum's resume (Job #19) as canonical base if this job has no current resume.
+    # Pinned to user_id=1 because it's Ajinkya's seed resume — other users start blank.
     with get_connection() as conn:
-        base_row = conn.execute("SELECT resume_md FROM jobs WHERE id = 19").fetchone()
+        base_row = conn.execute(
+            "SELECT resume_md FROM jobs WHERE id = 19 AND user_id = 1"
+        ).fetchone()
     base_resume = (job.get("resume_md") or "").strip() or (base_row["resume_md"] if base_row else "")
 
     user_content = (
@@ -1089,11 +1720,13 @@ RULES:
 @app.get("/contacts/{contact_id}/dm-studio", response_class=HTMLResponse)
 def dm_studio_page(contact_id: int, request: Request):
     tracker.init_db()
+    uid = current_user_id(request)
     with get_connection() as conn:
         contact_row = conn.execute(
             "SELECT c.*, j.id AS j_id, j.company AS j_company, j.title AS j_title "
-            "FROM contacts c JOIN jobs j ON c.job_id = j.id WHERE c.id = ?",
-            (contact_id,),
+            "FROM contacts c JOIN jobs j ON c.job_id = j.id "
+            "WHERE c.id = ? AND c.user_id = ?",
+            (contact_id, uid),
         ).fetchone()
     if not contact_row:
         return HTMLResponse(f"<h1>Contact #{contact_id} not found</h1>", status_code=404)
@@ -1114,12 +1747,14 @@ def dm_studio_submit(
     draft: str = Form(""),
 ):
     tracker.init_db()
+    uid = current_user_id(request)
     with get_connection() as conn:
         contact_row = conn.execute(
             "SELECT c.*, j.id AS j_id, j.company AS j_company, j.title AS j_title, "
             "j.status AS j_status, j.notes AS j_notes "
-            "FROM contacts c JOIN jobs j ON c.job_id = j.id WHERE c.id = ?",
-            (contact_id,),
+            "FROM contacts c JOIN jobs j ON c.job_id = j.id "
+            "WHERE c.id = ? AND c.user_id = ?",
+            (contact_id, uid),
         ).fetchone()
     if not contact_row:
         return HTMLResponse(f"<h1>Contact #{contact_id} not found</h1>", status_code=404)
@@ -1136,9 +1771,9 @@ def dm_studio_submit(
         now_iso = datetime.now().isoformat(timespec="seconds")
         with get_connection() as conn:
             conn.execute(
-                "INSERT INTO events (job_id, contact_id, event_type, body, occurred_at, recorded_at) "
-                "VALUES (?, ?, ?, ?, ?, ?)",
-                (job["id"], contact_id, "note", f"SUGGESTED DM (via DM Studio):\n\n{draft}", now_iso, now_iso),
+                "INSERT INTO events (job_id, contact_id, event_type, body, occurred_at, recorded_at, user_id) "
+                "VALUES (?, ?, ?, ?, ?, ?, ?)",
+                (job["id"], contact_id, "note", f"SUGGESTED DM (via DM Studio):\n\n{draft}", now_iso, now_iso, uid),
             )
         return RedirectResponse(f"/jobs/{job['id']}", status_code=303)
 
@@ -1256,6 +1891,7 @@ def leads_inbox(request: Request, show: str = "", title: str = "", loc: str = ""
     Both `title` and `loc` are comma-separated keys (e.g. ?title=po,pm&loc=pune,remote).
     """
     tracker.init_db()
+    uid = current_user_id(request)
     show_dismissed = (show == "dismissed")
     status_filter = "lead-dismissed" if show_dismissed else "lead"
 
@@ -1265,8 +1901,8 @@ def leads_inbox(request: Request, show: str = "", title: str = "", loc: str = ""
     title_clause, title_params = _build_chip_clause(TITLE_CHIPS, selected_titles, "title")
     loc_clause, loc_params = _build_chip_clause(LOC_CHIPS, selected_locs, "location")
 
-    where_parts = ["status = ?"]
-    params = [status_filter]
+    where_parts = ["user_id = ?", "status = ?"]
+    params = [uid, status_filter]
     if title_clause:
         where_parts.append(title_clause)
         params.extend(title_params)
@@ -1277,15 +1913,19 @@ def leads_inbox(request: Request, show: str = "", title: str = "", loc: str = ""
 
     with get_connection() as conn:
         rows = conn.execute(
-            f"SELECT id, title, company, link, location, added_at FROM jobs "
-            f"WHERE {where_sql} ORDER BY added_at DESC LIMIT 200",
+            f"SELECT id, title, company, link, location, added_at, "
+            f"jd_raw_text, jd_summary, level, yoe_required, "
+            f"must_have_skills, nice_to_have_skills "
+            f"FROM jobs WHERE {where_sql} ORDER BY added_at DESC LIMIT 200",
             tuple(params),
         ).fetchall()
         total_unfiltered = conn.execute(
-            "SELECT COUNT(*) AS n FROM jobs WHERE status = ?", (status_filter,),
+            "SELECT COUNT(*) AS n FROM jobs WHERE user_id = ? AND status = ?",
+            (uid, status_filter),
         ).fetchone()["n"]
         dismissed_row = conn.execute(
-            "SELECT COUNT(*) AS n FROM jobs WHERE status = 'lead-dismissed'"
+            "SELECT COUNT(*) AS n FROM jobs WHERE user_id = ? AND status = 'lead-dismissed'",
+            (uid,),
         ).fetchone()
     leads = []
     for r in rows:
@@ -1311,6 +1951,27 @@ def leads_inbox(request: Request, show: str = "", title: str = "", loc: str = ""
         # the on-screen hint matches the file on disk.
         label_slug = (d["resume_label"] or fam).replace(" / ", "_").replace(" ", "_")
         d["resume_filename"] = f"Ajinkya_Kate_{label_slug}.pdf"
+
+        # JD content for the expandable card section. Send the FULL JD so the
+        # user can read everything in-app (no need to bounce to LinkedIn just
+        # to scan requirements). The template renders it in a height-limited
+        # scrollable box, with a "Show full JD" toggle that expands the box
+        # to fit the entire text comfortably.
+        jd_raw = " ".join((d.get("jd_raw_text") or "").split()).strip()
+        jd_summary = (d.get("jd_summary") or "").strip()
+        d["jd_full"] = jd_raw
+        d["jd_summary_text"] = jd_summary
+        d["jd_char_count"] = len(jd_raw)
+        d["has_jd"] = bool(jd_raw)
+        # Skills split for chip-style display
+        d["must_have_list"] = [
+            s.strip() for s in (d.get("must_have_skills") or "").split(",")
+            if s.strip()
+        ][:8]
+        d["nice_to_have_list"] = [
+            s.strip() for s in (d.get("nice_to_have_skills") or "").split(",")
+            if s.strip()
+        ][:6]
         leads.append(d)
     # Build display chips with active/inactive state + URLs that toggle membership
     def build_chip_state(defs, current_keys, param_name):
@@ -1364,18 +2025,19 @@ def leads_inbox(request: Request, show: str = "", title: str = "", loc: str = ""
 
 
 @app.post("/leads/{lead_id}/pursue")
-def leads_pursue(lead_id: int):
+def leads_pursue(lead_id: int, request: Request):
     """Promote a lead to status='saved'. Tries to fetch full JD from LinkedIn
     guest page so Resume Studio can tailor immediately.
     """
     import linkedin_fetch
     tracker.init_db()
+    uid = current_user_id(request)
     now_iso = datetime.now().isoformat(timespec="seconds")
     with get_connection() as conn:
         row = conn.execute(
             "SELECT id, link, jd_raw_text, company, title, location "
-            "FROM jobs WHERE id = ?",
-            (lead_id,),
+            "FROM jobs WHERE id = ? AND user_id = ?",
+            (lead_id, uid),
         ).fetchone()
         if not row:
             return RedirectResponse("/leads", status_code=303)
@@ -1397,80 +2059,83 @@ def leads_pursue(lead_id: int):
                 "title = COALESCE(NULLIF(title, ''), ?), "
                 "company = COALESCE(NULLIF(company, ''), ?), "
                 "location = COALESCE(NULLIF(location, ''), ?), "
-                "last_activity_at = ? WHERE id = ?",
+                "last_activity_at = ? WHERE id = ? AND user_id = ?",
                 (fetched_jd["jd_text"], fetched_jd.get("title") or row["title"],
                  fetched_jd.get("company") or row["company"],
                  fetched_jd.get("location") or row["location"],
-                 now_iso, lead_id),
+                 now_iso, lead_id, uid),
             )
             conn.execute(
-                "INSERT INTO events (job_id, event_type, body, occurred_at, recorded_at) "
-                "VALUES (?, ?, ?, ?, ?)",
+                "INSERT INTO events (job_id, event_type, body, occurred_at, recorded_at, user_id) "
+                "VALUES (?, ?, ?, ?, ?, ?)",
                 (lead_id, "note",
                  f"Auto-fetched JD from LinkedIn guest page ({len(fetched_jd['jd_text'])} chars). "
                  "Resume Studio can now tailor against the real JD.",
-                 now_iso, now_iso),
+                 now_iso, now_iso, uid),
             )
         else:
             conn.execute(
-                "UPDATE jobs SET status = 'saved', worth_pursuing = 'yes', last_activity_at = ? WHERE id = ?",
-                (now_iso, lead_id),
+                "UPDATE jobs SET status = 'saved', worth_pursuing = 'yes', last_activity_at = ? WHERE id = ? AND user_id = ?",
+                (now_iso, lead_id, uid),
             )
 
         conn.execute(
-            "INSERT INTO events (job_id, event_type, body, occurred_at, recorded_at) "
-            "VALUES (?, ?, ?, ?, ?)",
-            (lead_id, "status_change", "lead -> saved (promoted from Leads inbox)", now_iso, now_iso),
+            "INSERT INTO events (job_id, event_type, body, occurred_at, recorded_at, user_id) "
+            "VALUES (?, ?, ?, ?, ?, ?)",
+            (lead_id, "status_change", "lead -> saved (promoted from Leads inbox)", now_iso, now_iso, uid),
         )
     return RedirectResponse(f"/jobs/{lead_id}", status_code=303)
 
 
 @app.post("/leads/{lead_id}/applied")
-def leads_already_applied(lead_id: int):
+def leads_already_applied(lead_id: int, request: Request):
     """User opened LinkedIn from the lead, found they already applied earlier.
     Skips the Saved → Applied dance: status straight to 'applied' + applied_at=today.
     """
     tracker.init_db()
+    uid = current_user_id(request)
     now_iso = datetime.now().isoformat(timespec="seconds")
     today = datetime.now().date().isoformat()
     with get_connection() as conn:
         conn.execute(
             "UPDATE jobs SET status = 'applied', worth_pursuing = 'yes', "
-            "applied_at = COALESCE(applied_at, ?), last_activity_at = ? WHERE id = ?",
-            (today, now_iso, lead_id),
+            "applied_at = COALESCE(applied_at, ?), last_activity_at = ? WHERE id = ? AND user_id = ?",
+            (today, now_iso, lead_id, uid),
         )
         conn.execute(
-            "INSERT INTO events (job_id, event_type, body, occurred_at, recorded_at) "
-            "VALUES (?, ?, ?, ?, ?)",
+            "INSERT INTO events (job_id, event_type, body, occurred_at, recorded_at, user_id) "
+            "VALUES (?, ?, ?, ?, ?, ?)",
             (lead_id, "status_change",
              "lead -> applied (already-applied path from Leads triage)",
-             now_iso, now_iso),
+             now_iso, now_iso, uid),
         )
     return RedirectResponse("/leads", status_code=303)
 
 
 @app.post("/leads/{lead_id}/dismiss")
-def leads_dismiss(lead_id: int):
+def leads_dismiss(lead_id: int, request: Request):
     """Hide a lead — stays in DB so future LinkedIn emails dedup against it."""
     tracker.init_db()
+    uid = current_user_id(request)
     now_iso = datetime.now().isoformat(timespec="seconds")
     with get_connection() as conn:
         conn.execute(
-            "UPDATE jobs SET status = 'lead-dismissed', last_activity_at = ? WHERE id = ?",
-            (now_iso, lead_id),
+            "UPDATE jobs SET status = 'lead-dismissed', last_activity_at = ? WHERE id = ? AND user_id = ?",
+            (now_iso, lead_id, uid),
         )
     return RedirectResponse("/leads", status_code=303)
 
 
 @app.post("/leads/{lead_id}/restore")
-def leads_restore(lead_id: int):
+def leads_restore(lead_id: int, request: Request):
     """Undo a dismiss — bring back to active leads."""
     tracker.init_db()
+    uid = current_user_id(request)
     now_iso = datetime.now().isoformat(timespec="seconds")
     with get_connection() as conn:
         conn.execute(
-            "UPDATE jobs SET status = 'lead', last_activity_at = ? WHERE id = ?",
-            (now_iso, lead_id),
+            "UPDATE jobs SET status = 'lead', last_activity_at = ? WHERE id = ? AND user_id = ?",
+            (now_iso, lead_id, uid),
         )
     return RedirectResponse("/leads?show=dismissed", status_code=303)
 
