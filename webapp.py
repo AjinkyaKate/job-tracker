@@ -1915,7 +1915,9 @@ def leads_inbox(request: Request, show: str = "", title: str = "", loc: str = ""
         rows = conn.execute(
             f"SELECT id, title, company, link, location, added_at, "
             f"jd_raw_text, jd_summary, level, yoe_required, "
-            f"must_have_skills, nice_to_have_skills "
+            f"must_have_skills, nice_to_have_skills, "
+            f"ai_score, ai_score_reason, ai_required_skills, "
+            f"ai_hr_email, ai_jd_summary, ai_analyzed_at "
             f"FROM jobs WHERE {where_sql} ORDER BY added_at DESC LIMIT 200",
             tuple(params),
         ).fetchall()
@@ -1972,6 +1974,13 @@ def leads_inbox(request: Request, show: str = "", title: str = "", loc: str = ""
             s.strip() for s in (d.get("nice_to_have_skills") or "").split(",")
             if s.strip()
         ][:6]
+        # AI analysis split into a list for chip rendering
+        d["ai_required_skills_list"] = [
+            s.strip() for s in (d.get("ai_required_skills") or "").split(",")
+            if s.strip()
+        ][:8]
+        # Truthy flag for the template to know if analysis exists
+        d["has_ai_analysis"] = bool(d.get("ai_analyzed_at"))
         leads.append(d)
     # Build display chips with active/inactive state + URLs that toggle membership
     def build_chip_state(defs, current_keys, param_name):
@@ -2138,6 +2147,92 @@ def leads_restore(lead_id: int, request: Request):
             (now_iso, lead_id, uid),
         )
     return RedirectResponse("/leads?show=dismissed", status_code=303)
+
+
+@app.post("/jobs/{job_id}/analyze")
+def jobs_analyze(job_id: int, request: Request, force: int = 0):
+    """Trigger AI analysis for a single JD. Returns the structured result.
+
+    Uses jd_analyzer's cache: only hits Gemini if the row has no
+    ai_analyzed_at, or if force=1. Wrapped in try/except so the UI can render
+    a friendly error message instead of a 500 page.
+    """
+    import jd_analyzer
+    tracker.init_db()
+    uid = current_user_id(request)
+    try:
+        with get_connection() as conn:
+            result = jd_analyzer.analyze_jd(
+                conn, job_id, user_id=uid, force=bool(force),
+            )
+        return result
+    except ValueError as exc:
+        # Job not found, no JD text, etc. — user-facing 400.
+        return JSONResponse(
+            status_code=400,
+            content={"error": "bad_request", "message": str(exc)},
+        )
+    except RuntimeError as exc:
+        # Gemini not configured. 503 so monitoring can flag it.
+        return JSONResponse(
+            status_code=503,
+            content={"error": "gemini_unavailable", "message": str(exc)},
+        )
+    except Exception as exc:
+        # Network, quota, schema validation, etc. — generic 500 with the
+        # error message so the user sees something actionable.
+        return JSONResponse(
+            status_code=500,
+            content={"error": "analyze_failed",
+                     "message": f"{type(exc).__name__}: {str(exc)[:300]}"},
+        )
+
+
+@app.get("/profile", response_class=HTMLResponse)
+def profile_page(request: Request, saved: int = 0):
+    """Show the user's editable profile. Used by the JD Analysis feature
+    to score how well each JD matches what the user actually wants.
+    On first visit, the textarea is pre-filled with the default profile so
+    the user can edit-don't-write-from-scratch."""
+    import jd_analyzer
+    tracker.init_db()
+    uid = current_user_id(request)
+    with get_connection() as conn:
+        profile_text = jd_analyzer.load_profile_text(conn, uid)
+    return TEMPLATES.TemplateResponse("profile.html", {
+        "request": request,
+        "profile_text": profile_text,
+        "saved": bool(saved),
+        "error": None,
+    })
+
+
+@app.post("/profile", response_class=HTMLResponse)
+def profile_save(request: Request, profile_text: str = Form(...)):
+    """Save the user's profile text. Validates non-empty, then upserts."""
+    import jd_analyzer
+    tracker.init_db()
+    uid = current_user_id(request)
+    profile_text = (profile_text or "").strip()
+    if not profile_text:
+        return TEMPLATES.TemplateResponse("profile.html", {
+            "request": request,
+            "profile_text": "",
+            "saved": False,
+            "error": "Profile cannot be empty.",
+        })
+    try:
+        with get_connection() as conn:
+            jd_analyzer.save_profile_text(conn, uid, profile_text)
+    except ValueError as exc:
+        return TEMPLATES.TemplateResponse("profile.html", {
+            "request": request,
+            "profile_text": profile_text,
+            "saved": False,
+            "error": str(exc),
+        })
+    # Redirect back to GET so refresh doesn't re-submit the form
+    return RedirectResponse(url="/profile?saved=1", status_code=303)
 
 
 @app.get("/resumes", response_class=HTMLResponse)

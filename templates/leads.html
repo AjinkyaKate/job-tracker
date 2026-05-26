@@ -121,6 +121,14 @@
           </div>
         </div>
         <div class="flex items-center gap-2 flex-shrink-0">
+          {% if lead.has_ai_analysis %}
+          {# Score badge for at-a-glance triage. Green=STRONG, amber=MAYBE, red=SKIP. #}
+          <span class="px-2 py-0.5 rounded font-mono text-[10.5px] font-semibold tracking-wider
+            {% if lead.ai_score == 'STRONG' %}bg-applied text-white
+            {% elif lead.ai_score == 'MAYBE' %}bg-replied text-white
+            {% else %}bg-rejected text-white{% endif %}"
+            title="{{ lead.ai_score_reason or '' }}">{{ lead.ai_score }}</span>
+          {% endif %}
           <svg class="lead-chev w-4 h-4 text-ink3 transition-transform" viewBox="0 0 16 16" fill="none" stroke="currentColor" stroke-width="2">
             <path d="M4 6l4 4 4-4"/>
           </svg>
@@ -172,6 +180,64 @@
             {% endif %}
           </div>
           {% endif %}
+
+          {# ─── AI JD Analysis panel ─────────────────────────────────────
+             Shows score + reason + skills + HR email + summary if already
+             analyzed. Otherwise shows an "Analyze this JD" button that
+             triggers POST /jobs/{id}/analyze and replaces this section
+             with the result. #}
+          <div class="jd-analysis" data-job-id="{{ lead.id }}">
+            {% if lead.has_ai_analysis %}
+              <div class="jd-analysis-result rounded-md border p-3
+                {% if lead.ai_score == 'STRONG' %}bg-applied/10 border-applied/40
+                {% elif lead.ai_score == 'MAYBE' %}bg-replied/10 border-replied/40
+                {% else %}bg-rejected/10 border-rejected/40{% endif %}">
+                <div class="flex items-center gap-2 mb-2">
+                  <span class="px-2.5 py-0.5 rounded font-mono text-[11px] font-semibold tracking-wider
+                    {% if lead.ai_score == 'STRONG' %}bg-applied text-white
+                    {% elif lead.ai_score == 'MAYBE' %}bg-replied text-white
+                    {% else %}bg-rejected text-white{% endif %}">{{ lead.ai_score }}</span>
+                  <span class="text-ink text-[13px] flex-1">{{ lead.ai_score_reason }}</span>
+                  <button type="button" class="reanalyze-btn text-[11px] text-ink3 hover:text-accent-400 underline" title="Re-analyze with current profile">
+                    Re-analyze
+                  </button>
+                </div>
+                {% if lead.ai_required_skills_list %}
+                <div class="mt-2">
+                  <div class="text-[11px] font-mono uppercase tracking-[0.16em] text-ink3 mb-1">Required skills</div>
+                  <div class="flex flex-wrap gap-1.5">
+                    {% for skill in lead.ai_required_skills_list %}
+                    <span class="px-2 py-0.5 rounded bg-sunken border border-line text-ink2 text-[11.5px]">{{ skill }}</span>
+                    {% endfor %}
+                  </div>
+                </div>
+                {% endif %}
+                {% if lead.ai_hr_email %}
+                <div class="mt-2 text-[12.5px] text-ink2">
+                  <span class="text-ink3">HR contact:</span>
+                  <a href="mailto:{{ lead.ai_hr_email }}" class="text-accent-400 hover:text-accent-300">{{ lead.ai_hr_email }}</a>
+                </div>
+                {% endif %}
+                {% if lead.ai_jd_summary %}
+                <div class="mt-2 text-[12.5px] text-ink2 leading-relaxed">
+                  <span class="text-ink3 font-mono uppercase tracking-[0.16em] text-[11px]">Summary:</span>
+                  {{ lead.ai_jd_summary }}
+                </div>
+                {% endif %}
+              </div>
+            {% else %}
+              <div class="jd-analysis-empty p-3 rounded-md bg-accent-500/5 border border-accent-500/20 flex items-center gap-3">
+                <div class="text-[18px]">🤖</div>
+                <div class="flex-1 text-[12.5px] text-ink2">
+                  Get an instant STRONG / MAYBE / SKIP score for this role plus required skills and HR contact (if mentioned in the JD).
+                </div>
+                <button type="button"
+                        class="analyze-btn h-9 px-4 rounded-md bg-accent-500 hover:bg-accent-400 text-white text-[12.5px] font-medium transition disabled:opacity-60 disabled:cursor-wait">
+                  Analyze this JD
+                </button>
+              </div>
+            {% endif %}
+          </div>
 
           {# AI summary (if Gemini extracted one) #}
           {% if lead.jd_summary_text %}
@@ -340,6 +406,100 @@
       });
       if (idx === 0) toggle();  // auto-open the first card
     });
+
+    // ─── JD Analysis (Analyze + Re-analyze button handlers) ────────────────
+    // Click "Analyze this JD" → POST /jobs/{id}/analyze → swap the empty
+    // panel for the result panel. Click "Re-analyze" → same endpoint with
+    // ?force=1 → swap reason + skills + summary in place.
+    function escapeHtml(s) {
+      if (s == null) return '';
+      return String(s).replace(/[&<>"']/g, c => ({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[c]));
+    }
+
+    function renderAnalysisHTML(result) {
+      const score = result.score || 'MAYBE';
+      const scoreClass = score === 'STRONG' ? 'bg-applied/10 border-applied/40'
+                       : score === 'MAYBE'  ? 'bg-replied/10 border-replied/40'
+                       :                       'bg-rejected/10 border-rejected/40';
+      const badgeClass = score === 'STRONG' ? 'bg-applied text-white'
+                       : score === 'MAYBE'  ? 'bg-replied text-white'
+                       :                       'bg-rejected text-white';
+      const skillsHTML = (result.required_skills || []).map(s =>
+        `<span class="px-2 py-0.5 rounded bg-sunken border border-line text-ink2 text-[11.5px]">${escapeHtml(s)}</span>`
+      ).join('');
+      const skillsSection = skillsHTML ? `
+        <div class="mt-2">
+          <div class="text-[11px] font-mono uppercase tracking-[0.16em] text-ink3 mb-1">Required skills</div>
+          <div class="flex flex-wrap gap-1.5">${skillsHTML}</div>
+        </div>` : '';
+      const hrSection = result.hr_email ? `
+        <div class="mt-2 text-[12.5px] text-ink2">
+          <span class="text-ink3">HR contact:</span>
+          <a href="mailto:${escapeHtml(result.hr_email)}" class="text-accent-400 hover:text-accent-300">${escapeHtml(result.hr_email)}</a>
+        </div>` : '';
+      const summarySection = result.summary ? `
+        <div class="mt-2 text-[12.5px] text-ink2 leading-relaxed">
+          <span class="text-ink3 font-mono uppercase tracking-[0.16em] text-[11px]">Summary:</span>
+          ${escapeHtml(result.summary)}
+        </div>` : '';
+      return `
+        <div class="jd-analysis-result rounded-md border p-3 ${scoreClass}">
+          <div class="flex items-center gap-2 mb-2">
+            <span class="px-2.5 py-0.5 rounded font-mono text-[11px] font-semibold tracking-wider ${badgeClass}">${escapeHtml(score)}</span>
+            <span class="text-ink text-[13px] flex-1">${escapeHtml(result.score_reason || '')}</span>
+            <button type="button" class="reanalyze-btn text-[11px] text-ink3 hover:text-accent-400 underline" title="Re-analyze with current profile">Re-analyze</button>
+          </div>
+          ${skillsSection}
+          ${hrSection}
+          ${summarySection}
+        </div>`;
+    }
+
+    async function runAnalyze(panel, force) {
+      const jobId = panel.dataset.jobId;
+      const buttons = panel.querySelectorAll('button');
+      const originalLabels = [];
+      buttons.forEach((b, i) => {
+        originalLabels[i] = b.textContent;
+        b.disabled = true;
+        b.textContent = force ? 'Re-analyzing…' : 'Analyzing…';
+      });
+      try {
+        const url = `/jobs/${jobId}/analyze${force ? '?force=1' : ''}`;
+        const res = await fetch(url, { method: 'POST', headers: { 'Accept': 'application/json' } });
+        const data = await res.json();
+        if (!res.ok) {
+          throw new Error(data.message || data.error || `HTTP ${res.status}`);
+        }
+        panel.innerHTML = renderAnalysisHTML(data);
+        wireAnalysisPanel(panel);
+      } catch (err) {
+        buttons.forEach((b, i) => {
+          b.disabled = false;
+          b.textContent = originalLabels[i];
+        });
+        showToast('err', 'Analysis failed', err.message || String(err));
+      }
+    }
+
+    function wireAnalysisPanel(panel) {
+      const analyzeBtn = panel.querySelector('.analyze-btn');
+      if (analyzeBtn) {
+        analyzeBtn.addEventListener('click', (e) => {
+          e.stopPropagation();
+          runAnalyze(panel, false);
+        });
+      }
+      const reanalyzeBtn = panel.querySelector('.reanalyze-btn');
+      if (reanalyzeBtn) {
+        reanalyzeBtn.addEventListener('click', (e) => {
+          e.stopPropagation();
+          runAnalyze(panel, true);
+        });
+      }
+    }
+
+    document.querySelectorAll('.jd-analysis').forEach(wireAnalysisPanel);
 
     // JD show-more toggle — collapsed default ~128px, expanded ~560px with
     // internal scroll. Inline maxHeight avoids depending on Tailwind JIT for

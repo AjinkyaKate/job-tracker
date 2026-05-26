@@ -248,6 +248,12 @@ CREATE TABLE IF NOT EXISTS users (
     created_at TEXT NOT NULL,
     last_login_at TEXT
 );
+
+CREATE TABLE IF NOT EXISTS user_profile (
+    user_id INTEGER PRIMARY KEY,
+    profile_text TEXT NOT NULL,
+    updated_at TEXT NOT NULL
+);
 """
 
 # Postgres translations:
@@ -333,6 +339,12 @@ CREATE TABLE IF NOT EXISTS users (
     picture_url TEXT,
     created_at TEXT NOT NULL,
     last_login_at TEXT
+);
+
+CREATE TABLE IF NOT EXISTS user_profile (
+    user_id INTEGER PRIMARY KEY,
+    profile_text TEXT NOT NULL,
+    updated_at TEXT NOT NULL
 );
 """
 

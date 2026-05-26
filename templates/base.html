@@ -74,6 +74,10 @@
     </div>
     <div class="flex items-center gap-1 sm:gap-2 flex-shrink-0">
       {% block topbar_actions %}{% endblock %}
+      <a href="/profile" title="Edit my profile (used by JD analysis AI)"
+         class="h-8 px-2 sm:px-3 rounded-md border border-line-light dark:border-line bg-raised-light dark:bg-raised text-[12px] font-medium hover:bg-sunken-light dark:hover:bg-sunken transition flex items-center">
+        <span class="sm:hidden">👤</span><span class="hidden sm:inline">Profile</span>
+      </a>
       <button id="theme-toggle" class="h-8 px-2 sm:px-3 rounded-md border border-line-light dark:border-line bg-raised-light dark:bg-raised text-[12px] font-medium hover:bg-sunken-light dark:hover:bg-sunken transition">
         <span class="dark:hidden">☾<span class="hidden sm:inline"> Dark</span></span>
         <span class="hidden dark:inline">☀<span class="hidden sm:inline"> Light</span></span>

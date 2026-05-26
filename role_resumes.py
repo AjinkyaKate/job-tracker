@@ -22,13 +22,13 @@ EXPERIENCE = """## Experience
 
 **Product Owner, D·engage** (Jan 2025 - May 2026, remote from Pune)
 
-Marketing-automation SaaS for enterprise customers in banking, retail, and telecom.
+London HQ B2B SaaS for customer engagement. Enterprise customers in banking, retail, and telecom.
 
-- Talked to customers, watched competitors, built quick prototypes. Wrote PRDs based on what I learned and picked what to build next sprint.
-- Shipped 3 AI features: LLM-generated email content, smart audience segmentation, personalization rules. Compared Gemini and OpenAI with engineers, wrote evaluation criteria, tested edge cases.
-- Ran 2-week sprints. Made calls on new build vs tech debt vs production support based on what was hurting customers most.
-- Took customer feedback from CSM and Implementation teams, turned it into roadmap items. Separated churn-causing problems from nice-to-haves.
-- Built prototypes with no-code tools and AI-assisted code to test ideas before engineering invested.
+- Owned the RCS messaging channel from requirements to production. Worked through scope, engineering coordination, customer rollout, and post-release support.
+- Ran production releases on a regular cadence. Coordinated with engineering on go-live readiness, wrote release notes that customer success and support teams used to brief their clients.
+- Led delivery of customer-specific feature requests on the platform. Scoped with the customer, planned sprints with engineering, signed off before release.
+- Coordinated integration projects on the platform end-to-end with vendor partners. Worked with vendor side to get prerequisites, map process flows, and walk customers and internal teams through what the integration would look like before engineering invested.
+- Used Claude, ChatGPT, and Gemini in daily work to automate repeat reporting, summarise long threads, and tighten communication with the engineering team. Cut about half a day of busywork per week.
 
 **Product Analyst, Denner.in** (May 2024 - Dec 2024, hybrid in Pune)
 
@@ -263,19 +263,17 @@ ROLE_RESUMES = {
     },
     "customer-engineer": {
         "summary": (
-            "Customer Engineer with 1.5 years at the intersection of B2B SaaS product and enterprise "
-            "customer support. At D·engage owned product delivery for cross-functional team serving "
-            "enterprise clients in banking, retail, and telecom: discovery, customization scoping, AI "
-            "feature design, customer onboarding, training, escalation triage. Comfortable reading code, "
-            "scoping integrations, debugging API issues. Looking for Customer Engineer, Customer Success "
-            "Engineer, or Technical Customer Manager roles at AI-native B2B vendors."
+            "Customer-side product person with 2+ years in B2B SaaS at the intersection of product and "
+            "customer-facing work. Enterprise customers in banking, retail, and telecom. Looking for "
+            "Customer Engineer or Customer Services Engineer roles at B2B platforms where the work is "
+            "being the bridge between customer and product."
         ),
         "skills": (
-            "Enterprise customer onboarding, integration support, escalation triage, customer success "
-            "collaboration, training delivery, health monitoring. Python (intermediate), SQL/PostgreSQL, "
-            "REST APIs, Postman and curl, basic JS, Git/GitHub. Gemini, OpenAI, Anthropic Claude APIs "
-            "(via personal projects). PRDs, roadmap input, cross-functional delivery, customer "
-            "discovery. B2B SaaS, MarTech, customer engagement, enterprise (banking, retail, telecom)."
+            "Customer onboarding, integration coordination with vendor partners, escalation triage, "
+            "customer success collaboration, release notes for customer-facing teams. AI tools in "
+            "daily work: Claude, ChatGPT, Gemini for drafting, summarising, automating repeat "
+            "reporting, and tightening engineering communication. CSPO certified. B2B SaaS, customer "
+            "engagement, enterprise customers in banking, retail, telecom."
         ),
     },
     "implementation-consultant": {
@@ -334,9 +332,7 @@ Pune District, Maharashtra · Available immediately · CSPO Certified
 
 ## About Me
 
-I'm a B2B operations professional with 1.5 years coordinating cross-functional work at a SaaS company. My day-to-day has been about keeping things moving across teams: tracking operational data in CRMs and dashboards, coordinating delivery schedules across engineering and customer success, and working with vendor partners on integrations.
-
-I have a working understanding of how renewable energy and ODC logistics flow end-to-end: route surveys, vehicle onboarding, order-to-vehicle allocation, multi-modal handoffs, dispatch, real-time tracking, and delivery confirmation. Comfortable taking ownership and spotting inefficiencies to fix. Available immediately.
+I'm a B2B operations professional with 1.5 years coordinating cross-functional work at a SaaS company. My day-to-day has been about keeping things moving across teams: tracking operational data in CRMs and dashboards, coordinating delivery schedules across engineering and customer success, and working with vendor partners on integrations. Comfortable taking ownership and spotting inefficiencies to fix. Available immediately.
 
 
 ## Experience
@@ -356,17 +352,17 @@ B2B SaaS customer engagement platform. The role spanned operational coordination
 - Owned product analytics and competitive research. Ran A/B tests, funnel deep-dives, user research syntheses. Built and maintained reporting dashboards.
 
 
-## Logistics Operations Knowledge
+## Skills
 
-Working understanding of the end-to-end logistics workflow that powers a B2B logistics business:
+Operations coordination across engineering, customer success, and vendor partners. Sprint planning, escalation triage, delivery scheduling, and stakeholder updates owned end-to-end.
 
-- **Survey**: assessing route feasibility, vehicle capacity, and load specifications before any commitment is made
-- **Route planning**: mapping the most efficient delivery paths, factoring in clearances, time windows, and vendor availability
-- **Vehicle onboarding**: registering, verifying, and qualifying vehicles into the network so they're ready to take orders
-- **Order-to-vehicle allocation**: matching the right vehicle to each shipment based on load type, route, and timing
-- **Shipment execution**: dispatching, real-time tracking, escalation handling, and delivery confirmation back to the customer
+Data tracking in CRMs and dashboards. A/B testing, funnel analysis, user research syntheses. Comfortable turning raw operational data into decisions and weekly stakeholder updates.
 
-This complements my SaaS-side coordination experience: cross-team scheduling, vendor partner management, integration tracking, and escalation triage are the same coordination muscles applied to a different domain.
+Day-to-day tools: Jira, Confluence, Notion, Google Workspace, Excel/Sheets, Looker.
+
+ChatGPT, Claude, and Gemini in normal work — drafting reports, writing requirements, and automating repeat reporting tasks.
+
+Languages: English, Hindi, Marathi.
 
 
 ## Education
@@ -391,59 +387,130 @@ VIBE_CODING_ENGINEER_RESUME = """# Ajinkya Kate
 
 [+91 77588 80580](tel:+917758880580) · [ajinkyakate2001@gmail.com](mailto:ajinkyakate2001@gmail.com) · [LinkedIn](https://linkedin.com/in/ajinkya-kate) · [GitHub](https://github.com/AjinkyaKate)
 
-Pune District, Maharashtra · Available immediately · CSPO Certified
+Pune, India · Available immediately · CSPO Certified
 
 
-## About Me
+## Summary
 
-I'm a product-engineer hybrid who ships working applications fast using AI-assisted development. 1.5 years as Product Owner at D·engage shipping AI-powered features in production B2B SaaS, plus a personal AI-powered job tracker I built end-to-end with Claude Code as my main dev environment. The tracker is in daily use. Looking for Vibe Coding Engineer or rapid-prototyping engineer roles where the work is "make this idea a real working app this week, not next quarter." Available immediately.
+I'm a product person who builds. The clearest way to show this is my current side project: a live job-search CRM I built solo in 3 weeks with Claude Code as my main dev environment. It's in daily use, code is public, around 50 commits in. Before this I spent 1.5 years as Product Owner at D·engage, shipping AI features in B2B SaaS for banking, retail, and telecom customers. I'm looking for a Full Stack Builder type role where the brief is "make this idea a real working app this week, not next quarter."
 
 
 ## Featured Project
 
-**Personal AI Job-Search CRM** (May 2026 - ongoing)
+**Job Tracker** (May 2026, in daily use)
 
-Live: [job-tracker-bmhy.onrender.com](https://job-tracker-bmhy.onrender.com) (demo access on request)
-Code: [github.com/AjinkyaKate/job-tracker](https://github.com/AjinkyaKate/job-tracker)
+[job-tracker-bmhy.onrender.com](https://job-tracker-bmhy.onrender.com) · [github.com/AjinkyaKate/job-tracker](https://github.com/AjinkyaKate/job-tracker)
 
-Built solo using Claude Code as my primary dev environment during my current job search. Started from a blank repo and shipped a working production app within about 3 weeks. ~50 commits. In daily use.
+The brief I gave myself: pull LinkedIn job alerts from my Gmail, surface them as triage cards with the full JD already fetched, track each application through to offer. Started with an empty folder and Claude Code. Shipped a working v1 in 3 weekends.
 
-Stack: FastAPI, PostgreSQL, Tailwind, Jinja2, Gemini API for email classification, Render for hosting, GitHub Actions for the auto-sync cron, HTTP Basic Auth for access control.
+The product today:
 
-What it does end-to-end:
+- Reads job-alert emails from Gmail every 10 minutes via GitHub Actions, parses LinkedIn's HTML, dedupes by URL
+- Pulls the full JD from LinkedIn's public guest endpoint so I read jobs in my own tool, not LinkedIn's
+- Generates 15 role-tailored resumes from one Python file (this one came from that system)
+- Drafts personalised LinkedIn DMs with Gemini, based on the contact's profile and the role
+- Tracks status as Gmail picks up signals like applied, interview, rejected
+- Multi-tenant now: this week I shipped Google sign-in plus per-user data partitioning so a friend can use it with their own Gmail
 
-- Ingests LinkedIn job-alert emails from Gmail, classifies them, dedupes by URL
-- Surfaces 100+ leads in a filtered inbox with chip-based filters
-- Generates 15 role-tailored resumes with stable PDF filenames per role family
-- Drafts personalised LinkedIn DMs to recruiters using LLMs
-- Auto-advances pipeline status as Gmail picks up applied / interview / offer / rejected signals
-- Multi-stage Kanban-style pipeline with stale-deal tracking, activity timeline, 1-click PDF download
+What I actually learned shipping this:
 
-Engineering choices made along the way: a dual-backend DB layer so the same code runs SQLite locally and Postgres in production. OAuth with PKCE for Gmail consent flow. html2pdf.js for client-side PDF generation so I didn't need server-side rendering libs. Idempotent ALTER TABLE migrations baked into init_db so deploys don't need a DBA gate. Single config-driven role-family system that drove all 15 resume variants from one Python file.
-
-
-## How I Work
-
-I work in a vibe-coding rhythm: AI as the engineering partner, me as the judgment layer. Default mode is "code, ship, see what breaks, iterate." Day-to-day I use Claude Code as my main dev environment, Cursor for spot edits, Render for deploys, GitHub Actions for automation, and the browser as my QA tool.
-
-Where I apply careful engineering vs fast hacks: schema, auth flows, OAuth, and anything that touches user data gets built carefully. UI tweaks, copy, one-off scripts get shipped fast and iterated. The judgment call on "hack vs build clean" is what separates production-grade prototypes from throwaway demo code. I try to build things that can survive the day I hand them over.
+- Cost matters from day one. Whole stack is $0/month: Render free dyno, free Postgres, Gemini free tier. I designed around the rate limits, not against them. When Gemini quota runs out, regex parsing takes over so sync keeps working.
+- Observability without buying a stack. The sync engine writes a one-line summary to the DB after every run (fetched count, new leads, status changes). When the cron was silently failing for three days, I noticed from this summary, not from any monitoring tool.
+- A tradeoff I'd revisit if real users showed up: I used html2pdf.js for client-side PDF so I wouldn't have to install a headless browser. The output is image-based, not ATS-friendly. Fine for me, not fine for v2.
 
 
 ## Experience
 
 **Product Owner, D·engage** (Jan 2025 - May 2026, remote from Pune)
 
-B2B SaaS marketing-automation platform for enterprise customers in banking, retail, and telecom.
+London HQ B2B SaaS for customer engagement. Enterprise customers in banking, retail, telecom.
 
-- Shipped 3 AI features end-to-end: LLM-generated email content, smart audience segmentation, personalisation rules. Worked with engineers on model selection, prompt design, evaluation criteria.
-- Translated customer feedback from CSM, support, and sales teams into prioritised engineering work. Wrote PRDs, release notes, customer briefs.
-- Ran 2-week sprints. Made tradeoff calls on new build vs tech debt vs production support based on customer impact.
-- Used ChatGPT, Claude, Gemini in daily work for drafting, summarising, and automating repetitive analysis. Saved about half a day per week.
+- Shipped 3 AI features into production: LLM-generated email content, smart audience segmentation, content personalisation. Worked with engineers on prompt design, eval criteria, model selection.
+- Translated customer feedback from CSM, support, and sales teams into prioritised work. Wrote PRDs, release notes, customer briefs, integration trackers.
+- Used Claude, ChatGPT, Gemini in daily work for drafting, summarising, automating repeat reporting. Cut about half a day of weekly busywork.
 - Built quick prototypes with no-code tools and AI-assisted code to validate ideas before engineering invested heavily.
 
 **Product Analyst, Denner.in** (May 2024 - Dec 2024, hybrid in Pune)
 
-- Owned product analytics and competitive research for the PM team. Ran A/B tests, funnel deep-dives, user research syntheses.
+- Owned product analytics and competitive research. Ran A/B tests, funnel deep-dives, user research syntheses.
+
+
+## How I Work
+
+I work in a vibe-coding rhythm. AI tooling is the partner, I'm the judgment layer. Default mode is "code, ship, see what breaks, iterate."
+
+Day-to-day stack: Claude Code as the main dev environment, Cursor for spot edits. Python with FastAPI, Jinja2, PostgreSQL on the backend. Tailwind and a little vanilla JS on the frontend. Gemini and Anthropic for the LLM work. Render for hosting, GitHub Actions for automation.
+
+I'm careful about auth, schema, anything that touches user data. Copy, UI tweaks, one-off scripts ship fast and iterate based on real use. The call on hack vs build clean is what separates a production prototype from a throwaway demo.
+
+
+## Education
+
+**Savitribai Phule Pune University**, Bachelor of Business Administration (BBA), Pune
+
+
+## Certifications
+
+**Certified Scrum Product Owner (CSPO)**, Scrum Alliance, Nov 2025
+"""
+
+
+# ─── Standalone resume: General / shareable ─────────────────────────────────
+# A single, role-agnostic resume for sharing on WhatsApp / Slack groups, with
+# referrers, or anywhere a JD-tailored variant would be overkill. Framed
+# builder-led: product person who ships code with AI as the dev partner.
+# Hyperlinked throughout so anyone clicking on a PDF can reach the live app,
+# GitHub, LinkedIn, phone, email in one click.
+
+GENERAL_RESUME = """# Ajinkya Kate
+
+[+91 77588 80580](tel:+917758880580) · [ajinkyakate2001@gmail.com](mailto:ajinkyakate2001@gmail.com) · [LinkedIn](https://linkedin.com/in/ajinkya-kate) · [GitHub](https://github.com/AjinkyaKate)
+
+Pune, India · Available immediately · CSPO Certified
+
+
+## Summary
+
+Product person who also ships code. I work as a full-stack builder using AI tools like Claude Code as my dev environment, turning ambiguous ideas into shipped, working applications. 1.5 years as Product Owner at D·engage in B2B SaaS, comfortable across product calls, customer conversations, and the code itself.
+
+
+## Experience
+
+**Product Owner, D·engage** (Jan 2025 - May 2026, remote from Pune)
+
+London HQ B2B SaaS for customer engagement. Enterprise customers in banking, retail, telecom.
+
+- Owned the RCS messaging channel from requirements to production. Worked through scope, engineering coordination, customer rollout, and post-release support.
+- Ran production releases on a regular cadence. Coordinated with engineering on go-live readiness, wrote release notes that customer success and support teams used to brief their clients.
+- Led delivery of customer-specific feature requests on the platform. Scoped with the customer, planned sprints with engineering, signed off before release.
+- Built quick prototypes to explain integration projects on the platform. For example, walked customers and internal teams through what a text/messaging integration would look like end-to-end before engineering invested.
+- Used Claude, ChatGPT, and Gemini in daily work to automate repeat reporting, summarise long threads, and tighten communication with the engineering team. Cut about half a day of busywork per week.
+
+**Product Analyst, Denner.in** (May 2024 - Dec 2024, hybrid in Pune)
+
+- Owned product analytics and competitive research. Ran A/B tests, funnel deep-dives, user research syntheses. Built and maintained reporting dashboards.
+
+
+## Project
+
+**Job Tracker** (May 2026, in daily use)
+
+[job-tracker-bmhy.onrender.com](https://job-tracker-bmhy.onrender.com) · [github.com/AjinkyaKate/job-tracker](https://github.com/AjinkyaKate/job-tracker)
+
+A personal CRM for managing job applications end to end. Pulls job-alert emails from Gmail, parses each lead, fetches the full job description, generates a role-tailored resume, drafts personalised LinkedIn DMs to recruiters, and tracks each application from saved through to offer.
+
+Built solo with Claude Code as my main dev environment. Around 50 commits, multi-tenant (Google sign-in, per-user data), running on free-tier infrastructure with cost designed in from day one.
+
+
+## Skills
+
+**Product:** Writing PRDs, customer briefs, customer discovery, sprint planning, requirement triage, stakeholder communication, release notes. CSPO certified. A/B testing, funnel analysis, user research.
+
+**Building with AI:** Claude Code as my primary dev environment, with Cursor for spot edits. Comfortable working with LLMs in the loop: prompt design, structured outputs, evaluation thinking, cost-aware design. Day to day I use Claude, ChatGPT, and Gemini to automate repeat reporting, draft documentation, summarise long threads, and tighten communication with engineering.
+
+**Tools and platforms:** GitHub, Render, Jira, Confluence, Notion, Google Workspace, Excel and Sheets.
+
+**Languages:** English, Hindi, Marathi.
 
 
 ## Education
@@ -469,6 +536,8 @@ def render_role_resume(family: str) -> str:
         return DIGITAL_OPS_RESUME
     if family == "vibe-coding-engineer":
         return VIBE_CODING_ENGINEER_RESUME
+    if family == "general":
+        return GENERAL_RESUME
 
     config = ROLE_RESUMES.get(family)
     if not config:
@@ -620,4 +689,8 @@ FAMILY_LABELS = {
     "digital-ops-coordinator":   "Digital Operations Coordinator",
     # Standalone resume for vibe-coding / rapid-prototyping engineer roles.
     "vibe-coding-engineer":      "Vibe Coding Engineer",
+    # Generic shareable resume — for posting in WhatsApp / Slack groups,
+    # forwarding to networks, or attaching anywhere a JD-specific version
+    # would be overkill. Framed builder-led: product person who ships code.
+    "general":                   "Resume",
 }
