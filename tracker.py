@@ -44,6 +44,16 @@ def init_db():
         _ensure_column(conn, "jobs", "ai_hr_email", "TEXT")
         _ensure_column(conn, "jobs", "ai_jd_summary", "TEXT")
         _ensure_column(conn, "jobs", "ai_analyzed_at", "TEXT")
+        # Richer fields populated when a job is ingested from the Apify
+        # LinkedIn-jobs scraper (via the add_lead MCP tool). NULL for jobs
+        # from the Gmail-alert path or manual entry.
+        _ensure_column(conn, "jobs", "company_size", "TEXT")         # "51-200 employees"
+        _ensure_column(conn, "jobs", "company_industry", "TEXT")     # "Software Development"
+        _ensure_column(conn, "jobs", "company_url", "TEXT")          # company website
+        _ensure_column(conn, "jobs", "work_arrangement", "TEXT")     # On-site / Hybrid / Remote
+        _ensure_column(conn, "jobs", "employment_type", "TEXT")      # FULL_TIME, etc.
+        _ensure_column(conn, "jobs", "posted_at", "TEXT")            # original post date (vs added_at = ingest date)
+        _ensure_column(conn, "jobs", "external_apply_url", "TEXT")   # direct-apply link if present
 
 
 def _require_job(conn, job_id):

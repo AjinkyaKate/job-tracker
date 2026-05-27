@@ -380,6 +380,93 @@ def add_event(job_id: int, event_type: str, body: str) -> dict:
 
 
 @mcp.tool()
+def add_lead(
+    title: str,
+    company: str,
+    link: str,
+    location: str = "",
+    jd_text: str = "",
+    jd_summary: str = "",
+    must_have_skills: str = "",
+    level: str = "",
+    yoe_required: str = "",
+    comp_range: str = "",
+    company_size: str = "",
+    company_industry: str = "",
+    company_url: str = "",
+    work_arrangement: str = "",
+    employment_type: str = "",
+    posted_at: str = "",
+    external_apply_url: str = "",
+    source: str = "apify-linkedin",
+    recruiter_name: str = "",
+    recruiter_title: str = "",
+    recruiter_linkedin_url: str = "",
+    recruiter_email: str = "",
+) -> dict:
+    """Create a new lead in the tracker from a scraped/external job posting.
+
+    Inserts a jobs row (status='lead') and, if recruiter_name is given, a
+    linked contacts row for the recruiter. Deduplicates by link: if a job
+    with the same link already exists for the user, returns that job's id
+    without creating a duplicate.
+
+    Use this to drop jobs found via the Apify LinkedIn scraper (or any
+    source) into the user's /leads inbox. Pass whatever fields you have;
+    everything except title/company/link is optional.
+
+    Returns: {ok, job_id, deduped, contact_id}.
+    """
+    now = _now_iso()
+    with _conn() as conn:
+        # Dedup by link (per user)
+        if link:
+            existing = conn.execute(
+                "SELECT id FROM jobs WHERE link = ? AND user_id = ? LIMIT 1",
+                (link, USER_ID),
+            ).fetchone()
+            if existing:
+                return {"ok": True, "job_id": existing["id"], "deduped": True,
+                        "contact_id": None}
+
+        # status='discovered' keeps scraped jobs in the separate /discover
+        # list, OUT of the Gmail-alert /leads inbox. Pursue moves them to
+        # 'saved' (into the pipeline); dismiss to 'lead-dismissed'.
+        cur = conn.execute(
+            "INSERT INTO jobs (title, company, link, location, jd_raw_text, "
+            "jd_summary, must_have_skills, level, yoe_required, comp_range, "
+            "company_size, company_industry, company_url, work_arrangement, "
+            "employment_type, posted_at, external_apply_url, source, status, "
+            "worth_pursuing, added_at, last_activity_at, user_id) "
+            "VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, "
+            "'discovered', 'unsure', ?, ?, ?)",
+            (title, company, link, location, jd_text, jd_summary,
+             must_have_skills, level, yoe_required, comp_range,
+             company_size, company_industry, company_url, work_arrangement,
+             employment_type, posted_at, external_apply_url, source,
+             now, now, USER_ID),
+        )
+        job_id = cur.lastrowid
+
+        contact_id = None
+        if recruiter_name.strip():
+            c = conn.execute(
+                "INSERT INTO contacts (job_id, name, role, email, "
+                "linkedin_url, notes, added_at, user_id) "
+                "VALUES (?, ?, ?, ?, ?, ?, ?, ?)",
+                (job_id, recruiter_name.strip(), recruiter_title.strip() or None,
+                 recruiter_email.strip() or None, recruiter_linkedin_url.strip() or None,
+                 f"Recruiter who posted this role (via {source}).",
+                 now, USER_ID),
+            )
+            contact_id = c.lastrowid
+
+        conn.commit()
+    return {"ok": True, "job_id": job_id, "deduped": False,
+            "contact_id": contact_id}
+
+
+@mcp.tool()
 def update_profile(profile_text: str) -> dict:
     """Replace the user's profile text used by JD analysis. Pass the FULL
     new profile (not a diff). Empty / whitespace-only is rejected."""

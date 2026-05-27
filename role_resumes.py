@@ -47,7 +47,7 @@ PROJECTS = """## Projects
 
 EDUCATION = """## Education
 
-**Savitribai Phule Pune University**, Bachelor of Business Administration (BBA), Pune
+**Pune University**, Bachelor of Business Administration (BBA), Pune
 """
 
 CERTIFICATIONS = """## Certifications
@@ -367,7 +367,7 @@ Languages: English, Hindi, Marathi.
 
 ## Education
 
-**Savitribai Phule Pune University**, Bachelor of Business Administration (BBA), Pune
+**Pune University**, Bachelor of Business Administration (BBA), Pune
 
 
 ## Certifications
@@ -446,7 +446,7 @@ I'm careful about auth, schema, anything that touches user data. Copy, UI tweaks
 
 ## Education
 
-**Savitribai Phule Pune University**, Bachelor of Business Administration (BBA), Pune
+**Pune University**, Bachelor of Business Administration (BBA), Pune
 
 
 ## Certifications
@@ -515,7 +515,149 @@ Built solo with Claude Code as my main dev environment. Around 50 commits, multi
 
 ## Education
 
-**Savitribai Phule Pune University**, Bachelor of Business Administration (BBA), Pune
+**Pune University**, Bachelor of Business Administration (BBA), Pune
+
+
+## Certifications
+
+**Certified Scrum Product Owner (CSPO)**, Scrum Alliance, Nov 2025
+"""
+
+
+# ─── Standalone resume: Solutions / Customer Success Engineer ───────────────
+# For the SE / CSE / Forward-Deployment role family (Morphisec, CleverTap,
+# CashFlo, CometChat, ElevenLabs, etc). Post-sales-CSE flavor: leads with
+# customer-facing + integration + troubleshooting, frames technical depth
+# honestly as "I ship working software with AI-assisted development", and
+# uses the job tracker as concrete proof of hands-on technical work.
+
+SOLUTIONS_ENGINEER_RESUME = """# Ajinkya Kate
+
+[+91 77588 80580](tel:+917758880580) · [ajinkyakate2001@gmail.com](mailto:ajinkyakate2001@gmail.com) · [LinkedIn](https://linkedin.com/in/ajinkya-kate) · [GitHub](https://github.com/AjinkyaKate)
+
+Pune, India · Available immediately · CSPO Certified
+
+
+## Summary
+
+Customer-facing technical person with 2+ years in B2B SaaS. I sit between the customer and the product team: onboarding, integration coordination, troubleshooting, and turning customer pain into clear requirements engineering can act on. Comfortable reading APIs and shipping working software with AI-assisted development. Looking for Customer Success Engineer, Solutions Engineer, or Forward Deployment roles where the job is making customers successful on a technical product.
+
+
+## Experience
+
+**Product Owner, D·engage** (Jan 2025 - May 2026, remote from Pune)
+
+London HQ B2B SaaS for customer engagement. Enterprise customers in banking, retail, telecom.
+
+- Onboarded enterprise customers onto the platform. Owned the RCS messaging channel from requirements to production, including customer rollout and post-launch support.
+- Coordinated integration projects end to end with vendor partners. Gathered prerequisites, mapped process flows, and walked customers and internal teams through how an integration would work before engineering invested.
+- Was the technical bridge between customers and engineering. Heard what frustrated a customer, translated it into a clear requirement, and often delivered the small fixes on the ground myself.
+- Ran production releases on a regular cadence. Wrote release notes that customer success and support teams used to brief their clients.
+- Used Claude, ChatGPT, and Gemini in daily work to automate repeat reporting and tighten communication with engineering.
+
+**Product Analyst, Denner.in** (May 2024 - Dec 2024, hybrid in Pune)
+
+- Owned product analytics and competitive research. Ran A/B tests, funnel deep-dives, user research syntheses. Built and maintained reporting dashboards.
+
+
+## Project
+
+**Job Tracker** (May 2026, in daily use)
+
+[job-tracker-bmhy.onrender.com](https://job-tracker-bmhy.onrender.com) · [github.com/AjinkyaKate/job-tracker](https://github.com/AjinkyaKate/job-tracker)
+
+A working app I built solo with Claude Code as my dev environment. It reads my Gmail for job-alert emails, parses each one, fetches the full job description over an API, and tracks every application through to offer.
+
+Why it matters for this role: it is proof I work hands-on with the technical side of a product. Real API integration (Gmail, OAuth with PKCE, a public job-data endpoint), a Postgres database, deployed on cloud infra with a scheduled job, debugged when it broke. I read the logs, fix what is wrong, and ship. I do this with AI-assisted development, which is how a lot of technical work gets done now.
+
+
+## Skills
+
+**Customer-facing:** Onboarding, integration coordination with vendor partners, requirement gathering, troubleshooting, escalation triage, release notes for customer-facing teams, stakeholder communication.
+
+**Technical:** Reading and debugging APIs (REST, JSON, webhooks), OAuth flows, reading logs, basic SQL. Ship working web apps with AI-assisted development (Claude Code, Cursor). Comfortable in a codebase even when I did not write every line.
+
+**Tools:** Jira, Confluence, Notion, Postman, GitHub, Google Workspace, Render.
+
+**AI in daily work:** Claude, ChatGPT, Gemini for drafting, analysis, debugging, and automating repeat work.
+
+**Languages:** English, Hindi, Marathi.
+
+
+## Education
+
+**Pune University**, Bachelor of Business Administration (BBA), Pune
+
+
+## Certifications
+
+**Certified Scrum Product Owner (CSPO)**, Scrum Alliance, Nov 2025
+"""
+
+
+# ─── Standalone resume: Business Technology / Data Solutions ────────────────
+# For the consulting-tech-hybrid family: ZS Business Technology Solutions
+# Associate, Deloitte/Accenture/EXL/Tiger Analytics tech-consulting and
+# data-solutions associate roles. 0-3 yrs, business-to-technical translation
+# is the core ask. Honest framing: leads with translation + data analytics +
+# AI-tooling fluency (co-pilot / SQL generation, which these JDs name),
+# claims working SQL/Python without overclaiming deep data-engineering.
+
+BIZ_TECH_SOLUTIONS_RESUME = """# Ajinkya Kate
+
+[+91 77588 80580](tel:+917758880580) · [ajinkyakate2001@gmail.com](mailto:ajinkyakate2001@gmail.com) · [LinkedIn](https://linkedin.com/in/ajinkya-kate) · [GitHub](https://github.com/AjinkyaKate)
+
+Pune, India · Available immediately · CSPO Certified
+
+
+## Summary
+
+Business-technology hybrid with 2+ years turning business problems into working data and software solutions. At D·engage I translated customer and operational needs into technical requirements engineering could build. At Denner.in I owned product analytics, A/B testing, and reporting dashboards. Comfortable with SQL and Python, and I lean on AI-assisted development (Claude Code, co-pilot, SQL generation) to ship faster. Looking for Business Technology and Data Solutions roles where the job is bridging business and technical delivery for clients.
+
+
+## Experience
+
+**Product Owner, D·engage** (Jan 2025 - May 2026, remote from Pune)
+
+London HQ B2B SaaS for customer engagement. Enterprise customers in banking, retail, telecom.
+
+- Translated business problems into technical designs. Took customer and operational needs and turned them into clear requirements and specs engineering could build against.
+- Owned the RCS messaging channel and integration projects end to end: scoping, coordinating with engineering, production rollout, and post-launch support.
+- Tracked operational data across the platform (customer activity, campaign delivery, integration progress) and turned it into reporting the team and customers relied on.
+- Used Claude, ChatGPT, and Gemini in daily work for analysis, drafting, and automating repeat reporting, including generating and checking SQL and code with AI tools.
+
+**Product Analyst, Denner.in** (May 2024 - Dec 2024, hybrid in Pune)
+
+- Owned product analytics and competitive research. Ran A/B tests, funnel deep-dives, and user-research synthesis. Built and maintained the reporting dashboards the product team used to make decisions.
+
+
+## Project
+
+**Job Tracker** (May 2026, in daily use)
+
+[job-tracker-bmhy.onrender.com](https://job-tracker-bmhy.onrender.com) · [github.com/AjinkyaKate/job-tracker](https://github.com/AjinkyaKate/job-tracker)
+
+A working app I built solo with Claude Code as my dev environment. It reads my Gmail for job-alert emails, parses each one into structured data in PostgreSQL, fetches job descriptions over APIs, and tracks every application through to offer.
+
+The technical surface: a PostgreSQL schema I designed and migrate, SQL queries across jobs / contacts / events tables, REST API integration, OAuth, and cloud deployment with a scheduled job. Built with AI-assisted development. It is proof I can take a problem from idea to a deployed, data-backed solution, which is the same loop as translating a client need into a working build.
+
+
+## Skills
+
+**Business and technical:** Translating business problems into technical requirements and designs, requirement gathering, stakeholder communication, agile delivery, client-facing work.
+
+**Data and analytics:** SQL (working), PostgreSQL schema design, A/B testing, funnel analysis, reporting dashboards, data synthesis.
+
+**Programming and AI tooling:** Python (working, AI-assisted), REST APIs, OAuth. Heavy use of Claude Code, co-pilot, and SQL-generation tools to build and ship.
+
+**Cloud and tools:** Cloud deployment (Render), GitHub, GitHub Actions, Jira, Confluence, Notion, Excel and Sheets, Google Workspace.
+
+**Languages:** English, Hindi, Marathi.
+
+
+## Education
+
+**Pune University**, Bachelor of Business Administration (BBA), Pune
 
 
 ## Certifications
@@ -538,6 +680,12 @@ def render_role_resume(family: str) -> str:
         return VIBE_CODING_ENGINEER_RESUME
     if family == "general":
         return GENERAL_RESUME
+    # Override the modular solutions-engineer config with the purpose-written
+    # standalone (post-sales-CSE flavor, honest AI-build framing).
+    if family == "solutions-engineer":
+        return SOLUTIONS_ENGINEER_RESUME
+    if family == "biz-tech-solutions":
+        return BIZ_TECH_SOLUTIONS_RESUME
 
     config = ROLE_RESUMES.get(family)
     if not config:
@@ -693,4 +841,7 @@ FAMILY_LABELS = {
     # forwarding to networks, or attaching anywhere a JD-specific version
     # would be overkill. Framed builder-led: product person who ships code.
     "general":                   "Resume",
+    # Standalone resume for consulting-tech-hybrid / data-solutions roles
+    # (ZS BTSA, Deloitte/Accenture/EXL/Tiger Analytics tech-consulting).
+    "biz-tech-solutions":        "Business Technology Solutions",
 }

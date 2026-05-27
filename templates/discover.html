@@ -1,0 +1,150 @@
+{% extends "base.html" %}
+
+{% block title %}Discover · {{ total }} jobs · Job Tracker{% endblock %}
+
+{% block topbar_breadcrumb %}
+<div class="text-ink3 text-[13px] hidden md:flex items-center gap-2">
+  <span>/</span>
+  <a href="/" class="hover:text-ink">Pipeline</a>
+  <span>/</span>
+  <span class="text-ink2">Discover</span>
+</div>
+{% endblock %}
+
+{% block content %}
+<div class="max-w-5xl mx-auto py-6">
+
+  <header class="mb-5">
+    <div class="text-[11px] font-mono uppercase tracking-[0.16em] text-ink3 mb-1">Sourced jobs</div>
+    <h1 class="text-2xl font-semibold text-ink">
+      {{ total }} jobs found via search
+    </h1>
+    <p class="text-ink2 text-sm mt-1">
+      Scraped from LinkedIn and ranked by fit against your profile. Separate from your Gmail
+      <a href="/leads" class="text-accent-400 hover:text-accent-300 underline">Leads inbox</a>.
+      Pursue moves a job into your pipeline. Dismiss hides it.
+    </p>
+    {% if total %}
+    <div class="flex gap-2 mt-3 text-[12px]">
+      <span class="px-2.5 py-1 rounded-md bg-applied/10 border border-applied/40 text-applied font-medium">{{ strong }} strong</span>
+      <span class="px-2.5 py-1 rounded-md bg-replied/10 border border-replied/40 text-replied font-medium">{{ maybe }} maybe</span>
+    </div>
+    {% endif %}
+  </header>
+
+  {% if not jobs %}
+  <div class="p-8 rounded-lg bg-raised border border-line text-center">
+    <p class="text-ink2 text-sm mb-2">No discovered jobs yet.</p>
+    <p class="text-ink3 text-[13px]">
+      Ask Claude Code to scrape jobs via the Apify MCP, e.g. "search LinkedIn for product manager jobs in Mumbai and add the top ones." They land here.
+    </p>
+  </div>
+  {% else %}
+  <div class="space-y-3">
+    {% for job in jobs %}
+    <div class="rounded-lg bg-raised border border-line hover:border-line2 transition overflow-hidden">
+
+      <div class="p-4">
+        <div class="flex items-start gap-3">
+          {# Fit badge #}
+          {% if job.ai_score %}
+          <span class="mt-0.5 px-2 py-0.5 rounded font-mono text-[10.5px] font-semibold tracking-wider flex-shrink-0
+            {% if job.ai_score == 'STRONG' %}bg-applied text-white
+            {% elif job.ai_score == 'MAYBE' %}bg-replied text-white
+            {% else %}bg-rejected text-white{% endif %}">{{ job.ai_score }}</span>
+          {% endif %}
+
+          <div class="flex-1 min-w-0">
+            <div class="text-ink text-[15px] font-medium">{{ job.title }}</div>
+            <div class="text-ink2 text-[13px]">
+              {{ job.company }}{% if job.location %} · {{ job.location }}{% endif %}
+            </div>
+            {# Meta chips #}
+            <div class="flex flex-wrap items-center gap-1.5 mt-2 text-[11px]">
+              {% if job.level %}<span class="px-2 py-0.5 rounded bg-sunken border border-line text-ink2 font-mono uppercase tracking-wider text-[10px]">{{ job.level }}</span>{% endif %}
+              {% if job.yoe_required %}<span class="px-2 py-0.5 rounded bg-sunken border border-line text-ink2">{{ job.yoe_required }} exp</span>{% endif %}
+              {% if job.work_arrangement %}<span class="px-2 py-0.5 rounded bg-sunken border border-line text-ink2">{{ job.work_arrangement }}</span>{% endif %}
+              {% if job.comp_range %}<span class="px-2 py-0.5 rounded bg-applied/10 border border-applied/40 text-applied">{{ job.comp_range }}</span>{% endif %}
+            </div>
+            {% if job.company_size or job.company_industry %}
+            <div class="text-[11.5px] text-ink3 mt-1.5">
+              {% if job.company_size %}{{ job.company_size }}{% endif %}{% if job.company_size and job.company_industry %} · {% endif %}{% if job.company_industry %}{{ job.company_industry }}{% endif %}
+            </div>
+            {% endif %}
+          </div>
+
+          <div class="text-ink3 text-[11px] font-mono flex-shrink-0 text-right">
+            {% if job.added_rel %}{{ job.added_rel }}{% endif %}
+          </div>
+        </div>
+
+        {# Fit reason #}
+        {% if job.ai_score_reason %}
+        <div class="mt-3 text-[12.5px] text-ink2 leading-relaxed bg-sunken/50 border border-line rounded-md p-2.5">
+          {{ job.ai_score_reason }}
+        </div>
+        {% endif %}
+
+        {# Required skills #}
+        {% if job.must_have_list %}
+        <div class="flex flex-wrap gap-1.5 mt-2.5">
+          {% for skill in job.must_have_list %}
+          <span class="px-2 py-0.5 rounded bg-accent-500/10 border border-accent-500/30 text-accent-400 text-[11px]">{{ skill }}</span>
+          {% endfor %}
+        </div>
+        {% endif %}
+
+        {# Recruiter contact #}
+        {% if job.recruiters %}
+        {% for r in job.recruiters %}
+        <div class="mt-2.5 flex items-center gap-2 text-[12.5px] p-2 rounded-md bg-accent-500/5 border border-accent-500/20">
+          <span class="text-[14px]">👤</span>
+          <div class="flex-1">
+            <span class="text-ink">{{ r.name }}</span>{% if r.role %}<span class="text-ink3"> · {{ r.role }}</span>{% endif %}
+          </div>
+          {% if r.linkedin_url %}
+          <a href="{{ r.linkedin_url }}" target="_blank" rel="noopener" class="text-accent-400 hover:text-accent-300 text-[12px]">Connect on LinkedIn ↗</a>
+          {% endif %}
+        </div>
+        {% endfor %}
+        {% endif %}
+
+        {# Suggested resume — auto-routed from the job title #}
+        {% if job.resume_url %}
+        <div class="mt-2.5 flex items-center gap-2 text-[12.5px] p-2 rounded-md bg-sunken border border-line">
+          <span class="text-[14px]">📄</span>
+          <div class="flex-1">
+            <span class="text-ink3">Send this resume:</span>
+            <span class="text-ink">{{ job.resume_label }}</span>
+          </div>
+          <a href="{{ job.resume_url }}" target="_blank" rel="noopener" class="text-accent-400 hover:text-accent-300 text-[12px]">Open resume ↗</a>
+        </div>
+        {% endif %}
+
+        {# Actions #}
+        <div class="flex flex-wrap gap-2 mt-3 pt-3 border-t border-line">
+          {% if job.link %}
+          <a href="{{ job.link }}" target="_blank" rel="noopener"
+             class="h-9 px-4 rounded-md border border-line bg-sunken hover:border-accent-500/50 hover:text-accent-400 text-ink2 text-[13px] inline-flex items-center gap-1.5 transition">
+            🔗 Open on LinkedIn
+          </a>
+          {% endif %}
+          <form method="POST" action="/leads/{{ job.id }}/pursue" class="inline">
+            <button type="submit" class="h-9 px-4 rounded-md border border-applied/50 bg-applied/15 hover:bg-applied/25 text-applied text-[13px] font-medium transition">
+              ✓ Pursue (move to pipeline)
+            </button>
+          </form>
+          <form method="POST" action="/leads/{{ job.id }}/dismiss" class="inline">
+            <button type="submit" class="h-9 px-4 rounded-md border border-rejected/40 bg-rejected/10 hover:bg-rejected/20 text-rejected text-[13px] font-medium transition">
+              ✕ Dismiss
+            </button>
+          </form>
+        </div>
+      </div>
+    </div>
+    {% endfor %}
+  </div>
+  {% endif %}
+
+</div>
+{% endblock %}

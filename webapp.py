@@ -1107,8 +1107,61 @@ def job_resume(job_id: int, request: Request):
             "job": job_dict,
             "resume_html": resume_html,
             "pdf_filename": pdf_filename,
+            "pdf_url": f"/jobs/{job_id}/resume/pdf",
         },
     )
+
+
+def _render_resume_pdf(resume_html: str, pdf_filename: str, request: Request):
+    """Shared helper: render the clean PDF template + Playwright → PDF Response.
+
+    Returns a FastAPI Response with the PDF bytes and a Content-Disposition
+    that downloads as the stable per-role filename. On any Playwright failure
+    returns a 503 JSON so the rest of the app stays healthy.
+    """
+    import pdf_export
+    html = TEMPLATES.get_template("resume_pdf.html").render(
+        request=request, resume_html=resume_html, pdf_filename=pdf_filename,
+    )
+    try:
+        pdf_bytes = pdf_export.html_to_pdf(html)
+    except RuntimeError as exc:
+        return JSONResponse(
+            status_code=503,
+            content={"error": "pdf_unavailable", "message": str(exc)},
+        )
+    from fastapi import Response
+    return Response(
+        content=pdf_bytes,
+        media_type="application/pdf",
+        headers={"Content-Disposition": f'attachment; filename="{pdf_filename}"'},
+    )
+
+
+@app.get("/jobs/{job_id}/resume/pdf")
+def job_resume_pdf(job_id: int, request: Request):
+    """Download a job's tailored resume as a real PDF (clickable links,
+    selectable text) via Playwright. See pdf_export.py for the why."""
+    tracker.init_db()
+    uid = current_user_id(request)
+    with get_connection() as conn:
+        job = conn.execute(
+            "SELECT * FROM jobs WHERE id = ? AND user_id = ?", (job_id, uid),
+        ).fetchone()
+    if not job:
+        return JSONResponse(status_code=404, content={"error": "not_found"})
+    job_dict = dict(job)
+    resume_md = (job_dict.get("resume_md") or "").strip()
+    if not resume_md:
+        return JSONResponse(
+            status_code=400,
+            content={"error": "no_resume", "message": "No tailored resume on this job yet."},
+        )
+    resume_html = md_lib.markdown(resume_md, extensions=["extra", "sane_lists"])
+    company_slug = _slugify_for_filename(job_dict.get("company") or "company")
+    title_slug = _slugify_for_filename(job_dict.get("title") or "role")
+    pdf_filename = f"Ajinkya_Kate_{company_slug}_{title_slug}.pdf"
+    return _render_resume_pdf(resume_html, pdf_filename, request)
 
 
 # ─────────────────────────────────────────────────────────────────────────────
@@ -1428,6 +1481,63 @@ def _build_chip_clause(chips_def, selected_keys, column):
     return f"({' OR '.join(fragments)})", params
 
 
+@app.get("/discover", response_class=HTMLResponse)
+def discover(request: Request):
+    """Separate list of jobs sourced from external scrapes (Apify LinkedIn,
+    etc.), kept OUT of the Gmail-alert /leads inbox. Ranked by fit score
+    (STRONG first), shows company meta + salary + recruiter contact. Pursue
+    moves a job into the pipeline (status=saved); Dismiss hides it."""
+    tracker.init_db()
+    uid = current_user_id(request)
+    with get_connection() as conn:
+        rows = conn.execute(
+            "SELECT id, title, company, link, location, company_size, "
+            "company_industry, company_url, work_arrangement, comp_range, "
+            "level, yoe_required, posted_at, source, jd_summary, "
+            "must_have_skills, jd_raw_text, ai_score, ai_score_reason "
+            "FROM jobs WHERE user_id = ? AND status = 'discovered' "
+            "ORDER BY CASE ai_score WHEN 'STRONG' THEN 0 WHEN 'MAYBE' THEN 1 "
+            "WHEN 'SKIP' THEN 2 ELSE 3 END, posted_at DESC",
+            (uid,),
+        ).fetchall()
+        # Recruiter contacts keyed by job_id (one query, grouped in Python)
+        contact_rows = conn.execute(
+            "SELECT job_id, name, role, linkedin_url, email FROM contacts "
+            "WHERE user_id = ? ORDER BY id", (uid,),
+        ).fetchall()
+    contacts_by_job = {}
+    for c in contact_rows:
+        contacts_by_job.setdefault(c["job_id"], []).append(dict(c))
+
+    import role_resumes as _rr
+    jobs = []
+    for r in rows:
+        d = dict(r)
+        d["added_rel"] = _relative_time(d.get("posted_at", "") or "")
+        d["recruiters"] = contacts_by_job.get(d["id"], [])
+        jd_raw = " ".join((d.get("jd_raw_text") or "").split()).strip()
+        d["jd_full"] = jd_raw
+        d["jd_char_count"] = len(jd_raw)
+        d["must_have_list"] = [
+            s.strip() for s in (d.get("must_have_skills") or "").split(",") if s.strip()
+        ][:8]
+        # Suggested resume: auto-route the job title to its best-fit resume
+        # family so each card links straight to the right tailored resume to
+        # send. Same detection used on /leads — one source of truth.
+        fam = _rr.detect_family_from_title(d.get("title") or "")
+        d["resume_family"] = fam
+        d["resume_label"] = _rr.FAMILY_LABELS.get(fam, fam)
+        d["resume_url"] = f"/resumes/role/{fam}"
+        jobs.append(d)
+
+    strong = sum(1 for j in jobs if j.get("ai_score") == "STRONG")
+    maybe = sum(1 for j in jobs if j.get("ai_score") == "MAYBE")
+    return TEMPLATES.TemplateResponse("discover.html", {
+        "request": request, "jobs": jobs,
+        "total": len(jobs), "strong": strong, "maybe": maybe,
+    })
+
+
 @app.get("/leads", response_class=HTMLResponse)
 def leads_inbox(request: Request, show: str = "", title: str = "", loc: str = ""):
     """Triage list of leads, filtered by chip-style title + location selectors.
@@ -1459,7 +1569,9 @@ def leads_inbox(request: Request, show: str = "", title: str = "", loc: str = ""
         rows = conn.execute(
             f"SELECT id, title, company, link, location, added_at, "
             f"jd_raw_text, jd_summary, level, yoe_required, "
-            f"must_have_skills, nice_to_have_skills "
+            f"must_have_skills, nice_to_have_skills, "
+            f"company_size, company_industry, work_arrangement, comp_range, "
+            f"posted_at, source "
             f"FROM jobs WHERE {where_sql} ORDER BY added_at DESC LIMIT 200",
             tuple(params),
         ).fetchall()
@@ -1739,6 +1851,10 @@ def role_resume_page(family: str, request: Request):
     # title displays target role @ target company at the top of the page.
     display_title = label
     display_company = company if company else label
+    pdf_url = f"/resumes/role/{family}/pdf"
+    if company:
+        from urllib.parse import quote
+        pdf_url += f"?company={quote(company)}"
     return TEMPLATES.TemplateResponse(
         "resume.html",
         {
@@ -1747,5 +1863,27 @@ def role_resume_page(family: str, request: Request):
                     "resume_md": md, "link": "", "company_slug": company_slug or label_slug},
             "resume_html": resume_html,
             "pdf_filename": pdf_filename,
+            "pdf_url": pdf_url,
         },
     )
+
+
+@app.get("/resumes/role/{family}/pdf")
+def role_resume_pdf(family: str, request: Request):
+    """Download a role-family resume as a real PDF (clickable links,
+    selectable text) via Playwright. Mirrors role_resume_page's filename
+    logic so the downloaded file matches the on-screen hint."""
+    import role_resumes
+    md = role_resumes.render_role_resume(family)
+    if not md:
+        return JSONResponse(status_code=404, content={"error": "unknown_family"})
+    resume_html = md_lib.markdown(md, extensions=["extra", "sane_lists"])
+    label = role_resumes.FAMILY_LABELS.get(family, family)
+    company = (request.query_params.get("company") or "").strip()
+    company_slug = _slugify_for_filename(company) if company else ""
+    label_slug = label.replace(" / ", "_").replace(" ", "_")
+    if company_slug:
+        pdf_filename = f"Ajinkya_Kate_{company_slug}_{label_slug}.pdf"
+    else:
+        pdf_filename = f"Ajinkya_Kate_{label_slug}.pdf"
+    return _render_resume_pdf(resume_html, pdf_filename, request)

@@ -143,6 +143,16 @@
               {{ lead.yoe_required }} experience
             </span>
             {% endif %}
+            {% if lead.work_arrangement %}
+            <span class="px-2 py-0.5 rounded bg-sunken border border-line text-ink2 text-[11px]">
+              {{ lead.work_arrangement }}
+            </span>
+            {% endif %}
+            {% if lead.comp_range %}
+            <span class="px-2 py-0.5 rounded bg-applied/10 border border-applied/40 text-applied text-[11px]">
+              {{ lead.comp_range }}
+            </span>
+            {% endif %}
             {% if lead.link %}
             <a href="{{ lead.link }}" target="_blank" rel="noopener"
                class="ml-auto text-accent-400 hover:text-accent-300 text-[12px] underline">
@@ -150,6 +160,15 @@
             </a>
             {% endif %}
           </div>
+
+          {# Company meta: size + industry (from Apify-sourced leads) #}
+          {% if lead.company_size or lead.company_industry %}
+          <div class="text-[12px] text-ink3">
+            {% if lead.company_size %}{{ lead.company_size }}{% endif %}
+            {% if lead.company_size and lead.company_industry %} · {% endif %}
+            {% if lead.company_industry %}{{ lead.company_industry }}{% endif %}
+          </div>
+          {% endif %}
 
           {# Must-have / nice-to-have skills #}
           {% if lead.must_have_list or lead.nice_to_have_list %}
