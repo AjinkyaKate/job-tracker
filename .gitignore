@@ -13,6 +13,7 @@ env/
 .env
 .env.local
 .env.*.local
+.env.prod
 
 # Data files — personal job info, never commit
 jobs.json

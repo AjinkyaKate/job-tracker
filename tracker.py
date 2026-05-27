@@ -66,6 +66,11 @@ def init_db():
         _ensure_column(conn, "contacts", "priority", "INTEGER")      # 1 = reach out first (HR), then leaders
         _ensure_column(conn, "contacts", "seniority", "TEXT")        # Director / VP / CXO / Owner ...
         _ensure_column(conn, "contacts", "about", "TEXT")            # short profile snippet for outreach context
+        # Premium-LinkedIn outreach: a full InMail (subject + body, ~1900 chars)
+        # in addition to the short connection note. connect_note stays the
+        # invite-note (door-opener); inmail_* is the direct-message variant.
+        _ensure_column(conn, "contacts", "inmail_subject", "TEXT")
+        _ensure_column(conn, "contacts", "inmail_body", "TEXT")
 
 
 def _require_job(conn, job_id):

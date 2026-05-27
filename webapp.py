@@ -1482,13 +1482,22 @@ def _build_chip_clause(chips_def, selected_keys, column):
 
 
 @app.get("/discover", response_class=HTMLResponse)
-def discover(request: Request):
+def discover(request: Request, sort: str = "new"):
     """Separate list of jobs sourced from external scrapes (Apify LinkedIn,
-    etc.), kept OUT of the Gmail-alert /leads inbox. Ranked by fit score
-    (STRONG first), shows company meta + salary + recruiter contact. Pursue
-    moves a job into the pipeline (status=saved); Dismiss hides it."""
+    etc.), kept OUT of the Gmail-alert /leads inbox. Default sort is NEWEST
+    first (?sort=new) so freshly-posted roles surface at the top ("be on top");
+    ?sort=fit ranks by STRONG/MAYBE/SKIP instead. Shows company meta + salary +
+    ranked contacts. Pursue moves a job into the pipeline; Dismiss hides it."""
     tracker.init_db()
     uid = current_user_id(request)
+    # COALESCE so jobs without a posted_at fall back to ingest time; works on
+    # both SQLite and Postgres (avoids NULLS FIRST/LAST backend differences).
+    if sort == "fit":
+        order = ("CASE ai_score WHEN 'STRONG' THEN 0 WHEN 'MAYBE' THEN 1 "
+                 "WHEN 'SKIP' THEN 2 ELSE 3 END, COALESCE(posted_at, added_at) DESC")
+    else:
+        sort = "new"
+        order = "COALESCE(posted_at, added_at) DESC"
     with get_connection() as conn:
         rows = conn.execute(
             "SELECT id, title, company, link, location, company_size, "
@@ -1496,14 +1505,14 @@ def discover(request: Request):
             "level, yoe_required, posted_at, source, jd_summary, "
             "must_have_skills, jd_raw_text, ai_score, ai_score_reason "
             "FROM jobs WHERE user_id = ? AND status = 'discovered' "
-            "ORDER BY CASE ai_score WHEN 'STRONG' THEN 0 WHEN 'MAYBE' THEN 1 "
-            "WHEN 'SKIP' THEN 2 ELSE 3 END, posted_at DESC",
+            "ORDER BY " + order,
             (uid,),
         ).fetchall()
         # Recruiter contacts keyed by job_id (one query, grouped in Python)
         contact_rows = conn.execute(
             "SELECT job_id, name, role, linkedin_url, email, "
-            "connect_note, followup_msg, contact_type, priority, seniority, about "
+            "connect_note, followup_msg, inmail_subject, inmail_body, "
+            "contact_type, priority, seniority, about "
             "FROM contacts WHERE user_id = ? "
             "ORDER BY COALESCE(priority, 1), id", (uid,),
         ).fetchall()
@@ -1545,7 +1554,7 @@ def discover(request: Request):
     maybe = sum(1 for j in jobs if j.get("ai_score") == "MAYBE")
     return TEMPLATES.TemplateResponse("discover.html", {
         "request": request, "jobs": jobs,
-        "total": len(jobs), "strong": strong, "maybe": maybe,
+        "total": len(jobs), "strong": strong, "maybe": maybe, "sort": sort,
     })
 
 

@@ -24,12 +24,22 @@
       <a href="/leads" class="text-accent-400 hover:text-accent-300 underline">Leads inbox</a>.
       Pursue moves a job into your pipeline. Dismiss hides it.
     </p>
-    {% if total %}
-    <div class="flex gap-2 mt-3 text-[12px]">
+    <div class="flex flex-wrap items-center gap-2 mt-3 text-[12px]">
+      {% if total %}
       <span class="px-2.5 py-1 rounded-md bg-applied/10 border border-applied/40 text-applied font-medium">{{ strong }} strong</span>
       <span class="px-2.5 py-1 rounded-md bg-replied/10 border border-replied/40 text-replied font-medium">{{ maybe }} maybe</span>
+      <span class="mx-1 text-line"></span>
+      {% endif %}
+      {# Sort toggle: newest-first (default) vs best-fit #}
+      <a href="/discover?sort=new" class="px-2.5 py-1 rounded-md border text-[12px] font-medium transition
+        {% if sort == 'new' %}bg-accent-500/15 border-accent-500/50 text-accent-400{% else %}border-line text-ink2 hover:bg-sunken{% endif %}">Newest</a>
+      <a href="/discover?sort=fit" class="px-2.5 py-1 rounded-md border text-[12px] font-medium transition
+        {% if sort == 'fit' %}bg-accent-500/15 border-accent-500/50 text-accent-400{% else %}border-line text-ink2 hover:bg-sunken{% endif %}">Best fit</a>
+      {# Refresh: reloads the list (keeps current sort). The 15-min auto-scrape feeds new jobs in. #}
+      <a href="/discover?sort={{ sort }}" class="ml-auto px-3 py-1 rounded-md border border-line bg-raised hover:bg-sunken text-ink text-[12px] font-medium inline-flex items-center gap-1.5">
+        <span>↻</span> Refresh
+      </a>
     </div>
-    {% endif %}
   </header>
 
   {% if not jobs %}
@@ -138,6 +148,21 @@
               </div>
             </div>
             <p class="text-[12px] text-ink2 leading-snug whitespace-pre-line">{{ r.connect_note }}</p>
+          </div>
+          {% endif %}
+
+          {# InMail (Premium) — subject + body, send directly without connecting #}
+          {% if r.inmail_body %}
+          <div class="mt-2 rounded-md bg-sunken border border-line p-2">
+            <div class="flex items-center justify-between mb-1">
+              <span class="text-[10px] font-mono uppercase tracking-wider text-ink3">InMail (Premium)</span>
+              <div class="flex items-center gap-2">
+                {% if r.inmail_subject %}<button type="button" class="copy-btn text-[11px] text-accent-400 hover:text-accent-300" data-copy="{{ r.inmail_subject }}">Copy subject</button>{% endif %}
+                <button type="button" class="copy-btn text-[11px] text-accent-400 hover:text-accent-300" data-copy="{{ r.inmail_body }}">Copy body</button>
+              </div>
+            </div>
+            {% if r.inmail_subject %}<p class="text-[11.5px] text-ink mb-1"><span class="text-ink3">Subject:</span> {{ r.inmail_subject }}</p>{% endif %}
+            <p class="text-[12px] text-ink2 leading-snug whitespace-pre-line">{{ r.inmail_body }}</p>
           </div>
           {% endif %}
 

@@ -47,3 +47,12 @@ websockets==15.0.1
 zipp==3.23.1
 # Postgres backend for Render deploy. Pulls in pure-Python psycopg + C-binary.
 psycopg[binary]==3.2.13
+# Pure-Python HTML->PDF fallback for hosts without Chromium (Render native).
+# Keeps <a href> links clickable. Playwright is preferred locally; this is the
+# prod path. Pinned to 0.2.11 (no cairo/system-lib deps, unlike newer releases).
+# reportlab<4 + svglib 1.5.1 are pinned to keep pip OFF the rlPyCairo/cairo path
+# that newer versions pull in (which needs system libs Render native lacks).
+xhtml2pdf==0.2.11
+reportlab==3.6.13
+svglib==1.5.1
+Pillow==11.3.0
