@@ -54,6 +54,18 @@ def init_db():
         _ensure_column(conn, "jobs", "employment_type", "TEXT")      # FULL_TIME, etc.
         _ensure_column(conn, "jobs", "posted_at", "TEXT")            # original post date (vs added_at = ingest date)
         _ensure_column(conn, "jobs", "external_apply_url", "TEXT")   # direct-apply link if present
+        # Outreach drafts attached to a contact: the <200-char LinkedIn invite
+        # note (door-opener) and the longer post-accept follow-up message.
+        # Drafted by Claude (JD + person + Ajinkya's profile), copy-pasted from
+        # the discover card. NULL until drafted.
+        _ensure_column(conn, "contacts", "connect_note", "TEXT")     # LinkedIn invite note, <=200 chars
+        _ensure_column(conn, "contacts", "followup_msg", "TEXT")     # message sent after they accept
+        # Decision-maker enrichment: who at the company to reach out to, ranked.
+        # Populated by the company-employees scrape (find_decision_makers.py).
+        _ensure_column(conn, "contacts", "contact_type", "TEXT")     # recruiter / hiring_manager / leader / founder
+        _ensure_column(conn, "contacts", "priority", "INTEGER")      # 1 = reach out first (HR), then leaders
+        _ensure_column(conn, "contacts", "seniority", "TEXT")        # Director / VP / CXO / Owner ...
+        _ensure_column(conn, "contacts", "about", "TEXT")            # short profile snippet for outreach context
 
 
 def _require_job(conn, job_id):

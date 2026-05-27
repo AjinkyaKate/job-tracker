@@ -666,6 +666,79 @@ The technical surface: a PostgreSQL schema I designed and migrate, SQL queries a
 """
 
 
+# ─── Standalone resume: Augnito Product Manager (Voice AI / healthcare) ─────
+# Tailored to the Augnito PM JD: end-to-end product lifecycle, B2B SaaS,
+# customer obsession, cross-functional influence (design/eng/CS/sales),
+# data-driven decisions, AI-driven solutions + design thinking (preferred).
+# Honest on years (2+, not the 4+ they ask) but leads hard on end-to-end
+# ownership and the Voice-AI/healthcare-adjacent angle.
+
+AUGNITO_PM_RESUME = """# Ajinkya Kate
+
+[+91 77588 80580](tel:+917758880580) · [ajinkyakate2001@gmail.com](mailto:ajinkyakate2001@gmail.com) · [LinkedIn](https://linkedin.com/in/ajinkya-kate) · [GitHub](https://github.com/AjinkyaKate)
+
+Pune, India · Available immediately · CSPO Certified
+
+
+## Summary
+
+Product Owner with 2+ years building and shipping B2B SaaS, owning features end to end: user research and requirements, roadmap prioritization, release management, and tracking adoption after launch. I work close to customers and across design, engineering, customer success, and sales to turn real pain into product that moves the metric. Comfortable making data-driven trade-offs in ambiguous, fast-moving environments, and I build with AI hands-on. Drawn to high-impact, AI-driven SaaS like Voice AI for healthcare, where the product directly changes how professionals do their work.
+
+
+## Experience
+
+**Product Owner, D·engage** (Jan 2025 - May 2026, remote from Pune)
+
+London HQ B2B SaaS for customer engagement. Enterprise customers in banking, retail, telecom.
+
+- Owned the RCS messaging channel end to end: user and stakeholder research, requirements, roadmap prioritization, production release management, and tracking adoption after launch.
+- Ran production releases on a regular cadence and wrote the release notes customer success and support used to brief enterprise clients, then watched adoption and fed the learnings back into the roadmap.
+- Partnered across design, engineering, quality, customer success, and sales to scope features and weigh trade-offs between customer experience, performance, and operational support load.
+- Stayed close to customers through the whole journey: onboarding, integration coordination, and turning recurring pain into clear, prioritized requirements engineering could act on.
+- Used Claude, ChatGPT, and Gemini daily to analyze usage data, draft specs, and automate repeat reporting.
+
+**Product Analyst, Denner.in** (May 2024 - Dec 2024, hybrid in Pune)
+
+- Owned product analytics and competitive research. Ran A/B tests and funnel deep-dives, and built the reporting dashboards the product team used to make data-driven calls.
+
+
+## Project
+
+**Job Tracker** (May 2026, in daily use)
+
+[job-tracker-bmhy.onrender.com](https://job-tracker-bmhy.onrender.com) · [github.com/AjinkyaKate/job-tracker](https://github.com/AjinkyaKate/job-tracker)
+
+An AI-driven product I scoped, built, and shipped solo, end to end. It reads my Gmail for job-alert emails, parses each into structured data, fetches the full job description over an API, ranks roles by fit, and tracks every application through to offer.
+
+Why it matters here: it is proof I take a product from user need to a deployed, data-backed build and then iterate on adoption. Real API integration, a PostgreSQL database I designed, cloud deployment, and AI features built on the Claude API. The same end-to-end ownership this role asks for, done hands-on.
+
+
+## Skills
+
+**Product management:** End-to-end lifecycle ownership, user and market research, product strategy, requirements and PRDs, roadmap prioritization, release management, adoption and outcome metrics, iteration. Design thinking and human-centered design.
+
+**Customer and cross-functional:** Customer obsession, onboarding, working across design, engineering, quality, customer success, sales, and support, and influencing stakeholders at every level.
+
+**Data-driven:** A/B testing, funnel analysis, reporting dashboards, SQL (working), turning usage data into product decisions.
+
+**AI-driven solutions:** Build with the Claude API and LLMs hands-on and ship AI features; daily use of Claude, ChatGPT, and Gemini for analysis, specs, and automation.
+
+**Tools:** Jira, Confluence, Notion, Figma, Postman, GitHub, Google Workspace.
+
+**Languages:** English, Hindi, Marathi.
+
+
+## Education
+
+**Pune University**, Bachelor of Business Administration (BBA), Pune
+
+
+## Certifications
+
+**Certified Scrum Product Owner (CSPO)**, Scrum Alliance, Nov 2025
+"""
+
+
 def render_role_resume(family: str) -> str:
     """Compose the full markdown resume for the given role family.
 
@@ -686,6 +759,8 @@ def render_role_resume(family: str) -> str:
         return SOLUTIONS_ENGINEER_RESUME
     if family == "biz-tech-solutions":
         return BIZ_TECH_SOLUTIONS_RESUME
+    if family == "augnito-pm":
+        return AUGNITO_PM_RESUME
 
     config = ROLE_RESUMES.get(family)
     if not config:
@@ -844,4 +919,7 @@ FAMILY_LABELS = {
     # Standalone resume for consulting-tech-hybrid / data-solutions roles
     # (ZS BTSA, Deloitte/Accenture/EXL/Tiger Analytics tech-consulting).
     "biz-tech-solutions":        "Business Technology Solutions",
+    # Standalone resume tailored to the Augnito Voice-AI PM JD (end-to-end
+    # lifecycle, B2B SaaS, customer obsession, AI-driven, healthcare-adjacent).
+    "augnito-pm":                "Product Manager - Augnito",
 }

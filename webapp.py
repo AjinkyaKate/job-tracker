@@ -1502,8 +1502,10 @@ def discover(request: Request):
         ).fetchall()
         # Recruiter contacts keyed by job_id (one query, grouped in Python)
         contact_rows = conn.execute(
-            "SELECT job_id, name, role, linkedin_url, email FROM contacts "
-            "WHERE user_id = ? ORDER BY id", (uid,),
+            "SELECT job_id, name, role, linkedin_url, email, "
+            "connect_note, followup_msg, contact_type, priority, seniority, about "
+            "FROM contacts WHERE user_id = ? "
+            "ORDER BY COALESCE(priority, 1), id", (uid,),
         ).fetchall()
     contacts_by_job = {}
     for c in contact_rows:
@@ -1524,7 +1526,16 @@ def discover(request: Request):
         # Suggested resume: auto-route the job title to its best-fit resume
         # family so each card links straight to the right tailored resume to
         # send. Same detection used on /leads — one source of truth.
+        # Human-readable source badge for the card.
+        d["source_label"] = {
+            "apify-linkedin": "LinkedIn", "linkedin-post": "LinkedIn post",
+            "naukri": "Naukri", "indeed": "Indeed", "glassdoor": "Glassdoor",
+        }.get(d.get("source") or "", (d.get("source") or "").title())
         fam = _rr.detect_family_from_title(d.get("title") or "")
+        # Company-specific overrides: a JD tailored for one company beats the
+        # generic title-based family for that company's cards.
+        if "augnito" in (d.get("company") or "").lower():
+            fam = "augnito-pm"
         d["resume_family"] = fam
         d["resume_label"] = _rr.FAMILY_LABELS.get(fam, fam)
         d["resume_url"] = f"/resumes/role/{fam}"
