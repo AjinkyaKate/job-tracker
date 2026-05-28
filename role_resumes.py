@@ -812,6 +812,79 @@ Why it matters here: it is proof I build platform/API/integration products hands
 """
 
 
+# ─── Standalone resume: Founder's Office / Strategy + Ops + Tech ────────────
+# Tailored to the Kropbook Founder's Office Associate JD and similar chief-of-
+# staff / generalist-operator roles at early-stage startups. Voice leans
+# OPERATOR rather than PM-corporate: action-led, ownership-first, builder-
+# energy. Pitches the Job Tracker as proof of the "see operational problem,
+# build the system, run it daily" loop these roles actually hire for.
+
+FOUNDERS_OFFICE_RESUME = """# Ajinkya Kate
+
+[+91 77588 80580](tel:+917758880580) · [ajinkyakate2001@gmail.com](mailto:ajinkyakate2001@gmail.com) · [LinkedIn](https://linkedin.com/in/ajinkya-kate) · [GitHub](https://github.com/AjinkyaKate)
+
+Pune, India · Available immediately · Open to Mumbai
+
+
+## Summary
+
+Generalist operator with 2+ years sitting between customers, engineering, and operations at a B2B SaaS. I'm the person who picks up the loose end no one else owns: hear the customer pain, translate it into a fix, coordinate with engineering, and often ship the small fixes myself. I build with AI hands-on (Claude API, OAuth, scheduled jobs, Postgres). Operate by ownership and outcome, not by job description.
+
+
+## Experience
+
+**Product Owner, D·engage** (Jan 2025 - May 2026, remote from Pune)
+
+London HQ B2B SaaS for customer engagement. Enterprise customers in banking, retail, telecom.
+
+- Owned the RCS messaging channel end to end. Requirements, vendor coordination, production rollout, post-launch support. The kind of role where the channel works or it doesn't, and I'm the person responsible either way.
+- Coordinated integration projects end to end with vendor partners. Mapped prerequisites and process flows, walked customers and internal teams through how an integration would work before engineering invested a line of code.
+- Sat between customers and engineering. Heard the pain in onboarding calls, translated it into clear requirements, and often shipped the small fixes on the ground myself.
+- Ran production releases on a regular cadence. Wrote release notes the support team used to brief enterprise clients.
+- Used Claude, ChatGPT, and Gemini daily to analyze usage data, draft specs, and automate repeat reporting.
+
+**Product Analyst, Denner.in** (May 2024 - Dec 2024, hybrid in Pune)
+
+- Owned product analytics, competitive research, and reporting dashboards. Ran A/B tests, funnel deep-dives, and user-research syntheses. Built the dashboards the team used to make decisions.
+
+
+## What I've built solo
+
+**Job Tracker** (May 2026, in daily use)
+
+[job-tracker-bmhy.onrender.com](https://job-tracker-bmhy.onrender.com) · [github.com/AjinkyaKate/job-tracker](https://github.com/AjinkyaKate/job-tracker)
+
+End-to-end operational system I built solo with Claude Code in three weeks. Reads Gmail via OAuth, parses LinkedIn alert emails, fetches job descriptions over a third-party REST API, scrapes companies and decision-makers via Apify, auto-drafts outreach messages, and tracks every application from lead to offer. PostgreSQL schema I designed and migrate, scheduled background jobs, cloud-deployed on Render. Real OAuth, real APIs, real production database.
+
+Why it matters here: this is exactly the Founder's Office shape. I saw an operational problem (my own job search), broke it into systems (ingest, score, outreach, pipeline), built the systems hands-on with AI as the brain, deployed them, and use them daily.
+
+
+## Skills
+
+**Operator instinct:** Owning a problem end to end, picking up loose ends, working across product, engineering, customer, and ops. Comfortable in ambiguity and rapid context-switching.
+
+**Tech and automation:** Build with the Claude API hands-on. Comfortable with OAuth, REST APIs, webhooks, SQL, Postman, GitHub. Ship working software with AI-assisted development (Claude Code, Cursor).
+
+**Analytics and decisions:** A/B testing, funnel analysis, reporting dashboards, turning data into decisions. Working SQL, deep Excel and Sheets.
+
+**Documentation and process:** PRDs, release notes, runbooks. The kind of writing that lets other people do the work without asking you again.
+
+**AI in daily work:** Claude, ChatGPT, Gemini for analysis, drafting, automation, and as a thinking partner.
+
+**Languages:** English, Hindi, Marathi.
+
+
+## Education
+
+**Pune University**, Bachelor of Business Administration (BBA), Pune
+
+
+## Certifications
+
+**Certified Scrum Product Owner (CSPO)**, Scrum Alliance, Nov 2025
+"""
+
+
 def render_role_resume(family: str) -> str:
     """Compose the full markdown resume for the given role family.
 
@@ -836,6 +909,8 @@ def render_role_resume(family: str) -> str:
         return AUGNITO_PM_RESUME
     if family == "saleshandy-pm":
         return SALESHANDY_PM_RESUME
+    if family == "founders-office":
+        return FOUNDERS_OFFICE_RESUME
 
     config = ROLE_RESUMES.get(family)
     if not config:
@@ -1001,4 +1076,8 @@ FAMILY_LABELS = {
     # Platform AND Email Deliverability). Anchors on the D·engage RCS-channel +
     # integration-delivery work as the direct parallel.
     "saleshandy-pm":             "Product Manager - Saleshandy",
+    # Standalone resume for Founder's Office / Chief-of-Staff / generalist-
+    # operator roles at early-stage startups (Kropbook and similar). Voice
+    # leans operator-builder, not PM-corporate.
+    "founders-office":           "Founder's Office Operator",
 }
