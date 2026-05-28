@@ -61,7 +61,7 @@ CERTIFICATIONS = """## Certifications
 ROLE_RESUMES = {
     "product-owner": {
         "summary": (
-            "Product Owner with 1.5 years building B2B SaaS. Did discovery, wrote PRDs, ran sprints, "
+            "Product Owner with 2+ years building B2B SaaS. Did discovery, wrote PRDs, ran sprints, "
             "shipped features, measured what worked. Most recently at D·engage shipping marketing "
             "automation and AI-powered engagement features for enterprise customers in banking, retail, "
             "and telecom. CSPO certified. Open to Product Owner roles in B2B SaaS, Pune-local, immediate "
@@ -76,7 +76,7 @@ ROLE_RESUMES = {
     },
     "pm-apm": {
         "summary": (
-            "PM with 1.5 years owning B2B SaaS product delivery. At D·engage shipped marketing-automation "
+            "PM with 2+ years owning B2B SaaS product delivery. At D·engage shipped marketing-automation "
             "and AI-powered engagement features for enterprise customers in banking, retail, and telecom. "
             "CSPO certified. Open to APM, PM, or Senior PM seats in customer engagement, MarTech, or "
             "AI-product SaaS."
@@ -90,7 +90,7 @@ ROLE_RESUMES = {
     },
     "ai-product-manager": {
         "summary": (
-            "PM with 1.5 years shipping AI features in production B2B SaaS. At D·engage built LLM-powered "
+            "PM with 2+ years shipping AI features in production B2B SaaS. At D·engage built LLM-powered "
             "engagement journeys, content generation, and smart segmentation. Worked closely with "
             "engineers on which models to use, how to write prompts, and how to evaluate output. Building "
             "AI side projects too: a personal AI-powered job tracker built end-to-end in Python with a "
@@ -106,7 +106,7 @@ ROLE_RESUMES = {
     },
     "forward-deployed": {
         "summary": (
-            "Forward-Deployed Product builder with 1.5 years owning enterprise B2B SaaS outcomes "
+            "Forward-Deployed Product builder with 2+ years owning enterprise B2B SaaS outcomes "
             "end-to-end. At D·engage worked with enterprise customers in banking, retail, and telecom: "
             "discovery, customization, AI features, training, retention. Active code-side builder too. "
             "Shipped a personal AI job tracker (FastAPI, PostgreSQL, Gemini, deployed) and an AI QA "
@@ -123,8 +123,8 @@ ROLE_RESUMES = {
     },
     "founding": {
         "summary": (
-            "Builder-PM exploring Founding PM seats at AI-native seed and Series-A startups. 1.5 years "
-            "shipping B2B SaaS at D·engage (customer engagement and MarTech for enterprise customers). "
+            "Builder-PM exploring Founding PM seats at AI-native seed and Series-A startups. 2+ years "
+            "shipping B2B SaaS, currently at D·engage (customer engagement and MarTech for enterprise customers). "
             "On the side, shipped AI projects in production: personal job-search tracker (FastAPI, "
             "PostgreSQL, Gemini email classification, GitHub Actions cron for auto-sync, deployed on "
             "Render, in daily use). Comfortable wearing PM, engineer, and customer-success hats "
@@ -140,7 +140,7 @@ ROLE_RESUMES = {
     },
     "solutions-engineer": {
         "summary": (
-            "Customer-facing technical product professional with 1.5 years at D·engage (B2B marketing "
+            "Customer-facing technical product professional with 2+ years in B2B SaaS, currently at D·engage (B2B marketing "
             "automation for enterprise clients in banking, retail, and telecom). Lived at the "
             "intersection of customer needs, engineering capacity, and AI capabilities. Translated "
             "customer pain into product specs, partnered with engineering on AI feature design, supported "
@@ -158,7 +158,7 @@ ROLE_RESUMES = {
     },
     "product-engineer": {
         "summary": (
-            "Product Engineer who owns features end-to-end. 1.5 years at D·engage as Product Owner "
+            "Product Engineer who owns features end-to-end. 2+ years in product roles, currently as Product Owner at D·engage "
             "shipping B2B SaaS AI-powered engagement features for enterprise customers. Code on "
             "weekends: built a personal AI job tracker in Python, FastAPI, and PostgreSQL with Gemini "
             "integration, deployed on Render, currently in daily use "
@@ -176,7 +176,7 @@ ROLE_RESUMES = {
     },
     "business-analyst": {
         "summary": (
-            "Business and Product Analyst with 1.5 years across product and analytics roles. At D·engage "
+            "Business and Product Analyst with 2+ years across product and analytics roles. At D·engage "
             "as Product Owner: drove product discovery, A/B test analysis, funnel deep-dives, "
             "requirements writing. At Denner.in as Product Analyst: owned competitive research and "
             "analytics dashboards. CSPO certified. Open to BA or Product Analyst roles in B2B SaaS, "
@@ -190,7 +190,7 @@ ROLE_RESUMES = {
     },
     "senior-pm": {
         "summary": (
-            "Senior Product Manager candidate with 1.5 years owning B2B SaaS product delivery at D·engage. "
+            "Senior Product Manager candidate with 2+ years owning B2B SaaS product delivery, currently at D·engage. "
             "Did discovery, wrote PRDs, ran sprints, shipped AI features for enterprise customers in "
             "banking, retail, and telecom. Ready to step up to Senior PM scope: own a product area "
             "end-to-end, mentor APMs, lead multi-team initiatives, set quarterly OKRs. CSPO certified. "
@@ -207,8 +207,8 @@ ROLE_RESUMES = {
     },
     "technical-pm": {
         "summary": (
-            "Technical Product Manager. PM with hands-on code comfort. 1.5 years at D·engage as Product "
-            "Owner shipping B2B SaaS marketing automation and AI-powered features for enterprise "
+            "Technical Product Manager. PM with hands-on code comfort. 2+ years in product roles, currently as "
+            "Product Owner at D·engage shipping B2B SaaS marketing automation and AI-powered features for enterprise "
             "customers. Code on weekends: built a personal AI job tracker in Python, FastAPI, and "
             "PostgreSQL with Gemini email classification, deployed on Render, in daily use "
             "(github.com/AjinkyaKate/job-tracker). Comfortable in eng standups, reading PRs, scoping "
@@ -227,7 +227,7 @@ ROLE_RESUMES = {
     "forward-deployed-engineer": {
         "summary": (
             "Forward-Deployed Engineer candidate. Code-leaning generalist who lives with enterprise "
-            "customers and ships integrations end-to-end. 1.5 years at D·engage on the product side "
+            "customers and ships integrations end-to-end. 2+ years in product roles, currently at D·engage on the product side "
             "(B2B SaaS, AI marketing automation for enterprise clients in banking, retail, and telecom) "
             "built strong customer-pain to product-fit instincts. Personal projects in production: AI "
             "job tracker (FastAPI, PostgreSQL, Gemini, deployed on Render, in daily use). "
@@ -246,8 +246,8 @@ ROLE_RESUMES = {
     },
     "founding-engineer": {
         "summary": (
-            "Founding Engineer candidate at AI-native seed or Series-A startups. 1.5 years on the product "
-            "side at D·engage (B2B SaaS, enterprise customer engagement, AI feature shipping). "
+            "Founding Engineer candidate at AI-native seed or Series-A startups. 2+ years on the product "
+            "side, currently at D·engage (B2B SaaS, enterprise customer engagement, AI feature shipping). "
             "Side-project track: built a personal AI job tracker solo (FastAPI, PostgreSQL, Gemini email "
             "classification, GitHub Actions cron, deployed on Render, in daily use at "
             "github.com/AjinkyaKate/job-tracker). Wear engineer, PM, "
@@ -278,7 +278,7 @@ ROLE_RESUMES = {
     },
     "implementation-consultant": {
         "summary": (
-            "Implementation Consultant or Engineer with 1.5 years at D·engage owning the product side of "
+            "Implementation Consultant or Engineer with 2+ years in B2B SaaS, currently at D·engage owning the product side of "
             "enterprise B2B SaaS deployment. Did requirements gathering, customization scoping, AI "
             "feature configuration, onboarding and training, success monitoring. Worked with enterprise "
             "customers in banking, retail, and telecom. Translated business needs into product "
@@ -297,7 +297,7 @@ ROLE_RESUMES = {
     "applied-ai-engineer": {
         "summary": (
             "Applied AI Engineer. PM-engineer hybrid focused on shipping LLM-powered features into "
-            "production. 1.5 years at D·engage shipping AI-powered marketing engagement features "
+            "production. 2+ years in product roles, currently at D·engage shipping AI-powered marketing engagement features "
             "(LLM-assisted content generation, smart segmentation, personalization journeys). Partnered "
             "with engineering on model selection, prompt design, and evaluation. Personal AI projects in "
             "production: job tracker using Gemini for email classification (deployed on Render, in daily "
@@ -332,7 +332,7 @@ Pune District, Maharashtra · Available immediately · CSPO Certified
 
 ## About Me
 
-I'm a B2B operations professional with 1.5 years coordinating cross-functional work at a SaaS company. My day-to-day has been about keeping things moving across teams: tracking operational data in CRMs and dashboards, coordinating delivery schedules across engineering and customer success, and working with vendor partners on integrations. Comfortable taking ownership and spotting inefficiencies to fix. Available immediately.
+I'm a B2B operations professional with 2+ years coordinating cross-functional work at a SaaS company. My day-to-day has been about keeping things moving across teams: tracking operational data in CRMs and dashboards, coordinating delivery schedules across engineering and customer success, and working with vendor partners on integrations. Comfortable taking ownership and spotting inefficiencies to fix. Available immediately.
 
 
 ## Experience
@@ -392,7 +392,7 @@ Pune, India · Available immediately · CSPO Certified
 
 ## Summary
 
-I'm a product person who builds. The clearest way to show this is my current side project: a live job-search CRM I built solo in 3 weeks with Claude Code as my main dev environment. It's in daily use, code is public, around 50 commits in. Before this I spent 1.5 years as Product Owner at D·engage, shipping AI features in B2B SaaS for banking, retail, and telecom customers. I'm looking for a Full Stack Builder type role where the brief is "make this idea a real working app this week, not next quarter."
+I'm a product person who builds. The clearest way to show this is my current side project: a live job-search CRM I built solo in 3 weeks with Claude Code as my main dev environment. It's in daily use, code is public, around 50 commits in. Before this I spent 2+ years in product roles, most recently as Product Owner at D·engage, shipping AI features in B2B SaaS for banking, retail, and telecom customers. I'm looking for a Full Stack Builder type role where the brief is "make this idea a real working app this week, not next quarter."
 
 
 ## Featured Project
@@ -471,7 +471,7 @@ Pune, India · Available immediately · CSPO Certified
 
 ## Summary
 
-Product person who also ships code. I work as a full-stack builder using AI tools like Claude Code as my dev environment, turning ambiguous ideas into shipped, working applications. 1.5 years as Product Owner at D·engage in B2B SaaS, comfortable across product calls, customer conversations, and the code itself.
+Product person who also ships code. I work as a full-stack builder using AI tools like Claude Code as my dev environment, turning ambiguous ideas into shipped, working applications. 2+ years in product roles, currently as Product Owner at D·engage in B2B SaaS, comfortable across product calls, customer conversations, and the code itself.
 
 
 ## Experience
@@ -739,6 +739,79 @@ Why it matters here: it is proof I take a product from user need to a deployed, 
 """
 
 
+# ─── Standalone resume: Saleshandy Platform/API/Integrations PM ─────────────
+# Tailored to both Saleshandy roles (Product Manager API/Integrations/Platform
+# AND Technical PM Email Deliverability) since both ask for the same shape:
+# technical PM on a B2B SaaS messaging/email-adjacent platform, owning the
+# API/integration surface, customer-facing, AI-tool fluency. Anchors on the
+# D·engage RCS-channel + integration-delivery work which is the exact parallel.
+
+SALESHANDY_PM_RESUME = """# Ajinkya Kate
+
+[+91 77588 80580](tel:+917758880580) · [ajinkyakate2001@gmail.com](mailto:ajinkyakate2001@gmail.com) · [LinkedIn](https://linkedin.com/in/ajinkya-kate) · [GitHub](https://github.com/AjinkyaKate)
+
+Pune, India · Available immediately · CSPO Certified
+
+
+## Summary
+
+Product Owner with 2+ years shipping platform and integration features on a B2B SaaS. I own the RCS messaging channel at D·engage end to end: requirements, integration delivery with vendor partners, production releases, and post-launch support. Technically fluent. Comfortable reading APIs (REST, OAuth, webhooks), debugging from logs, writing basic SQL, and shipping tools on the Claude API. The platform-PM loop, talk to users, define the API surface, ship, measure adoption, is the work I want to do full-time.
+
+
+## Experience
+
+**Product Owner, D·engage** (Jan 2025 - May 2026, remote from Pune)
+
+London HQ B2B SaaS for customer engagement. Enterprise customers in banking, retail, telecom.
+
+- Owned the RCS messaging channel end to end. Requirements, roadmap, production releases, adoption tracking. The same loop the Saleshandy platform/API role asks for, on a CPaaS adjacent to cold-email infrastructure.
+- Coordinated integration projects end to end with vendor partners. Gathered prerequisites, mapped process flows, walked customers and internal teams through how an integration would work before engineering invested a line of code.
+- Sat between customers and engineering. Heard the pain in onboarding calls, translated it into a clear requirement, and often shipped the small fixes on the ground myself.
+- Read APIs, debugged from logs, used Postman daily to validate integrations before customer rollout. Wrote release notes the support team used to brief enterprise clients.
+- Used Claude, ChatGPT, and Gemini in daily work to analyze usage data, draft specs, and automate repeat reporting.
+
+**Product Analyst, Denner.in** (May 2024 - Dec 2024, hybrid in Pune)
+
+- Owned product analytics and competitive research. Ran A/B tests and funnel deep-dives, and built the reporting dashboards the product team used to make data-driven calls.
+
+
+## Project
+
+**Job Tracker** (May 2026, in daily use)
+
+[job-tracker-bmhy.onrender.com](https://job-tracker-bmhy.onrender.com) · [github.com/AjinkyaKate/job-tracker](https://github.com/AjinkyaKate/job-tracker)
+
+A working platform I built solo with the Claude API as the brain. Reads Gmail via OAuth, parses LinkedIn alert emails into structured data, fetches full JDs over a third-party REST API, ranks roles by fit, and pushes to PostgreSQL on a scheduled background job.
+
+Why it matters here: it is proof I build platform/API/integration products hands-on. Real OAuth flows, REST integration, webhooks, a Postgres schema I designed and migrate, scheduled jobs, deployed on cloud infra. The same surface a Saleshandy API/Platform PM owns, done end to end on my own.
+
+
+## Skills
+
+**Platform / API / Integrations:** Owning a channel end to end on B2B SaaS, integration coordination with vendor partners, API surface design discussions with engineering, prerequisites and process-flow mapping, customer-facing onboarding for integrations, developer-experience thinking.
+
+**Technical fluency:** REST APIs, JSON, webhooks, OAuth flows, reading and debugging from logs, basic SQL, Postman. Ship working software with AI-assisted development (Claude Code, Cursor). Comfortable in a codebase even when I did not write every line.
+
+**Product:** End-to-end product lifecycle, user research in onboarding and support calls, requirements and PRDs, release management, adoption tracking, metrics.
+
+**AI in daily work:** Build with the Claude API hands-on. Daily use of Claude, ChatGPT, and Gemini for analysis, drafting, and automation.
+
+**Tools:** Jira, Confluence, Notion, Postman, GitHub, Google Workspace, Render.
+
+**Languages:** English, Hindi, Marathi.
+
+
+## Education
+
+**Pune University**, Bachelor of Business Administration (BBA), Pune
+
+
+## Certifications
+
+**Certified Scrum Product Owner (CSPO)**, Scrum Alliance, Nov 2025
+"""
+
+
 def render_role_resume(family: str) -> str:
     """Compose the full markdown resume for the given role family.
 
@@ -761,6 +834,8 @@ def render_role_resume(family: str) -> str:
         return BIZ_TECH_SOLUTIONS_RESUME
     if family == "augnito-pm":
         return AUGNITO_PM_RESUME
+    if family == "saleshandy-pm":
+        return SALESHANDY_PM_RESUME
 
     config = ROLE_RESUMES.get(family)
     if not config:
@@ -922,4 +997,8 @@ FAMILY_LABELS = {
     # Standalone resume tailored to the Augnito Voice-AI PM JD (end-to-end
     # lifecycle, B2B SaaS, customer obsession, AI-driven, healthcare-adjacent).
     "augnito-pm":                "Product Manager - Augnito",
+    # Standalone resume tailored to both Saleshandy PM JDs (API/Integrations/
+    # Platform AND Email Deliverability). Anchors on the D·engage RCS-channel +
+    # integration-delivery work as the direct parallel.
+    "saleshandy-pm":             "Product Manager - Saleshandy",
 }

@@ -1543,8 +1543,11 @@ def discover(request: Request, sort: str = "new"):
         fam = _rr.detect_family_from_title(d.get("title") or "")
         # Company-specific overrides: a JD tailored for one company beats the
         # generic title-based family for that company's cards.
-        if "augnito" in (d.get("company") or "").lower():
+        company_lc = (d.get("company") or "").lower()
+        if "augnito" in company_lc:
             fam = "augnito-pm"
+        elif "saleshandy" in company_lc:
+            fam = "saleshandy-pm"
         d["resume_family"] = fam
         d["resume_label"] = _rr.FAMILY_LABELS.get(fam, fam)
         d["resume_url"] = f"/resumes/role/{fam}"
