@@ -1,0 +1,421 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8" />
+<meta name="viewport" content="width=device-width, initial-scale=1" />
+<title>Dev vs Production · Visual Guide</title>
+<script src="https://cdn.tailwindcss.com"></script>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700;800&display=swap" rel="stylesheet">
+<style>
+  body { font-family: 'Inter', system-ui, sans-serif; }
+  .arrow-r {
+    position: relative;
+  }
+  .arrow-r::after {
+    content: "→";
+    position: absolute;
+    right: -1.75rem;
+    top: 50%;
+    transform: translateY(-50%);
+    font-size: 1.5rem;
+    color: #a78bfa;
+  }
+  .pulse {
+    animation: pulse 2s infinite;
+  }
+  @keyframes pulse {
+    0%, 100% { opacity: 1; }
+    50% { opacity: 0.5; }
+  }
+</style>
+</head>
+<body class="bg-gray-950 text-gray-100 min-h-screen">
+
+<div class="max-w-5xl mx-auto px-4 py-12">
+
+  <!-- HERO -->
+  <header class="mb-16">
+    <div class="text-purple-400 text-sm font-mono mb-2 tracking-widest uppercase">Visual Guide</div>
+    <h1 class="text-5xl sm:text-6xl font-extrabold mb-4 leading-tight">
+      Dev vs Production
+    </h1>
+    <p class="text-xl text-gray-300 max-w-2xl leading-relaxed">
+      Two environments for one app, and how to ship safely between them without breaking things for customers.
+    </p>
+  </header>
+
+  <!-- ─── SECTION 1: What's an environment? ──────────────────────────── -->
+  <section class="mb-20">
+    <div class="text-purple-400 text-xs font-mono mb-1 tracking-widest uppercase">1. The Idea</div>
+    <h2 class="text-3xl font-bold mb-6">What's an environment?</h2>
+
+    <p class="text-lg text-gray-300 mb-8 leading-relaxed">
+      Think of it like running a small business. You have two places where work happens:
+    </p>
+
+    <div class="grid md:grid-cols-2 gap-6 mb-8">
+      <!-- Workshop -->
+      <div class="bg-amber-950/40 border-2 border-amber-700/60 rounded-2xl p-6">
+        <div class="text-6xl mb-4">🛠️</div>
+        <h3 class="text-2xl font-bold mb-3 text-amber-300">Your Workshop</h3>
+        <p class="text-gray-300 mb-3 leading-relaxed">
+          Messy. Half-built things. Tools scattered. You try new ideas, break stuff, fix it, try again.
+        </p>
+        <p class="text-amber-200/80 font-medium">
+          → Customers never see this.
+        </p>
+      </div>
+
+      <!-- Storefront -->
+      <div class="bg-emerald-950/40 border-2 border-emerald-700/60 rounded-2xl p-6">
+        <div class="text-6xl mb-4">🏪</div>
+        <h3 class="text-2xl font-bold mb-3 text-emerald-300">Your Storefront</h3>
+        <p class="text-gray-300 mb-3 leading-relaxed">
+          Clean. Polished. Everything works. Customers walk in, find what they need, leave happy.
+        </p>
+        <p class="text-emerald-200/80 font-medium">
+          → If this breaks, customers leave and don't come back.
+        </p>
+      </div>
+    </div>
+
+    <div class="bg-purple-950/30 border-l-4 border-purple-500 rounded-r-xl p-6">
+      <p class="text-gray-200 leading-relaxed">
+        In software, the <span class="text-amber-300 font-semibold">workshop is your dev environment</span> and the
+        <span class="text-emerald-300 font-semibold">storefront is your production environment</span>.
+        Same app, two copies. Different audiences. Different rules.
+      </p>
+    </div>
+  </section>
+
+  <!-- ─── SECTION 2: Where we are vs where we want to be ─────────────── -->
+  <section class="mb-20">
+    <div class="text-purple-400 text-xs font-mono mb-1 tracking-widest uppercase">2. The Problem</div>
+    <h2 class="text-3xl font-bold mb-6">Where we are today (risky)</h2>
+
+    <p class="text-lg text-gray-300 mb-8 leading-relaxed">
+      Right now, your job-tracker has only ONE environment. Every change you push goes
+      <span class="text-red-300 font-semibold">straight to the live URL</span>. The same place where you experiment is where real usage happens.
+    </p>
+
+    <!-- Today: one box -->
+    <div class="mb-10">
+      <div class="text-center mb-3 text-sm text-gray-400 font-mono">Today</div>
+      <div class="mx-auto max-w-md bg-red-950/40 border-2 border-red-700/60 rounded-2xl p-6 text-center">
+        <div class="text-5xl mb-3">⚠️</div>
+        <div class="text-xs font-mono text-red-300 mb-2">SINGLE ENVIRONMENT</div>
+        <div class="text-xl font-bold mb-2">job-tracker-bmhy.onrender.com</div>
+        <div class="text-gray-300 text-sm mb-4">Your laptop pushes code here. You also use this URL daily for real job hunt.</div>
+        <div class="inline-block bg-red-900/40 border border-red-700/50 rounded-lg px-3 py-1.5 text-red-300 text-xs font-medium">
+          If push breaks something → broken for you AND any future customer
+        </div>
+      </div>
+    </div>
+
+    <h2 class="text-3xl font-bold mb-6 mt-12">Where we want to be (safe)</h2>
+    <p class="text-lg text-gray-300 mb-8 leading-relaxed">
+      Two separate environments. Same code, different deploys. Code lives in dev first. Only when you're sure does it move to prod.
+    </p>
+
+    <div class="grid md:grid-cols-2 gap-6 items-center mb-8">
+      <div class="bg-amber-950/40 border-2 border-amber-700/60 rounded-2xl p-6">
+        <div class="text-xs font-mono text-amber-300 mb-2">DEV (workshop)</div>
+        <div class="text-lg font-bold mb-2">job-tracker-dev.onrender.com</div>
+        <ul class="text-gray-300 text-sm space-y-1 mb-4">
+          <li>✓ Auto-deploys every git push</li>
+          <li>✓ Test data, fake users</li>
+          <li>✓ You break it freely</li>
+        </ul>
+        <div class="text-xs text-amber-300/70 font-medium">Customers: 0 (just you)</div>
+      </div>
+      <div class="bg-emerald-950/40 border-2 border-emerald-700/60 rounded-2xl p-6">
+        <div class="text-xs font-mono text-emerald-300 mb-2">PROD (storefront)</div>
+        <div class="text-lg font-bold mb-2">jobtracker.io (or similar)</div>
+        <ul class="text-gray-300 text-sm space-y-1 mb-4">
+          <li>✓ Manual promote only (you approve)</li>
+          <li>✓ Real user data</li>
+          <li>✓ Backups, monitoring, alerts</li>
+        </ul>
+        <div class="text-xs text-emerald-300/70 font-medium">Customers: real people relying on it</div>
+      </div>
+    </div>
+
+    <div class="text-center text-purple-400 text-2xl mb-2">↓</div>
+    <div class="text-center text-sm text-gray-400 mb-8">code flows this way, never backwards</div>
+  </section>
+
+  <!-- ─── SECTION 3: The deploy pipeline ─────────────────────────────── -->
+  <section class="mb-20">
+    <div class="text-purple-400 text-xs font-mono mb-1 tracking-widest uppercase">3. The Pipeline</div>
+    <h2 class="text-3xl font-bold mb-6">How code travels from your laptop to customers</h2>
+
+    <p class="text-lg text-gray-300 mb-10 leading-relaxed">
+      Each step is a check. Each check catches a different kind of mistake. The more checks before prod, the safer.
+    </p>
+
+    <div class="space-y-3">
+      <!-- Step 1 -->
+      <div class="flex items-stretch gap-4">
+        <div class="w-12 h-12 rounded-full bg-purple-500 flex items-center justify-center flex-shrink-0 text-white font-bold">1</div>
+        <div class="bg-gray-900 border border-gray-800 rounded-xl p-4 flex-1">
+          <div class="font-semibold mb-1">You write code on your laptop</div>
+          <div class="text-gray-400 text-sm">Save the file. Run it locally with <code class="bg-gray-800 px-1.5 py-0.5 rounded text-purple-300 text-xs">uvicorn webapp:app --reload</code> to see if it works at all.</div>
+        </div>
+      </div>
+      <div class="ml-6 text-gray-500">↓</div>
+      <!-- Step 2 -->
+      <div class="flex items-stretch gap-4">
+        <div class="w-12 h-12 rounded-full bg-purple-500 flex items-center justify-center flex-shrink-0 text-white font-bold">2</div>
+        <div class="bg-gray-900 border border-gray-800 rounded-xl p-4 flex-1">
+          <div class="font-semibold mb-1">git commit + git push</div>
+          <div class="text-gray-400 text-sm">Your code is now in GitHub. Anyone with repo access can see it.</div>
+        </div>
+      </div>
+      <div class="ml-6 text-gray-500">↓</div>
+      <!-- Step 3 -->
+      <div class="flex items-stretch gap-4">
+        <div class="w-12 h-12 rounded-full bg-amber-500 flex items-center justify-center flex-shrink-0 text-white font-bold">3</div>
+        <div class="bg-amber-950/30 border border-amber-700/40 rounded-xl p-4 flex-1">
+          <div class="font-semibold mb-1 text-amber-300">Render auto-deploys to DEV</div>
+          <div class="text-gray-400 text-sm">Render detects the push, rebuilds your app, deploys to <span class="font-mono text-amber-200">job-tracker-dev.onrender.com</span>. Takes ~2 minutes.</div>
+        </div>
+      </div>
+      <div class="ml-6 text-gray-500">↓</div>
+      <!-- Step 4 -->
+      <div class="flex items-stretch gap-4">
+        <div class="w-12 h-12 rounded-full bg-amber-500 flex items-center justify-center flex-shrink-0 text-white font-bold">4</div>
+        <div class="bg-amber-950/30 border border-amber-700/40 rounded-xl p-4 flex-1">
+          <div class="font-semibold mb-1 text-amber-300">You test the dev URL</div>
+          <div class="text-gray-400 text-sm">Open dev URL, click around, sign in with a test Gmail, sync emails, generate a resume. Make sure nothing's broken.</div>
+        </div>
+      </div>
+      <div class="ml-6 text-gray-500">↓</div>
+      <!-- Step 5 -->
+      <div class="flex items-stretch gap-4">
+        <div class="w-12 h-12 rounded-full bg-emerald-500 flex items-center justify-center flex-shrink-0 text-white font-bold">5</div>
+        <div class="bg-emerald-950/30 border border-emerald-700/40 rounded-xl p-4 flex-1">
+          <div class="font-semibold mb-1 text-emerald-300">You manually trigger PROD deploy</div>
+          <div class="text-gray-400 text-sm">If dev is good, click "Promote to production" in Render UI. Same code, different environment vars.</div>
+        </div>
+      </div>
+      <div class="ml-6 text-gray-500">↓</div>
+      <!-- Step 6 -->
+      <div class="flex items-stretch gap-4">
+        <div class="w-12 h-12 rounded-full bg-emerald-500 flex items-center justify-center flex-shrink-0 text-white font-bold">6</div>
+        <div class="bg-emerald-950/30 border border-emerald-700/40 rounded-xl p-4 flex-1">
+          <div class="font-semibold mb-1 text-emerald-300">Customers see the new version</div>
+          <div class="text-gray-400 text-sm">Real users on <span class="font-mono text-emerald-200">jobtracker.io</span> now have the new feature. Hopefully smoothly.</div>
+        </div>
+      </div>
+    </div>
+  </section>
+
+  <!-- ─── SECTION 4: Gmail Login ─────────────────────────────────────── -->
+  <section class="mb-20">
+    <div class="text-purple-400 text-xs font-mono mb-1 tracking-widest uppercase">4. Multi-User Auth</div>
+    <h2 class="text-3xl font-bold mb-6">Sign in with Gmail (any user, not just you)</h2>
+
+    <p class="text-lg text-gray-300 mb-8 leading-relaxed">
+      Right now: only YOU can use the app because of HTTP Basic Auth. To commercialize, any user needs to be able to sign in with their own Google account and see only THEIR jobs and resumes.
+    </p>
+
+    <div class="grid md:grid-cols-2 gap-6 mb-10">
+      <div class="bg-gray-900 border border-gray-800 rounded-2xl p-6">
+        <div class="text-xs font-mono text-gray-400 mb-2">TODAY</div>
+        <h3 class="text-xl font-bold mb-3">HTTP Basic Auth</h3>
+        <p class="text-gray-400 text-sm mb-4">One username + password set in env vars. Anyone with the password can see everything. Works for solo use.</p>
+        <div class="bg-black/40 rounded-lg p-3 text-xs font-mono text-gray-300">
+          ADMIN_USERNAME=admin<br>
+          ADMIN_PASSWORD=...
+        </div>
+      </div>
+      <div class="bg-purple-950/30 border border-purple-700/50 rounded-2xl p-6">
+        <div class="text-xs font-mono text-purple-300 mb-2">TOMORROW</div>
+        <h3 class="text-xl font-bold mb-3 text-purple-300">Sign in with Google</h3>
+        <p class="text-gray-400 text-sm mb-4">Each user signs in with their own Google account. App stores their Gmail tokens. They see only their data.</p>
+        <div class="bg-black/40 rounded-lg p-3 text-xs font-mono text-purple-200">
+          users table<br>
+          ↓<br>
+          jobs.user_id, leads.user_id<br>
+          (each row tagged to one user)
+        </div>
+      </div>
+    </div>
+
+    <h3 class="text-xl font-bold mb-6">The Sign-in-with-Google flow</h3>
+
+    <div class="bg-gray-900 border border-gray-800 rounded-2xl p-6">
+      <div class="space-y-4">
+        <div class="flex items-start gap-3">
+          <div class="w-7 h-7 rounded-full bg-purple-500 flex items-center justify-center flex-shrink-0 text-white text-sm font-bold">1</div>
+          <div class="flex-1">
+            <div class="font-semibold">User opens jobtracker.io, clicks "Sign in with Google"</div>
+            <div class="text-gray-400 text-sm">Just a button. Triggers a redirect.</div>
+          </div>
+        </div>
+        <div class="flex items-start gap-3">
+          <div class="w-7 h-7 rounded-full bg-purple-500 flex items-center justify-center flex-shrink-0 text-white text-sm font-bold">2</div>
+          <div class="flex-1">
+            <div class="font-semibold">Browser goes to Google's "Allow access?" page</div>
+            <div class="text-gray-400 text-sm">Google asks: "Job Tracker wants to read your Gmail to find LinkedIn alerts. OK?"</div>
+          </div>
+        </div>
+        <div class="flex items-start gap-3">
+          <div class="w-7 h-7 rounded-full bg-purple-500 flex items-center justify-center flex-shrink-0 text-white text-sm font-bold">3</div>
+          <div class="flex-1">
+            <div class="font-semibold">User clicks "Allow"</div>
+            <div class="text-gray-400 text-sm">Google sends them back to your app with a temporary code.</div>
+          </div>
+        </div>
+        <div class="flex items-start gap-3">
+          <div class="w-7 h-7 rounded-full bg-purple-500 flex items-center justify-center flex-shrink-0 text-white text-sm font-bold">4</div>
+          <div class="flex-1">
+            <div class="font-semibold">Your app trades the code for an access token + refresh token</div>
+            <div class="text-gray-400 text-sm">Stores both in DB, linked to a user_id. Now your app can read this user's Gmail whenever it wants.</div>
+          </div>
+        </div>
+        <div class="flex items-start gap-3">
+          <div class="w-7 h-7 rounded-full bg-purple-500 flex items-center justify-center flex-shrink-0 text-white text-sm font-bold">5</div>
+          <div class="flex-1">
+            <div class="font-semibold">App sets a session cookie for that user</div>
+            <div class="text-gray-400 text-sm">From now on, every request from this user is recognized. They see only THEIR jobs, leads, and resumes.</div>
+          </div>
+        </div>
+      </div>
+    </div>
+
+    <div class="mt-6 bg-amber-950/30 border-l-4 border-amber-500 rounded-r-xl p-5">
+      <p class="text-gray-200 leading-relaxed text-sm">
+        <span class="font-semibold text-amber-300">Side note:</span> You already use OAuth in the Gmail sync feature (where the app reads your Gmail). The "Sign in with Google" flow is the SAME OAuth pattern, just used for login instead of email reading. Same plumbing, different purpose.
+      </p>
+    </div>
+  </section>
+
+  <!-- ─── SECTION 5: When dev works but prod breaks ──────────────────── -->
+  <section class="mb-20">
+    <div class="text-purple-400 text-xs font-mono mb-1 tracking-widest uppercase">5. When it breaks</div>
+    <h2 class="text-3xl font-bold mb-6">"Works on dev but broken in prod" — why?</h2>
+
+    <p class="text-lg text-gray-300 mb-10 leading-relaxed">
+      This is the most frustrating bug to have. You shipped the same code. Why does it act differently? Usually one of these four reasons.
+    </p>
+
+    <div class="grid md:grid-cols-2 gap-4">
+      <div class="bg-gray-900 border border-gray-800 rounded-2xl p-5">
+        <div class="text-3xl mb-2">🔑</div>
+        <h3 class="font-bold mb-2">Different env vars</h3>
+        <p class="text-gray-400 text-sm">
+          Dev uses your test Gemini key. Prod uses a different key with rate limits. Same code, different keys, different behavior.
+        </p>
+        <div class="mt-3 text-xs text-purple-300 font-medium">Fix: keep an .env.dev and .env.prod, compare them.</div>
+      </div>
+      <div class="bg-gray-900 border border-gray-800 rounded-2xl p-5">
+        <div class="text-3xl mb-2">📊</div>
+        <h3 class="font-bold mb-2">Different database state</h3>
+        <p class="text-gray-400 text-sm">
+          Dev has 5 test users. Prod has 5,000 real users. Code that ran in 0.1s on 5 rows times out on 5,000.
+        </p>
+        <div class="mt-3 text-xs text-purple-300 font-medium">Fix: load production-like data into dev. Test at scale.</div>
+      </div>
+      <div class="bg-gray-900 border border-gray-800 rounded-2xl p-5">
+        <div class="text-3xl mb-2">🔄</div>
+        <h3 class="font-bold mb-2">Missing migration</h3>
+        <p class="text-gray-400 text-sm">
+          You added a new column locally. Dev ran the migration. You forgot to run it on prod. Code references a column that doesn't exist there.
+        </p>
+        <div class="mt-3 text-xs text-purple-300 font-medium">Fix: migrations auto-run on every deploy (tracker.init_db handles this).</div>
+      </div>
+      <div class="bg-gray-900 border border-gray-800 rounded-2xl p-5">
+        <div class="text-3xl mb-2">🌐</div>
+        <h3 class="font-bold mb-2">External service config differs</h3>
+        <p class="text-gray-400 text-sm">
+          Dev's Google OAuth has callback URL = localhost. Prod needs jobtracker.io. If you forgot to register the prod URL with Google, OAuth fails.
+        </p>
+        <div class="mt-3 text-xs text-purple-300 font-medium">Fix: register BOTH callback URLs in Google Cloud Console.</div>
+      </div>
+    </div>
+
+    <div class="mt-10 bg-purple-950/30 border-l-4 border-purple-500 rounded-r-xl p-6">
+      <h3 class="font-bold text-purple-300 mb-3">The Golden Rule</h3>
+      <p class="text-gray-200 leading-relaxed">
+        Keep dev and prod as identical as possible. Same Python version, same database engine, same env var names. The only things that should differ are the SECRETS (different keys) and the DATA (test vs real).
+      </p>
+    </div>
+  </section>
+
+  <!-- ─── SECTION 6: Action plan ─────────────────────────────────────── -->
+  <section class="mb-20">
+    <div class="text-purple-400 text-xs font-mono mb-1 tracking-widest uppercase">6. Action Plan</div>
+    <h2 class="text-3xl font-bold mb-6">What we'll actually do, step by step</h2>
+
+    <div class="space-y-3">
+      <div class="bg-gray-900 border border-gray-800 rounded-xl p-5 flex items-start gap-4">
+        <div class="w-10 h-10 rounded-lg bg-gray-800 flex items-center justify-center flex-shrink-0 font-mono text-purple-300 font-bold">A</div>
+        <div>
+          <div class="font-bold mb-1">Stabilize dev first</div>
+          <div class="text-gray-400 text-sm">Fix the Gmail autosync failure (we left that open). Make sure dev is rock-solid before promoting anything to prod.</div>
+        </div>
+      </div>
+      <div class="bg-gray-900 border border-gray-800 rounded-xl p-5 flex items-start gap-4">
+        <div class="w-10 h-10 rounded-lg bg-gray-800 flex items-center justify-center flex-shrink-0 font-mono text-purple-300 font-bold">B</div>
+        <div>
+          <div class="font-bold mb-1">Spin up a second Render web service for PROD</div>
+          <div class="text-gray-400 text-sm">Same repo, different env vars, different name (e.g. job-tracker-prod). Free tier still fine for now.</div>
+        </div>
+      </div>
+      <div class="bg-gray-900 border border-gray-800 rounded-xl p-5 flex items-start gap-4">
+        <div class="w-10 h-10 rounded-lg bg-gray-800 flex items-center justify-center flex-shrink-0 font-mono text-purple-300 font-bold">C</div>
+        <div>
+          <div class="font-bold mb-1">Spin up a second Postgres for PROD</div>
+          <div class="text-gray-400 text-sm">Separate database means dev test data never mixes with real prod data.</div>
+        </div>
+      </div>
+      <div class="bg-gray-900 border border-gray-800 rounded-xl p-5 flex items-start gap-4">
+        <div class="w-10 h-10 rounded-lg bg-gray-800 flex items-center justify-center flex-shrink-0 font-mono text-purple-300 font-bold">D</div>
+        <div>
+          <div class="font-bold mb-1">Configure Render to auto-deploy dev, manual prod</div>
+          <div class="text-gray-400 text-sm">Render Settings: dev = "Auto-deploy on push", prod = "Manual deploy" (you click a button when ready).</div>
+        </div>
+      </div>
+      <div class="bg-gray-900 border border-gray-800 rounded-xl p-5 flex items-start gap-4">
+        <div class="w-10 h-10 rounded-lg bg-gray-800 flex items-center justify-center flex-shrink-0 font-mono text-purple-300 font-bold">E</div>
+        <div>
+          <div class="font-bold mb-1">Add Sign-in-with-Google to the app</div>
+          <div class="text-gray-400 text-sm">Replace HTTP Basic Auth with OAuth login. Add a users table. Tag every job/lead/resume with user_id.</div>
+        </div>
+      </div>
+      <div class="bg-gray-900 border border-gray-800 rounded-xl p-5 flex items-start gap-4">
+        <div class="w-10 h-10 rounded-lg bg-gray-800 flex items-center justify-center flex-shrink-0 font-mono text-purple-300 font-bold">F</div>
+        <div>
+          <div class="font-bold mb-1">Test multi-user on DEV with 2-3 different Gmail accounts</div>
+          <div class="text-gray-400 text-sm">Make sure user A doesn't see user B's data. This is the make-or-break test.</div>
+        </div>
+      </div>
+      <div class="bg-gray-900 border border-gray-800 rounded-xl p-5 flex items-start gap-4">
+        <div class="w-10 h-10 rounded-lg bg-emerald-900/30 border border-emerald-700/40 flex items-center justify-center flex-shrink-0 font-mono text-emerald-300 font-bold">G</div>
+        <div>
+          <div class="font-bold mb-1 text-emerald-300">Promote to PROD</div>
+          <div class="text-gray-400 text-sm">Manual deploy. Watch logs. If anything looks wrong, instant rollback. First customer can now sign up.</div>
+        </div>
+      </div>
+    </div>
+
+    <div class="mt-10 bg-emerald-950/30 border-l-4 border-emerald-500 rounded-r-xl p-6">
+      <p class="text-gray-200 leading-relaxed">
+        Each step is small. Each one teaches you a different piece. By step G, you'll have shipped a multi-tenant SaaS with a proper deploy pipeline. Resume material on its own.
+      </p>
+    </div>
+  </section>
+
+  <!-- ─── FOOTER ──────────────────────────────────────────────────── -->
+  <footer class="border-t border-gray-800 pt-8 mt-12 text-center text-gray-500 text-sm">
+    <p>Visual learning guide for the job-tracker project. Open and read at your own pace.</p>
+    <p class="mt-1">When ready to ship, work through steps A through G in order.</p>
+  </footer>
+
+</div>
+
+</body>
+</html>

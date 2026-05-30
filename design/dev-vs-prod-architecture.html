@@ -1,0 +1,708 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8" />
+<meta name="viewport" content="width=device-width, initial-scale=1" />
+<title>Dev vs Prod · Architecture &amp; Real-World Flows</title>
+<script src="https://cdn.tailwindcss.com"></script>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700;800&family=JetBrains+Mono:wght@400;500;600&display=swap" rel="stylesheet">
+<style>
+  body { font-family: 'Inter', system-ui, sans-serif; }
+  .mono { font-family: 'JetBrains Mono', monospace; }
+  .box { transition: transform 0.2s; }
+  .box:hover { transform: translateY(-2px); }
+  .grid-bg {
+    background-image:
+      radial-gradient(circle, rgba(167, 139, 250, 0.08) 1px, transparent 1px);
+    background-size: 24px 24px;
+  }
+  /* SVG arrows */
+  .arrow path { stroke: #a78bfa; stroke-width: 2; fill: none; }
+  .arrow-head { fill: #a78bfa; }
+  .arrow-orange path { stroke: #f59e0b; stroke-width: 2; fill: none; }
+  .arrow-orange-head { fill: #f59e0b; }
+  .arrow-green path { stroke: #10b981; stroke-width: 2; fill: none; }
+  .arrow-green-head { fill: #10b981; }
+  /* Sequence diagram lines */
+  .lifeline {
+    background-image: linear-gradient(to bottom, transparent, transparent 4px, #6b7280 4px, #6b7280 8px);
+    background-size: 1px 12px;
+    background-repeat: repeat-y;
+    background-position: center 0;
+  }
+</style>
+</head>
+<body class="bg-gray-950 text-gray-100 min-h-screen">
+
+<div class="max-w-6xl mx-auto px-4 py-12">
+
+  <!-- HERO -->
+  <header class="mb-16">
+    <div class="text-purple-400 text-sm font-mono mb-2 tracking-widest uppercase">Architecture &amp; Real-World Flows</div>
+    <h1 class="text-5xl sm:text-6xl font-extrabold mb-4 leading-tight">
+      How it actually works
+    </h1>
+    <p class="text-xl text-gray-300 max-w-3xl leading-relaxed">
+      Concrete diagrams showing real services, real data flows, and how requests travel through the system. Read this after the concepts guide.
+    </p>
+  </header>
+
+  <!-- ─── DIAGRAM 1: System Architecture ────────────────────────── -->
+  <section class="mb-20">
+    <div class="text-purple-400 text-xs font-mono mb-1 tracking-widest uppercase">1. Big Picture</div>
+    <h2 class="text-3xl font-bold mb-3">The whole system on one page</h2>
+    <p class="text-gray-300 mb-8">Every box is a real service. Every line is a real network connection.</p>
+
+    <div class="bg-gray-900/50 border border-gray-800 rounded-2xl p-8 grid-bg">
+      <div class="grid md:grid-cols-3 gap-8 items-center">
+        <!-- Left column: User -->
+        <div class="box bg-blue-950/40 border-2 border-blue-700/60 rounded-xl p-5 text-center">
+          <div class="text-4xl mb-2">👤</div>
+          <div class="text-xs mono text-blue-300 mb-1">CLIENT</div>
+          <div class="font-bold mb-2">User's Browser</div>
+          <div class="text-xs text-gray-400">Chrome / Safari / Firefox</div>
+        </div>
+
+        <!-- Middle column: Your App -->
+        <div class="box bg-purple-950/40 border-2 border-purple-700/60 rounded-xl p-5 text-center">
+          <div class="text-4xl mb-2">🖥️</div>
+          <div class="text-xs mono text-purple-300 mb-1">YOUR APP</div>
+          <div class="font-bold mb-1">FastAPI Server</div>
+          <div class="text-xs text-gray-400">on Render (Python 3.11)</div>
+          <div class="mt-3 mono text-[10px] text-purple-200/70">
+            webapp.py<br>
+            tracker.py<br>
+            gmail_integration.py
+          </div>
+        </div>
+
+        <!-- Right column: Postgres -->
+        <div class="box bg-emerald-950/40 border-2 border-emerald-700/60 rounded-xl p-5 text-center">
+          <div class="text-4xl mb-2">🗄️</div>
+          <div class="text-xs mono text-emerald-300 mb-1">DATABASE</div>
+          <div class="font-bold mb-1">PostgreSQL</div>
+          <div class="text-xs text-gray-400">on Render</div>
+          <div class="mt-3 mono text-[10px] text-emerald-200/70">
+            users, jobs, contacts,<br>
+            events, oauth_tokens,<br>
+            sync_state, ...
+          </div>
+        </div>
+      </div>
+
+      <!-- Connections row -->
+      <div class="grid md:grid-cols-3 gap-8 mt-4 text-center text-xs">
+        <div>
+          <span class="text-blue-300 mono">↔ HTTPS</span>
+        </div>
+        <div>
+          <span class="text-emerald-300 mono">↔ SQL</span>
+        </div>
+        <div class="text-gray-500"></div>
+      </div>
+
+      <!-- External services row -->
+      <div class="grid md:grid-cols-3 gap-8 mt-12">
+        <div class="box bg-orange-950/40 border-2 border-orange-700/60 rounded-xl p-5 text-center">
+          <div class="text-4xl mb-2">📧</div>
+          <div class="text-xs mono text-orange-300 mb-1">EXTERNAL</div>
+          <div class="font-bold mb-1">Gmail API</div>
+          <div class="text-xs text-gray-400">reads user's LinkedIn alerts</div>
+        </div>
+        <div class="box bg-orange-950/40 border-2 border-orange-700/60 rounded-xl p-5 text-center">
+          <div class="text-4xl mb-2">🔐</div>
+          <div class="text-xs mono text-orange-300 mb-1">EXTERNAL</div>
+          <div class="font-bold mb-1">Google OAuth</div>
+          <div class="text-xs text-gray-400">"Sign in with Google"</div>
+        </div>
+        <div class="box bg-orange-950/40 border-2 border-orange-700/60 rounded-xl p-5 text-center">
+          <div class="text-4xl mb-2">🤖</div>
+          <div class="text-xs mono text-orange-300 mb-1">EXTERNAL</div>
+          <div class="font-bold mb-1">Gemini API</div>
+          <div class="text-xs text-gray-400">classifies emails, drafts text</div>
+        </div>
+      </div>
+
+      <div class="text-center mt-4 text-xs text-gray-500">
+        ← App talks to all three via HTTPS REST →
+      </div>
+
+      <!-- Dev side -->
+      <div class="mt-12 grid md:grid-cols-3 gap-8 items-center">
+        <div class="box bg-gray-800/60 border border-gray-700 rounded-xl p-5 text-center">
+          <div class="text-4xl mb-2">💻</div>
+          <div class="text-xs mono text-gray-400 mb-1">YOU</div>
+          <div class="font-bold mb-1">Your Laptop</div>
+          <div class="text-xs text-gray-400">writes code, runs `git push`</div>
+        </div>
+        <div class="text-center text-purple-400 text-3xl">→</div>
+        <div class="box bg-gray-800/60 border border-gray-700 rounded-xl p-5 text-center">
+          <div class="text-4xl mb-2">🐙</div>
+          <div class="text-xs mono text-gray-400 mb-1">SOURCE OF TRUTH</div>
+          <div class="font-bold mb-1">GitHub Repo</div>
+          <div class="text-xs text-gray-400">stores code + runs cron via Actions</div>
+        </div>
+      </div>
+      <div class="text-center text-xs text-gray-500 mt-4">
+        GitHub webhooks Render whenever you push → Render auto-rebuilds
+      </div>
+    </div>
+  </section>
+
+  <!-- ─── DIAGRAM 2: Sign-in-with-Google sequence ───────────────────── -->
+  <section class="mb-20">
+    <div class="text-purple-400 text-xs font-mono mb-1 tracking-widest uppercase">2. Sign-in Flow</div>
+    <h2 class="text-3xl font-bold mb-3">"Sign in with Google" — step by step</h2>
+    <p class="text-gray-300 mb-8">A sequence diagram. Three actors. Arrows show messages going back and forth in time (top = first, bottom = last).</p>
+
+    <div class="bg-gray-900/50 border border-gray-800 rounded-2xl p-6 overflow-x-auto">
+      <div class="grid grid-cols-3 gap-4 min-w-[700px]">
+        <!-- Headers -->
+        <div class="text-center">
+          <div class="inline-block bg-blue-950/60 border-2 border-blue-700/60 rounded-xl px-4 py-2">
+            <div class="text-4xl">👤</div>
+            <div class="font-bold mt-1">User Browser</div>
+          </div>
+        </div>
+        <div class="text-center">
+          <div class="inline-block bg-purple-950/60 border-2 border-purple-700/60 rounded-xl px-4 py-2">
+            <div class="text-4xl">🖥️</div>
+            <div class="font-bold mt-1">Your App</div>
+          </div>
+        </div>
+        <div class="text-center">
+          <div class="inline-block bg-orange-950/60 border-2 border-orange-700/60 rounded-xl px-4 py-2">
+            <div class="text-4xl">🔐</div>
+            <div class="font-bold mt-1">Google</div>
+          </div>
+        </div>
+      </div>
+
+      <!-- Steps -->
+      <div class="mt-8 space-y-2">
+
+        <!-- Step 1 -->
+        <div class="grid grid-cols-3 gap-4 items-center min-w-[700px]">
+          <div class="text-right">
+            <div class="inline-block bg-blue-900/50 px-3 py-2 rounded-lg text-sm">
+              Clicks "Sign in with Google"
+            </div>
+          </div>
+          <div class="text-center text-purple-300 mono text-sm">
+            → POST /auth/start →
+          </div>
+          <div></div>
+        </div>
+
+        <!-- Step 2 -->
+        <div class="grid grid-cols-3 gap-4 items-center min-w-[700px]">
+          <div></div>
+          <div class="text-center">
+            <div class="bg-purple-900/40 px-3 py-2 rounded-lg text-sm inline-block">
+              Builds Google OAuth URL<br>
+              <span class="mono text-xs text-purple-200">(with state + PKCE)</span>
+            </div>
+          </div>
+          <div></div>
+        </div>
+
+        <!-- Step 3 -->
+        <div class="grid grid-cols-3 gap-4 items-center min-w-[700px]">
+          <div class="text-right text-purple-300 mono text-sm">
+            ← 302 Redirect ←
+          </div>
+          <div></div>
+          <div></div>
+        </div>
+
+        <!-- Step 4 -->
+        <div class="grid grid-cols-3 gap-4 items-center min-w-[700px]">
+          <div class="text-right text-orange-300 mono text-sm col-span-3">
+            Browser follows redirect to accounts.google.com  →→→
+          </div>
+        </div>
+
+        <!-- Step 5 -->
+        <div class="grid grid-cols-3 gap-4 items-center min-w-[700px]">
+          <div></div>
+          <div></div>
+          <div class="text-left">
+            <div class="bg-orange-900/40 px-3 py-2 rounded-lg text-sm inline-block">
+              Shows consent screen:<br>
+              <span class="text-xs text-orange-200">"Allow Job Tracker to read your Gmail?"</span>
+            </div>
+          </div>
+        </div>
+
+        <!-- Step 6 -->
+        <div class="grid grid-cols-3 gap-4 items-center min-w-[700px]">
+          <div class="text-right">
+            <div class="inline-block bg-blue-900/50 px-3 py-2 rounded-lg text-sm">
+              Clicks "Allow"
+            </div>
+          </div>
+          <div></div>
+          <div></div>
+        </div>
+
+        <!-- Step 7 -->
+        <div class="grid grid-cols-3 gap-4 items-center min-w-[700px]">
+          <div></div>
+          <div></div>
+          <div class="text-left text-orange-300 mono text-sm">
+            ← 302 to /auth/callback?code=...
+          </div>
+        </div>
+
+        <!-- Step 8 -->
+        <div class="grid grid-cols-3 gap-4 items-center min-w-[700px]">
+          <div></div>
+          <div class="text-center text-purple-300 mono text-sm">
+            ← Browser sends code to your app
+          </div>
+          <div></div>
+        </div>
+
+        <!-- Step 9 -->
+        <div class="grid grid-cols-3 gap-4 items-center min-w-[700px]">
+          <div></div>
+          <div></div>
+          <div class="text-left text-orange-300 mono text-sm">
+            POST /token → exchange code for tokens →
+          </div>
+        </div>
+
+        <!-- Step 10 -->
+        <div class="grid grid-cols-3 gap-4 items-center min-w-[700px]">
+          <div></div>
+          <div></div>
+          <div class="text-left">
+            <div class="bg-orange-900/40 px-3 py-2 rounded-lg text-sm inline-block">
+              Returns:<br>
+              <span class="mono text-xs">access_token, refresh_token, expiry</span>
+            </div>
+          </div>
+        </div>
+
+        <!-- Step 11 -->
+        <div class="grid grid-cols-3 gap-4 items-center min-w-[700px]">
+          <div></div>
+          <div class="text-center">
+            <div class="bg-purple-900/40 px-3 py-2 rounded-lg text-sm inline-block">
+              Stores tokens in DB<br>
+              <span class="mono text-xs">INSERT INTO oauth_tokens (user_id, ...)</span>
+            </div>
+          </div>
+          <div></div>
+        </div>
+
+        <!-- Step 12 -->
+        <div class="grid grid-cols-3 gap-4 items-center min-w-[700px]">
+          <div class="text-right text-purple-300 mono text-sm">
+            ← Set session cookie ← Redirect to /
+          </div>
+          <div></div>
+          <div></div>
+        </div>
+
+        <!-- Step 13 -->
+        <div class="grid grid-cols-3 gap-4 items-center min-w-[700px]">
+          <div class="text-right">
+            <div class="inline-block bg-emerald-900/50 border border-emerald-700/50 px-3 py-2 rounded-lg text-sm">
+              ✓ Logged in. Sees personal dashboard.
+            </div>
+          </div>
+          <div></div>
+          <div></div>
+        </div>
+
+      </div>
+    </div>
+
+    <div class="mt-6 bg-purple-950/30 border-l-4 border-purple-500 rounded-r-xl p-5">
+      <p class="text-gray-200 text-sm leading-relaxed">
+        <span class="font-semibold text-purple-300">Why so many steps?</span> Security. The user never types their Google password into your app. Your app never sees the password. Google handles authentication, your app just gets a token to act on behalf of the user.
+      </p>
+    </div>
+  </section>
+
+  <!-- ─── DIAGRAM 3: Database Schema (tree) ─────────────────────────── -->
+  <section class="mb-20">
+    <div class="text-purple-400 text-xs font-mono mb-1 tracking-widest uppercase">3. Database Schema</div>
+    <h2 class="text-3xl font-bold mb-3">How data is organized (after multi-user refactor)</h2>
+    <p class="text-gray-300 mb-8">Tree of tables. Arrows mean "has many". Foreign keys tie children to parents.</p>
+
+    <div class="bg-gray-900/50 border border-gray-800 rounded-2xl p-8">
+      <!-- Top: users -->
+      <div class="flex justify-center mb-6">
+        <div class="box bg-emerald-950/60 border-2 border-emerald-500 rounded-xl p-5 max-w-sm">
+          <div class="font-bold text-emerald-300 mb-2 mono">users</div>
+          <ul class="text-sm space-y-1 mono">
+            <li><span class="text-emerald-400">id</span> <span class="text-gray-500">— primary key</span></li>
+            <li><span class="text-emerald-400">email</span> <span class="text-gray-500">— from Google OAuth</span></li>
+            <li><span class="text-emerald-400">google_user_id</span> <span class="text-gray-500">— Google's unique ID</span></li>
+            <li><span class="text-emerald-400">display_name</span></li>
+            <li><span class="text-emerald-400">created_at</span></li>
+            <li><span class="text-emerald-400">last_login_at</span></li>
+          </ul>
+        </div>
+      </div>
+
+      <!-- Arrows down -->
+      <div class="text-center text-emerald-400 text-3xl mb-2">↓</div>
+      <div class="text-center text-emerald-300 mono text-sm mb-6">"has many" (via user_id foreign key)</div>
+
+      <!-- Children: jobs, oauth_tokens, sessions -->
+      <div class="grid md:grid-cols-3 gap-4 mb-6">
+        <!-- jobs -->
+        <div class="box bg-purple-950/40 border-2 border-purple-700/60 rounded-xl p-4">
+          <div class="font-bold text-purple-300 mb-2 mono">jobs</div>
+          <ul class="text-xs space-y-1 mono">
+            <li><span class="text-purple-400">id</span></li>
+            <li><span class="text-emerald-400">user_id</span> <span class="text-gray-500">FK</span></li>
+            <li><span class="text-purple-400">title</span></li>
+            <li><span class="text-purple-400">company</span></li>
+            <li><span class="text-purple-400">status</span></li>
+            <li><span class="text-purple-400">applied_at</span></li>
+            <li>...</li>
+          </ul>
+        </div>
+        <!-- oauth_tokens -->
+        <div class="box bg-orange-950/40 border-2 border-orange-700/60 rounded-xl p-4">
+          <div class="font-bold text-orange-300 mb-2 mono">oauth_tokens</div>
+          <ul class="text-xs space-y-1 mono">
+            <li><span class="text-orange-400">id</span></li>
+            <li><span class="text-emerald-400">user_id</span> <span class="text-gray-500">FK</span></li>
+            <li><span class="text-orange-400">provider</span> <span class="text-gray-500">"google"</span></li>
+            <li><span class="text-orange-400">access_token</span></li>
+            <li><span class="text-orange-400">refresh_token</span></li>
+            <li><span class="text-orange-400">expires_at</span></li>
+          </ul>
+        </div>
+        <!-- sessions -->
+        <div class="box bg-blue-950/40 border-2 border-blue-700/60 rounded-xl p-4">
+          <div class="font-bold text-blue-300 mb-2 mono">sessions</div>
+          <ul class="text-xs space-y-1 mono">
+            <li><span class="text-blue-400">session_id</span> <span class="text-gray-500">cookie</span></li>
+            <li><span class="text-emerald-400">user_id</span> <span class="text-gray-500">FK</span></li>
+            <li><span class="text-blue-400">created_at</span></li>
+            <li><span class="text-blue-400">expires_at</span></li>
+          </ul>
+        </div>
+      </div>
+
+      <!-- Sub-children of jobs -->
+      <div class="ml-0 md:ml-12 border-l-2 border-dashed border-purple-700/40 pl-4 md:pl-8">
+        <div class="text-purple-300 mono text-xs mb-3">↳ jobs has many...</div>
+        <div class="grid md:grid-cols-2 gap-4">
+          <div class="bg-purple-950/30 border border-purple-800/50 rounded-lg p-3">
+            <div class="font-bold text-purple-300 mono text-sm mb-1">contacts</div>
+            <div class="text-xs mono text-gray-400">id, <span class="text-purple-400">job_id</span> FK, name, email, role, ...</div>
+          </div>
+          <div class="bg-purple-950/30 border border-purple-800/50 rounded-lg p-3">
+            <div class="font-bold text-purple-300 mono text-sm mb-1">events</div>
+            <div class="text-xs mono text-gray-400">id, <span class="text-purple-400">job_id</span> FK, event_type, body, occurred_at, ...</div>
+          </div>
+        </div>
+      </div>
+    </div>
+
+    <div class="mt-6 bg-emerald-950/30 border-l-4 border-emerald-500 rounded-r-xl p-5">
+      <p class="text-gray-200 text-sm leading-relaxed">
+        <span class="font-semibold text-emerald-300">Key idea:</span> Every row in jobs/contacts/events ultimately ties back to a <span class="mono">user_id</span>. That's how Alice and Bob using the same app see different data.
+      </p>
+    </div>
+  </section>
+
+  <!-- ─── DIAGRAM 4: Multi-user data isolation ───────────────────────── -->
+  <section class="mb-20">
+    <div class="text-purple-400 text-xs font-mono mb-1 tracking-widest uppercase">4. Multi-User Isolation</div>
+    <h2 class="text-3xl font-bold mb-3">One database. Three users. Three views.</h2>
+    <p class="text-gray-300 mb-8">Alice, Bob, and you all share the same Postgres. The <span class="mono text-emerald-400">user_id</span> filter is what keeps your data invisible to Alice and Alice's invisible to you.</p>
+
+    <div class="bg-gray-900/50 border border-gray-800 rounded-2xl p-6 overflow-x-auto">
+      <div class="mono text-xs mb-4 text-gray-400">jobs table (everyone's rows in one place)</div>
+      <table class="w-full text-sm mono">
+        <thead>
+          <tr class="bg-gray-800/60 text-gray-400">
+            <th class="p-2 text-left">id</th>
+            <th class="p-2 text-left">user_id</th>
+            <th class="p-2 text-left">title</th>
+            <th class="p-2 text-left">company</th>
+            <th class="p-2 text-left">status</th>
+            <th class="p-2 text-left">who</th>
+          </tr>
+        </thead>
+        <tbody>
+          <tr class="border-t border-gray-800 bg-pink-950/20">
+            <td class="p-2 text-pink-300">1</td><td class="p-2 text-pink-300">42</td><td class="p-2">AI PM</td><td class="p-2">Foo</td><td class="p-2">saved</td><td class="p-2 text-pink-300">← Alice</td>
+          </tr>
+          <tr class="border-t border-gray-800 bg-pink-950/20">
+            <td class="p-2 text-pink-300">2</td><td class="p-2 text-pink-300">42</td><td class="p-2">Senior PM</td><td class="p-2">Bar</td><td class="p-2">applied</td><td class="p-2 text-pink-300">← Alice</td>
+          </tr>
+          <tr class="border-t border-gray-800 bg-cyan-950/20">
+            <td class="p-2 text-cyan-300">3</td><td class="p-2 text-cyan-300">99</td><td class="p-2">APM</td><td class="p-2">Baz</td><td class="p-2">saved</td><td class="p-2 text-cyan-300">← Bob</td>
+          </tr>
+          <tr class="border-t border-gray-800 bg-cyan-950/20">
+            <td class="p-2 text-cyan-300">4</td><td class="p-2 text-cyan-300">99</td><td class="p-2">FDE</td><td class="p-2">Qux</td><td class="p-2">saved</td><td class="p-2 text-cyan-300">← Bob</td>
+          </tr>
+          <tr class="border-t border-gray-800 bg-purple-950/20">
+            <td class="p-2 text-purple-300">5</td><td class="p-2 text-purple-300">108</td><td class="p-2">Technical PM</td><td class="p-2">Wex</td><td class="p-2">applied</td><td class="p-2 text-purple-300">← You</td>
+          </tr>
+        </tbody>
+      </table>
+
+      <div class="mt-8 grid md:grid-cols-3 gap-4">
+        <div class="bg-pink-950/30 border border-pink-700/50 rounded-lg p-4">
+          <div class="text-xs mono text-pink-300 mb-2">Alice's request</div>
+          <div class="mono text-xs text-gray-300 mb-2">SELECT * FROM jobs WHERE user_id = 42</div>
+          <div class="text-pink-200 text-sm">→ Sees rows 1, 2</div>
+        </div>
+        <div class="bg-cyan-950/30 border border-cyan-700/50 rounded-lg p-4">
+          <div class="text-xs mono text-cyan-300 mb-2">Bob's request</div>
+          <div class="mono text-xs text-gray-300 mb-2">SELECT * FROM jobs WHERE user_id = 99</div>
+          <div class="text-cyan-200 text-sm">→ Sees rows 3, 4</div>
+        </div>
+        <div class="bg-purple-950/30 border border-purple-700/50 rounded-lg p-4">
+          <div class="text-xs mono text-purple-300 mb-2">Your request</div>
+          <div class="mono text-xs text-gray-300 mb-2">SELECT * FROM jobs WHERE user_id = 108</div>
+          <div class="text-purple-200 text-sm">→ Sees row 5</div>
+        </div>
+      </div>
+    </div>
+
+    <div class="mt-6 bg-red-950/30 border-l-4 border-red-500 rounded-r-xl p-5">
+      <p class="text-gray-200 text-sm leading-relaxed">
+        <span class="font-semibold text-red-300">The bug to NEVER make:</span> Forgetting the <span class="mono">WHERE user_id = ?</span> clause in any query. If you ship code that says <span class="mono">SELECT * FROM jobs</span> without the filter, Alice sees Bob's data. This is the #1 multi-tenant security failure. Always filter by user_id, every query, no exceptions.
+      </p>
+    </div>
+  </section>
+
+  <!-- ─── DIAGRAM 5: Request lifecycle (Gmail Sync) ───────────────────── -->
+  <section class="mb-20">
+    <div class="text-purple-400 text-xs font-mono mb-1 tracking-widest uppercase">5. Request Lifecycle</div>
+    <h2 class="text-3xl font-bold mb-3">When a user clicks "Sync Gmail" — what happens</h2>
+    <p class="text-gray-300 mb-8">Tracing one click through every layer. ~5 seconds end-to-end on a warm server.</p>
+
+    <div class="bg-gray-900/50 border border-gray-800 rounded-2xl p-6">
+      <div class="space-y-5">
+
+        <!-- Step 1 -->
+        <div class="flex items-start gap-4">
+          <div class="w-10 h-10 rounded-full bg-blue-500 flex items-center justify-center flex-shrink-0 text-white font-bold mono">1</div>
+          <div class="flex-1 bg-blue-950/30 border border-blue-700/40 rounded-lg p-4">
+            <div class="font-semibold text-blue-300 mb-1">Browser</div>
+            <div class="text-sm text-gray-300">User clicks the "Sync Gmail" button → JavaScript sends <span class="mono text-blue-200">POST /gmail/sync</span> with session cookie.</div>
+          </div>
+        </div>
+
+        <div class="ml-5 text-purple-400 text-2xl">↓</div>
+
+        <!-- Step 2 -->
+        <div class="flex items-start gap-4">
+          <div class="w-10 h-10 rounded-full bg-purple-500 flex items-center justify-center flex-shrink-0 text-white font-bold mono">2</div>
+          <div class="flex-1 bg-purple-950/30 border border-purple-700/40 rounded-lg p-4">
+            <div class="font-semibold text-purple-300 mb-1">FastAPI receives request</div>
+            <div class="text-sm text-gray-300">Looks up session cookie → finds user_id. Loads OAuth tokens for this user from DB.</div>
+            <div class="mt-2 mono text-xs text-purple-200 bg-black/30 p-2 rounded">SELECT * FROM oauth_tokens WHERE user_id = 108</div>
+          </div>
+        </div>
+
+        <div class="ml-5 text-purple-400 text-2xl">↓</div>
+
+        <!-- Step 3 -->
+        <div class="flex items-start gap-4">
+          <div class="w-10 h-10 rounded-full bg-orange-500 flex items-center justify-center flex-shrink-0 text-white font-bold mono">3</div>
+          <div class="flex-1 bg-orange-950/30 border border-orange-700/40 rounded-lg p-4">
+            <div class="font-semibold text-orange-300 mb-1">Call Gmail API</div>
+            <div class="text-sm text-gray-300">FastAPI uses the access_token to call Gmail. Searches the user's mailbox for LinkedIn alerts since last sync.</div>
+            <div class="mt-2 mono text-xs text-orange-200 bg-black/30 p-2 rounded">GET https://gmail.googleapis.com/gmail/v1/users/me/messages<br>Authorization: Bearer ya29.a0AfH6...</div>
+          </div>
+        </div>
+
+        <div class="ml-5 text-purple-400 text-2xl">↓</div>
+
+        <!-- Step 4 -->
+        <div class="flex items-start gap-4">
+          <div class="w-10 h-10 rounded-full bg-orange-500 flex items-center justify-center flex-shrink-0 text-white font-bold mono">4</div>
+          <div class="flex-1 bg-orange-950/30 border border-orange-700/40 rounded-lg p-4">
+            <div class="font-semibold text-orange-300 mb-1">Gmail returns email IDs</div>
+            <div class="text-sm text-gray-300">FastAPI fetches each email's body. Parses out job alerts.</div>
+          </div>
+        </div>
+
+        <div class="ml-5 text-purple-400 text-2xl">↓</div>
+
+        <!-- Step 5 -->
+        <div class="flex items-start gap-4">
+          <div class="w-10 h-10 rounded-full bg-emerald-500 flex items-center justify-center flex-shrink-0 text-white font-bold mono">5</div>
+          <div class="flex-1 bg-emerald-950/30 border border-emerald-700/40 rounded-lg p-4">
+            <div class="font-semibold text-emerald-300 mb-1">Insert new leads into DB</div>
+            <div class="text-sm text-gray-300">For each new job alert: insert a row into jobs. Crucially: <span class="mono text-emerald-200">with user_id = 108</span>.</div>
+            <div class="mt-2 mono text-xs text-emerald-200 bg-black/30 p-2 rounded">INSERT INTO jobs (user_id, title, company, status, ...) VALUES (108, 'AI PM @ Foo', 'Foo Corp', 'lead', ...)</div>
+          </div>
+        </div>
+
+        <div class="ml-5 text-purple-400 text-2xl">↓</div>
+
+        <!-- Step 6 -->
+        <div class="flex items-start gap-4">
+          <div class="w-10 h-10 rounded-full bg-purple-500 flex items-center justify-center flex-shrink-0 text-white font-bold mono">6</div>
+          <div class="flex-1 bg-purple-950/30 border border-purple-700/40 rounded-lg p-4">
+            <div class="font-semibold text-purple-300 mb-1">Return JSON summary</div>
+            <div class="text-sm text-gray-300">FastAPI sends response back.</div>
+            <div class="mt-2 mono text-xs text-purple-200 bg-black/30 p-2 rounded">{"ok": true, "fetched": 47, "leads": 3, "events": 12, "duration_s": 4.2}</div>
+          </div>
+        </div>
+
+        <div class="ml-5 text-purple-400 text-2xl">↓</div>
+
+        <!-- Step 7 -->
+        <div class="flex items-start gap-4">
+          <div class="w-10 h-10 rounded-full bg-blue-500 flex items-center justify-center flex-shrink-0 text-white font-bold mono">7</div>
+          <div class="flex-1 bg-blue-950/30 border border-blue-700/40 rounded-lg p-4">
+            <div class="font-semibold text-blue-300 mb-1">Browser updates UI</div>
+            <div class="text-sm text-gray-300">Toast pops up: "✓ Sync complete · 3 new leads · 4.2s". Card on screen updates with new numbers.</div>
+          </div>
+        </div>
+
+      </div>
+    </div>
+  </section>
+
+  <!-- ─── DIAGRAM 6: Deploy pipeline (real) ───────────────────────────── -->
+  <section class="mb-20">
+    <div class="text-purple-400 text-xs font-mono mb-1 tracking-widest uppercase">6. Deploy Pipeline (Real Tools)</div>
+    <h2 class="text-3xl font-bold mb-3">From your laptop to a real customer's screen</h2>
+    <p class="text-gray-300 mb-8">Concrete services. Concrete URLs. What each piece does.</p>
+
+    <div class="bg-gray-900/50 border border-gray-800 rounded-2xl p-8 grid-bg">
+      <!-- Lane 1: Laptop -->
+      <div class="grid md:grid-cols-2 gap-6 items-center mb-8">
+        <div class="box bg-gray-800/60 border border-gray-700 rounded-xl p-5">
+          <div class="text-3xl mb-2">💻</div>
+          <div class="text-xs mono text-gray-400 mb-1">SOURCE</div>
+          <div class="font-bold mb-1">Your Laptop</div>
+          <div class="text-xs text-gray-400 mb-3">Edits files, runs locally with <span class="mono">uvicorn webapp:app --reload</span></div>
+          <div class="text-xs mono text-purple-300">$ git commit -m "fix bug"<br>$ git push origin main</div>
+        </div>
+        <div class="text-purple-400 text-3xl text-center">→</div>
+      </div>
+
+      <!-- Lane 2: GitHub -->
+      <div class="grid md:grid-cols-2 gap-6 items-center mb-8">
+        <div class="box bg-gray-800/60 border-2 border-gray-600 rounded-xl p-5">
+          <div class="text-3xl mb-2">🐙</div>
+          <div class="text-xs mono text-gray-400 mb-1">SOURCE OF TRUTH</div>
+          <div class="font-bold mb-1">GitHub Repo</div>
+          <div class="text-xs text-gray-400 mb-3">github.com/AjinkyaKate/job-tracker</div>
+          <div class="text-xs text-gray-400">→ Push received → triggers webhooks to Render</div>
+        </div>
+        <div class="text-purple-400 text-3xl text-center">→</div>
+      </div>
+
+      <!-- DEV branch -->
+      <div class="bg-amber-950/30 border-2 border-amber-700/50 rounded-2xl p-6 mb-8">
+        <div class="text-xs mono text-amber-300 mb-3 tracking-widest">DEV ENVIRONMENT (auto-deploy)</div>
+        <div class="grid md:grid-cols-3 gap-4 items-center">
+          <div class="box bg-amber-950/40 border border-amber-600/60 rounded-xl p-4">
+            <div class="text-2xl mb-1">🔨</div>
+            <div class="font-bold text-sm">Render builds Docker image</div>
+            <div class="text-xs text-gray-400 mt-1">~2 min: pip install, build artifacts</div>
+          </div>
+          <div class="text-amber-400 text-2xl text-center">→</div>
+          <div class="box bg-amber-950/40 border border-amber-600/60 rounded-xl p-4">
+            <div class="text-2xl mb-1">🌐</div>
+            <div class="font-bold text-sm">Live at:</div>
+            <div class="text-xs mono text-amber-300 mt-1">job-tracker-dev.onrender.com</div>
+            <div class="text-xs text-gray-400 mt-2">+ separate dev Postgres</div>
+          </div>
+        </div>
+        <div class="mt-4 text-xs text-gray-400 text-center">You + maybe 1-2 testers use this URL. Break it freely.</div>
+      </div>
+
+      <!-- Manual gate -->
+      <div class="flex justify-center mb-8">
+        <div class="box bg-purple-950/40 border-2 border-purple-600 rounded-xl p-5 max-w-md text-center">
+          <div class="text-3xl mb-2">🚦</div>
+          <div class="font-bold text-purple-300 mb-2">Manual Gate (YOU)</div>
+          <div class="text-sm text-gray-300 mb-2">Test dev URL. Decide: ship to prod?</div>
+          <div class="mt-2 text-xs text-gray-400">If yes → click "Manual Deploy" in Render prod service.</div>
+        </div>
+      </div>
+
+      <!-- PROD branch -->
+      <div class="bg-emerald-950/30 border-2 border-emerald-700/50 rounded-2xl p-6">
+        <div class="text-xs mono text-emerald-300 mb-3 tracking-widest">PROD ENVIRONMENT (manual deploy)</div>
+        <div class="grid md:grid-cols-3 gap-4 items-center">
+          <div class="box bg-emerald-950/40 border border-emerald-600/60 rounded-xl p-4">
+            <div class="text-2xl mb-1">🔨</div>
+            <div class="font-bold text-sm">Render builds again</div>
+            <div class="text-xs text-gray-400 mt-1">Same code, different env vars</div>
+          </div>
+          <div class="text-emerald-400 text-2xl text-center">→</div>
+          <div class="box bg-emerald-950/40 border border-emerald-600/60 rounded-xl p-4">
+            <div class="text-2xl mb-1">🌍</div>
+            <div class="font-bold text-sm">Live at:</div>
+            <div class="text-xs mono text-emerald-300 mt-1">jobtracker.io</div>
+            <div class="text-xs text-gray-400 mt-2">+ prod Postgres (real user data)</div>
+          </div>
+        </div>
+        <div class="mt-4 text-xs text-gray-400 text-center">Real customers using this URL. If broken → instant rollback.</div>
+      </div>
+
+    </div>
+  </section>
+
+  <!-- ─── DIAGRAM 7: Side-by-side env vars ─────────────────────────── -->
+  <section class="mb-20">
+    <div class="text-purple-400 text-xs font-mono mb-1 tracking-widest uppercase">7. What's Actually Different</div>
+    <h2 class="text-3xl font-bold mb-3">Dev vs prod: same code, different env vars</h2>
+    <p class="text-gray-300 mb-8">The code in both environments is identical. The only differences live in environment variables.</p>
+
+    <div class="grid md:grid-cols-2 gap-6">
+      <div class="bg-amber-950/30 border-2 border-amber-700/50 rounded-2xl p-6">
+        <div class="text-xs mono text-amber-300 mb-3 tracking-widest">.env (DEV)</div>
+        <div class="mono text-xs space-y-1 text-gray-300">
+          <div><span class="text-amber-300">ADMIN_USERNAME</span>=<span class="text-amber-100">admin</span></div>
+          <div><span class="text-amber-300">ADMIN_PASSWORD</span>=<span class="text-amber-100">dev-password-123</span></div>
+          <div><span class="text-amber-300">DATABASE_URL</span>=<span class="text-amber-100">postgresql://.../dev_db</span></div>
+          <div><span class="text-amber-300">GOOGLE_CLIENT_ID</span>=<span class="text-amber-100">DEV_CLIENT_ID...</span></div>
+          <div><span class="text-amber-300">GOOGLE_CLIENT_SECRET</span>=<span class="text-amber-100">DEV_SECRET...</span></div>
+          <div><span class="text-amber-300">GOOGLE_REDIRECT_URI</span>=<span class="text-amber-100">job-tracker-dev.onrender.com/auth/callback</span></div>
+          <div><span class="text-amber-300">GEMINI_API_KEY</span>=<span class="text-amber-100">dev_key_with_lower_quota</span></div>
+        </div>
+      </div>
+      <div class="bg-emerald-950/30 border-2 border-emerald-700/50 rounded-2xl p-6">
+        <div class="text-xs mono text-emerald-300 mb-3 tracking-widest">.env (PROD)</div>
+        <div class="mono text-xs space-y-1 text-gray-300">
+          <div><span class="text-emerald-300">ADMIN_USERNAME</span>=<span class="text-emerald-100">(none, replaced by Google login)</span></div>
+          <div><span class="text-emerald-300">ADMIN_PASSWORD</span>=<span class="text-emerald-100">(none)</span></div>
+          <div><span class="text-emerald-300">DATABASE_URL</span>=<span class="text-emerald-100">postgresql://.../prod_db</span></div>
+          <div><span class="text-emerald-300">GOOGLE_CLIENT_ID</span>=<span class="text-emerald-100">PROD_CLIENT_ID...</span></div>
+          <div><span class="text-emerald-300">GOOGLE_CLIENT_SECRET</span>=<span class="text-emerald-100">PROD_SECRET...</span></div>
+          <div><span class="text-emerald-300">GOOGLE_REDIRECT_URI</span>=<span class="text-emerald-100">jobtracker.io/auth/callback</span></div>
+          <div><span class="text-emerald-300">GEMINI_API_KEY</span>=<span class="text-emerald-100">prod_key_paid_tier</span></div>
+        </div>
+      </div>
+    </div>
+
+    <div class="mt-6 bg-purple-950/30 border-l-4 border-purple-500 rounded-r-xl p-5">
+      <p class="text-gray-200 text-sm leading-relaxed">
+        <span class="font-semibold text-purple-300">Critical:</span> The Google OAuth client must be created TWICE in Google Cloud Console — once for dev, once for prod — with different redirect URIs. Otherwise Google rejects the callback.
+      </p>
+    </div>
+  </section>
+
+  <!-- ─── FOOTER ──────────────────────────────────────────────────── -->
+  <footer class="border-t border-gray-800 pt-8 mt-12 text-center text-gray-500 text-sm">
+    <p>Architecture &amp; flows guide for the job-tracker project.</p>
+    <p class="mt-1">Pair this with the concepts guide (dev-vs-prod-visual.html) for full picture.</p>
+    <p class="mt-3 text-xs">Open both side by side. Refer back when you implement.</p>
+  </footer>
+
+</div>
+
+</body>
+</html>

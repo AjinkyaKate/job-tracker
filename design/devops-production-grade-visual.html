@@ -1,0 +1,646 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8" />
+<meta name="viewport" content="width=device-width, initial-scale=1" />
+<title>Production-Grade Systems · DevOps Visual Guide</title>
+<script src="https://cdn.tailwindcss.com"></script>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700;800&family=JetBrains+Mono:wght@400;500;600&display=swap" rel="stylesheet">
+<style>
+  body { font-family: 'Inter', system-ui, sans-serif; }
+  .mono { font-family: 'JetBrains Mono', monospace; }
+  .box { transition: transform 0.2s; }
+  .box:hover { transform: translateY(-2px); }
+  .grid-bg {
+    background-image:
+      radial-gradient(circle, rgba(167, 139, 250, 0.08) 1px, transparent 1px);
+    background-size: 24px 24px;
+  }
+</style>
+</head>
+<body class="bg-gray-950 text-gray-100 min-h-screen">
+
+<div class="max-w-6xl mx-auto px-4 py-12">
+
+  <!-- HERO -->
+  <header class="mb-16">
+    <div class="text-purple-400 text-sm mono mb-2 tracking-widest uppercase">DevOps · Production-Grade Systems</div>
+    <h1 class="text-5xl sm:text-6xl font-extrabold mb-4 leading-tight">
+      From code to customer
+    </h1>
+    <p class="text-xl text-gray-300 max-w-3xl leading-relaxed">
+      How a real engineering team takes one person's code and turns it into a service running 24/7 for millions of users. Tools, roles, pipelines, and the rituals around them.
+    </p>
+  </header>
+
+  <!-- ─── SECTION 1: What is production grade? ─────────────────────── -->
+  <section class="mb-20">
+    <div class="text-purple-400 text-xs mono mb-1 tracking-widest uppercase">1. The Definition</div>
+    <h2 class="text-3xl font-bold mb-6">What does "production grade" actually mean?</h2>
+
+    <p class="text-lg text-gray-300 mb-8 leading-relaxed">
+      It's not about the code being clever. It's about the system surviving real-world chaos: traffic spikes, bad inputs, network hiccups, hardware failures, bugs you didn't catch. A production-grade system makes promises and keeps them.
+    </p>
+
+    <div class="grid md:grid-cols-2 lg:grid-cols-3 gap-4">
+      <div class="bg-blue-950/40 border-2 border-blue-700/60 rounded-2xl p-5">
+        <div class="text-3xl mb-2">⏱️</div>
+        <h3 class="font-bold mb-2">Uptime</h3>
+        <p class="text-gray-400 text-sm">Service is reachable when customers need it. "99.9%" = ~8 hours of allowed downtime per year. "99.99%" = ~52 minutes.</p>
+      </div>
+      <div class="bg-emerald-950/40 border-2 border-emerald-700/60 rounded-2xl p-5">
+        <div class="text-3xl mb-2">🛡️</div>
+        <h3 class="font-bold mb-2">Reliability</h3>
+        <p class="text-gray-400 text-sm">Same input = same output. No flaky behavior. Errors are caught, logged, and handled gracefully.</p>
+      </div>
+      <div class="bg-purple-950/40 border-2 border-purple-700/60 rounded-2xl p-5">
+        <div class="text-3xl mb-2">📈</div>
+        <h3 class="font-bold mb-2">Scalability</h3>
+        <p class="text-gray-400 text-sm">Works with 10 users AND 10 million. Performance doesn't fall off a cliff.</p>
+      </div>
+      <div class="bg-orange-950/40 border-2 border-orange-700/60 rounded-2xl p-5">
+        <div class="text-3xl mb-2">🔍</div>
+        <h3 class="font-bold mb-2">Observability</h3>
+        <p class="text-gray-400 text-sm">When something breaks, you can SEE why. Logs, metrics, traces, dashboards.</p>
+      </div>
+      <div class="bg-pink-950/40 border-2 border-pink-700/60 rounded-2xl p-5">
+        <div class="text-3xl mb-2">🔄</div>
+        <h3 class="font-bold mb-2">Recoverability</h3>
+        <p class="text-gray-400 text-sm">When something breaks, you can roll back fast. Backups, rollback plans, hot fixes.</p>
+      </div>
+      <div class="bg-cyan-950/40 border-2 border-cyan-700/60 rounded-2xl p-5">
+        <div class="text-3xl mb-2">🔐</div>
+        <h3 class="font-bold mb-2">Security</h3>
+        <p class="text-gray-400 text-sm">Customer data protected. Auth gates in place. Secrets in vaults, not code. Audit trails for changes.</p>
+      </div>
+    </div>
+
+    <div class="mt-8 bg-purple-950/30 border-l-4 border-purple-500 rounded-r-xl p-6">
+      <p class="text-gray-200 leading-relaxed">
+        Your code only contributes to ~30% of "production grade." The other 70% is the system, the team, the rituals, and the tooling around the code. That's what DevOps is about.
+      </p>
+    </div>
+  </section>
+
+  <!-- ─── SECTION 2: Team roles ────────────────────────────────────── -->
+  <section class="mb-20">
+    <div class="text-purple-400 text-xs mono mb-1 tracking-widest uppercase">2. Who Does What</div>
+    <h2 class="text-3xl font-bold mb-6">The team behind a production system</h2>
+
+    <p class="text-lg text-gray-300 mb-8 leading-relaxed">
+      In a mature engineering org, no single person ships code to production alone. Different roles have different gates and different expertise. Your company's flow (dev writes → lead approves → DB team raises ticket → QA tests → release) is normal.
+    </p>
+
+    <div class="bg-gray-900/50 border border-gray-800 rounded-2xl p-8 grid-bg">
+      <div class="grid md:grid-cols-3 gap-6">
+        <div class="box bg-blue-950/40 border-2 border-blue-700/60 rounded-xl p-5">
+          <div class="text-3xl mb-2">👨‍💻</div>
+          <div class="text-xs mono text-blue-300 mb-1">WRITES CODE</div>
+          <div class="font-bold mb-1">Software Engineer (Dev)</div>
+          <div class="text-xs text-gray-400 mb-3">Writes features, fixes bugs, opens pull requests.</div>
+          <div class="mono text-[10px] text-blue-200/70">Tools: VS Code, Git, GitHub, language stack</div>
+        </div>
+
+        <div class="box bg-purple-950/40 border-2 border-purple-700/60 rounded-xl p-5">
+          <div class="text-3xl mb-2">🧐</div>
+          <div class="text-xs mono text-purple-300 mb-1">REVIEWS</div>
+          <div class="font-bold mb-1">Tech Lead / Senior Engineer</div>
+          <div class="text-xs text-gray-400 mb-3">Reviews PRs. Catches design issues, security issues, performance concerns. Approves merge.</div>
+          <div class="mono text-[10px] text-purple-200/70">Tools: GitHub PR reviews, design docs</div>
+        </div>
+
+        <div class="box bg-orange-950/40 border-2 border-orange-700/60 rounded-xl p-5">
+          <div class="text-3xl mb-2">🚀</div>
+          <div class="text-xs mono text-orange-300 mb-1">SHIPS</div>
+          <div class="font-bold mb-1">DevOps / Platform Engineer</div>
+          <div class="text-xs text-gray-400 mb-3">Builds and maintains the deployment pipeline. CI/CD, infrastructure, secrets management.</div>
+          <div class="mono text-[10px] text-orange-200/70">Tools: Jenkins, GitHub Actions, ArgoCD, Terraform, Kubernetes</div>
+        </div>
+
+        <div class="box bg-emerald-950/40 border-2 border-emerald-700/60 rounded-xl p-5">
+          <div class="text-3xl mb-2">🚨</div>
+          <div class="text-xs mono text-emerald-300 mb-1">WATCHES</div>
+          <div class="font-bold mb-1">SRE (Site Reliability Engineer)</div>
+          <div class="text-xs text-gray-400 mb-3">Monitors prod. On-call rotation. Defines SLOs. Investigates incidents.</div>
+          <div class="mono text-[10px] text-emerald-200/70">Tools: DataDog, Grafana, PagerDuty, Sentry</div>
+        </div>
+
+        <div class="box bg-pink-950/40 border-2 border-pink-700/60 rounded-xl p-5">
+          <div class="text-3xl mb-2">🗄️</div>
+          <div class="text-xs mono text-pink-300 mb-1">OWNS DATA</div>
+          <div class="font-bold mb-1">DBA / Data Engineer</div>
+          <div class="text-xs text-gray-400 mb-3">Approves schema changes. Runs migrations. Backups, replication, performance.</div>
+          <div class="mono text-[10px] text-pink-200/70">Tools: PostgreSQL, MySQL, migration tools (Flyway, Alembic)</div>
+        </div>
+
+        <div class="box bg-cyan-950/40 border-2 border-cyan-700/60 rounded-xl p-5">
+          <div class="text-3xl mb-2">🧪</div>
+          <div class="text-xs mono text-cyan-300 mb-1">VALIDATES</div>
+          <div class="font-bold mb-1">QA Engineer / SDET</div>
+          <div class="text-xs text-gray-400 mb-3">Writes test suites. Runs regressions. Signs off before prod release.</div>
+          <div class="mono text-[10px] text-cyan-200/70">Tools: Cypress, Playwright, Postman, JMeter</div>
+        </div>
+      </div>
+    </div>
+
+    <div class="mt-8 bg-amber-950/30 border-l-4 border-amber-500 rounded-r-xl p-5">
+      <p class="text-gray-200 text-sm leading-relaxed">
+        <strong class="text-amber-300">Note:</strong> In small startups, ONE person plays multiple roles (you've been all 6 on your job-tracker). In a 500-person eng org, each role has dedicated people. The roles don't go away, they just get specialized.
+      </p>
+    </div>
+  </section>
+
+  <!-- ─── SECTION 3: CI/CD pipeline ────────────────────────────────── -->
+  <section class="mb-20">
+    <div class="text-purple-400 text-xs mono mb-1 tracking-widest uppercase">3. The CI/CD Pipeline</div>
+    <h2 class="text-3xl font-bold mb-3">From your laptop to production, step by step</h2>
+    <p class="text-gray-300 mb-8">CI = Continuous Integration. CD = Continuous Deployment (or Delivery). Together they form the automated path from "code written" to "code live."</p>
+
+    <div class="bg-gray-900/50 border border-gray-800 rounded-2xl p-6 space-y-2">
+
+      <div class="flex items-stretch gap-3">
+        <div class="w-10 h-10 rounded-lg bg-blue-500 flex items-center justify-center flex-shrink-0 text-white font-bold mono">1</div>
+        <div class="flex-1 bg-blue-950/30 border border-blue-700/40 rounded-lg p-3">
+          <div class="font-semibold text-blue-300 text-sm">Engineer commits code</div>
+          <div class="text-xs text-gray-400">git push origin feature/my-thing</div>
+        </div>
+      </div>
+
+      <div class="ml-5 text-gray-500">↓</div>
+
+      <div class="flex items-stretch gap-3">
+        <div class="w-10 h-10 rounded-lg bg-purple-500 flex items-center justify-center flex-shrink-0 text-white font-bold mono">2</div>
+        <div class="flex-1 bg-purple-950/30 border border-purple-700/40 rounded-lg p-3">
+          <div class="font-semibold text-purple-300 text-sm">CI server kicks in (automated)</div>
+          <div class="text-xs text-gray-400">GitHub Actions / Jenkins detects the push. Spins up a fresh environment.</div>
+          <div class="mt-1 mono text-[10px] text-purple-200">Run linter → Run unit tests → Run integration tests → Build artifact</div>
+        </div>
+      </div>
+
+      <div class="ml-5 text-gray-500">↓</div>
+
+      <div class="flex items-stretch gap-3">
+        <div class="w-10 h-10 rounded-lg bg-emerald-500 flex items-center justify-center flex-shrink-0 text-white font-bold mono">3</div>
+        <div class="flex-1 bg-emerald-950/30 border border-emerald-700/40 rounded-lg p-3">
+          <div class="font-semibold text-emerald-300 text-sm">All green? → Open Pull Request</div>
+          <div class="text-xs text-gray-400">If any test fails, the engineer fixes before going further. PR is opened automatically when ready.</div>
+        </div>
+      </div>
+
+      <div class="ml-5 text-gray-500">↓</div>
+
+      <div class="flex items-stretch gap-3">
+        <div class="w-10 h-10 rounded-lg bg-amber-500 flex items-center justify-center flex-shrink-0 text-white font-bold mono">4</div>
+        <div class="flex-1 bg-amber-950/30 border border-amber-700/40 rounded-lg p-3">
+          <div class="font-semibold text-amber-300 text-sm">Tech Lead reviews the PR</div>
+          <div class="text-xs text-gray-400">Reads the diff. Asks questions. Suggests changes. Approves OR rejects.</div>
+        </div>
+      </div>
+
+      <div class="ml-5 text-gray-500">↓</div>
+
+      <div class="flex items-stretch gap-3">
+        <div class="w-10 h-10 rounded-lg bg-amber-500 flex items-center justify-center flex-shrink-0 text-white font-bold mono">5</div>
+        <div class="flex-1 bg-amber-950/30 border border-amber-700/40 rounded-lg p-3">
+          <div class="font-semibold text-amber-300 text-sm">Merged to main branch → auto-deploys to DEV</div>
+          <div class="text-xs text-gray-400">Merge triggers another pipeline. Code is built into a Docker image, pushed to a registry, then deployed to dev/staging.</div>
+        </div>
+      </div>
+
+      <div class="ml-5 text-gray-500">↓</div>
+
+      <div class="flex items-stretch gap-3">
+        <div class="w-10 h-10 rounded-lg bg-cyan-500 flex items-center justify-center flex-shrink-0 text-white font-bold mono">6</div>
+        <div class="flex-1 bg-cyan-950/30 border border-cyan-700/40 rounded-lg p-3">
+          <div class="font-semibold text-cyan-300 text-sm">QA tests on staging</div>
+          <div class="text-xs text-gray-400">Manual + automated test runs against staging. Edge cases, regressions, mobile, multi-region.</div>
+        </div>
+      </div>
+
+      <div class="ml-5 text-gray-500">↓</div>
+
+      <div class="flex items-stretch gap-3">
+        <div class="w-10 h-10 rounded-lg bg-emerald-500 flex items-center justify-center flex-shrink-0 text-white font-bold mono">7</div>
+        <div class="flex-1 bg-emerald-950/30 border border-emerald-700/40 rounded-lg p-3">
+          <div class="font-semibold text-emerald-300 text-sm">QA approves → promote to PROD (manual gate)</div>
+          <div class="text-xs text-gray-400">A human clicks "Promote." OR if you trust your tests fully, this can be automatic (true Continuous Deployment).</div>
+        </div>
+      </div>
+
+      <div class="ml-5 text-gray-500">↓</div>
+
+      <div class="flex items-stretch gap-3">
+        <div class="w-10 h-10 rounded-lg bg-purple-500 flex items-center justify-center flex-shrink-0 text-white font-bold mono">8</div>
+        <div class="flex-1 bg-purple-950/30 border border-purple-700/40 rounded-lg p-3">
+          <div class="font-semibold text-purple-300 text-sm">Deployed to PROD with monitoring</div>
+          <div class="text-xs text-gray-400">SRE/DevOps watches dashboards for the first 30-60 min. Error rates, latency, traffic. Rollback ready.</div>
+        </div>
+      </div>
+
+    </div>
+
+    <div class="mt-6 bg-blue-950/30 border-l-4 border-blue-500 rounded-r-xl p-5">
+      <p class="text-gray-200 text-sm leading-relaxed">
+        <strong class="text-blue-300">Common tools at each stage:</strong> Git/GitHub (source) → GitHub Actions / Jenkins / GitLab CI (CI runner) → Docker (containerize) → AWS ECR / Docker Hub (registry) → Kubernetes / ECS / Render (deploy target) → DataDog / Sentry / Grafana (observability). Each company picks 1-2 from each category.
+      </p>
+    </div>
+  </section>
+
+  <!-- ─── SECTION 4: Environments ──────────────────────────────────── -->
+  <section class="mb-20">
+    <div class="text-purple-400 text-xs mono mb-1 tracking-widest uppercase">4. Environments</div>
+    <h2 class="text-3xl font-bold mb-6">More than just dev and prod</h2>
+    <p class="text-gray-300 mb-8">Real systems have 3-5 environments, not just 2. Each one catches different bugs.</p>
+
+    <div class="space-y-3">
+      <div class="bg-gray-800/40 border border-gray-700 rounded-xl p-4 flex items-start gap-4">
+        <div class="w-16 mono text-amber-300 font-bold text-sm">DEV</div>
+        <div class="flex-1">
+          <div class="font-bold text-sm">Developer's local machine OR shared dev server</div>
+          <div class="text-xs text-gray-400">Run by: each engineer. Test data. Breaks freely.</div>
+        </div>
+      </div>
+      <div class="text-center text-gray-500">↓</div>
+      <div class="bg-gray-800/40 border border-gray-700 rounded-xl p-4 flex items-start gap-4">
+        <div class="w-16 mono text-purple-300 font-bold text-sm">STAGING</div>
+        <div class="flex-1">
+          <div class="font-bold text-sm">Mirror of prod, but with test data</div>
+          <div class="text-xs text-gray-400">QA tests here. Matches prod infra exactly. Catches "works locally, breaks in prod-like infra" bugs.</div>
+        </div>
+      </div>
+      <div class="text-center text-gray-500">↓</div>
+      <div class="bg-gray-800/40 border border-gray-700 rounded-xl p-4 flex items-start gap-4">
+        <div class="w-16 mono text-cyan-300 font-bold text-sm">UAT</div>
+        <div class="flex-1">
+          <div class="font-bold text-sm">User Acceptance Testing</div>
+          <div class="text-xs text-gray-400">Product/business team tries the feature. Sometimes real customers in a beta program.</div>
+        </div>
+      </div>
+      <div class="text-center text-gray-500">↓</div>
+      <div class="bg-gray-800/40 border border-gray-700 rounded-xl p-4 flex items-start gap-4">
+        <div class="w-16 mono text-orange-300 font-bold text-sm">CANARY</div>
+        <div class="flex-1">
+          <div class="font-bold text-sm">Tiny slice of real users (1-5%)</div>
+          <div class="text-xs text-gray-400">Real prod, but only some users see the new version. Watch error rates. If anything breaks, only a small group affected.</div>
+        </div>
+      </div>
+      <div class="text-center text-gray-500">↓</div>
+      <div class="bg-emerald-950/40 border border-emerald-700/60 rounded-xl p-4 flex items-start gap-4">
+        <div class="w-16 mono text-emerald-300 font-bold text-sm">PROD</div>
+        <div class="flex-1">
+          <div class="font-bold text-sm">All real users</div>
+          <div class="text-xs text-gray-400">100% of traffic. Where it really has to work.</div>
+        </div>
+      </div>
+    </div>
+  </section>
+
+  <!-- ─── SECTION 5: DB migration track ─────────────────────────────── -->
+  <section class="mb-20">
+    <div class="text-purple-400 text-xs mono mb-1 tracking-widest uppercase">5. The Database Track</div>
+    <h2 class="text-3xl font-bold mb-3">Why DB changes are a separate, scarier flow</h2>
+    <p class="text-gray-300 mb-8">Code can be rolled back in 1 minute. A botched database migration can take HOURS to recover from, sometimes requires restoring from backup, and can corrupt customer data. That's why DBAs have a separate gate.</p>
+
+    <div class="bg-pink-950/30 border-2 border-pink-700/50 rounded-2xl p-6">
+      <h3 class="font-bold mb-4 text-pink-300">Typical DB change flow</h3>
+      <div class="space-y-2">
+        <div class="bg-pink-950/30 border border-pink-700/40 rounded-lg p-3">
+          <div class="font-bold text-sm">1. Dev raises a ticket for the schema change</div>
+          <div class="text-xs text-gray-400 mt-1">"I need a new column X on table Y for feature Z."</div>
+        </div>
+        <div class="text-center text-pink-500">↓</div>
+        <div class="bg-pink-950/30 border border-pink-700/40 rounded-lg p-3">
+          <div class="font-bold text-sm">2. DBA reviews</div>
+          <div class="text-xs text-gray-400 mt-1">Checks performance impact, indexing, naming conventions, lock implications. Approves or asks for changes.</div>
+        </div>
+        <div class="text-center text-pink-500">↓</div>
+        <div class="bg-pink-950/30 border border-pink-700/40 rounded-lg p-3">
+          <div class="font-bold text-sm">3. Migration script written + tested on staging</div>
+          <div class="text-xs text-gray-400 mt-1">Tools like Flyway, Liquibase, Alembic, Django migrations. Idempotent (safe to re-run).</div>
+        </div>
+        <div class="text-center text-pink-500">↓</div>
+        <div class="bg-pink-950/30 border border-pink-700/40 rounded-lg p-3">
+          <div class="font-bold text-sm">4. Backup prod DB</div>
+          <div class="text-xs text-gray-400 mt-1">Before touching anything in production. Always always.</div>
+        </div>
+        <div class="text-center text-pink-500">↓</div>
+        <div class="bg-pink-950/30 border border-pink-700/40 rounded-lg p-3">
+          <div class="font-bold text-sm">5. Run migration during a maintenance window</div>
+          <div class="text-xs text-gray-400 mt-1">Off-peak hours. Maybe a 5-min downtime announced ahead.</div>
+        </div>
+        <div class="text-center text-pink-500">↓</div>
+        <div class="bg-pink-950/30 border border-pink-700/40 rounded-lg p-3">
+          <div class="font-bold text-sm">6. Verify + deploy the code that uses the new schema</div>
+          <div class="text-xs text-gray-400 mt-1">Migration runs FIRST, code runs SECOND. Never the other way around.</div>
+        </div>
+      </div>
+    </div>
+
+    <div class="mt-6 bg-amber-950/30 border-l-4 border-amber-500 rounded-r-xl p-5">
+      <p class="text-gray-200 text-sm leading-relaxed">
+        <strong class="text-amber-300">Golden rule:</strong> Schema changes always go LIVE BEFORE the code that depends on them. If you deploy code first and migration fails, your app crashes in prod.
+      </p>
+    </div>
+  </section>
+
+  <!-- ─── SECTION 6: Region-based deploys (their example) ──────────── -->
+  <section class="mb-20">
+    <div class="text-purple-400 text-xs mono mb-1 tracking-widest uppercase">6. Region-Based Rollouts</div>
+    <h2 class="text-3xl font-bold mb-3">Why you saw "feature deployed to RU and DC, others later"</h2>
+    <p class="text-gray-300 mb-8">Big companies don't ship to the whole world at once. They roll out region by region, watching for issues. Your company's "RU and DC" pattern is exactly this.</p>
+
+    <div class="bg-gray-900/50 border border-gray-800 rounded-2xl p-8 grid-bg">
+      <div class="text-center text-gray-400 mb-6 mono text-sm">Day 1: feature launches in ONE region</div>
+
+      <div class="grid grid-cols-3 gap-3 mb-4">
+        <div class="box bg-emerald-950/40 border-2 border-emerald-700/60 rounded-xl p-4 text-center">
+          <div class="text-xs mono text-emerald-300 mb-1">REGION A (DC)</div>
+          <div class="font-bold text-sm">v2.5 (new) ✓</div>
+          <div class="text-[10px] text-gray-400 mt-2">Watch error rates for 24h</div>
+        </div>
+        <div class="box bg-gray-800/40 border border-gray-700 rounded-xl p-4 text-center opacity-60">
+          <div class="text-xs mono text-gray-400 mb-1">REGION B (RU)</div>
+          <div class="font-bold text-sm">v2.4 (old)</div>
+        </div>
+        <div class="box bg-gray-800/40 border border-gray-700 rounded-xl p-4 text-center opacity-60">
+          <div class="text-xs mono text-gray-400 mb-1">REGION C (EU/US)</div>
+          <div class="font-bold text-sm">v2.4 (old)</div>
+        </div>
+      </div>
+
+      <div class="text-center text-gray-400 mb-3">↓ 24h later, no issues seen ↓</div>
+
+      <div class="text-center text-gray-400 mb-6 mono text-sm">Day 2: expand to a second region</div>
+
+      <div class="grid grid-cols-3 gap-3 mb-4">
+        <div class="box bg-emerald-950/40 border-2 border-emerald-700/60 rounded-xl p-4 text-center">
+          <div class="text-xs mono text-emerald-300 mb-1">REGION A (DC)</div>
+          <div class="font-bold text-sm">v2.5 ✓</div>
+        </div>
+        <div class="box bg-emerald-950/40 border-2 border-emerald-700/60 rounded-xl p-4 text-center">
+          <div class="text-xs mono text-emerald-300 mb-1">REGION B (RU)</div>
+          <div class="font-bold text-sm">v2.5 ✓</div>
+        </div>
+        <div class="box bg-gray-800/40 border border-gray-700 rounded-xl p-4 text-center opacity-60">
+          <div class="text-xs mono text-gray-400 mb-1">REGION C (EU/US)</div>
+          <div class="font-bold text-sm">v2.4</div>
+        </div>
+      </div>
+
+      <div class="text-center text-gray-400 mb-3">↓ another 24h, still clean ↓</div>
+
+      <div class="text-center text-gray-400 mb-6 mono text-sm">Day 3: full rollout</div>
+
+      <div class="grid grid-cols-3 gap-3">
+        <div class="box bg-emerald-950/40 border-2 border-emerald-700/60 rounded-xl p-4 text-center">
+          <div class="text-xs mono text-emerald-300 mb-1">REGION A</div>
+          <div class="font-bold text-sm">v2.5 ✓</div>
+        </div>
+        <div class="box bg-emerald-950/40 border-2 border-emerald-700/60 rounded-xl p-4 text-center">
+          <div class="text-xs mono text-emerald-300 mb-1">REGION B</div>
+          <div class="font-bold text-sm">v2.5 ✓</div>
+        </div>
+        <div class="box bg-emerald-950/40 border-2 border-emerald-700/60 rounded-xl p-4 text-center">
+          <div class="text-xs mono text-emerald-300 mb-1">REGION C</div>
+          <div class="font-bold text-sm">v2.5 ✓</div>
+        </div>
+      </div>
+    </div>
+
+    <div class="mt-6 grid md:grid-cols-2 gap-4">
+      <div class="bg-emerald-950/30 border border-emerald-700/40 rounded-lg p-4">
+        <div class="font-bold text-emerald-300 text-sm mb-2">Why this works:</div>
+        <ul class="text-xs text-gray-300 space-y-1">
+          <li>• Bad bugs surface in 1 region first, not globally</li>
+          <li>• Rollback impacts 33% of users, not 100%</li>
+          <li>• You can compare metrics (v2.5 region vs v2.4 region)</li>
+          <li>• Confidence builds before the full launch</li>
+        </ul>
+      </div>
+      <div class="bg-amber-950/30 border border-amber-700/40 rounded-lg p-4">
+        <div class="font-bold text-amber-300 text-sm mb-2">Trade-offs:</div>
+        <ul class="text-xs text-gray-300 space-y-1">
+          <li>• Slower full rollout (3-7 days vs minutes)</li>
+          <li>• Code must support multiple versions running simultaneously</li>
+          <li>• DB changes need to work for BOTH v2.4 AND v2.5 code</li>
+          <li>• More infrastructure cost</li>
+        </ul>
+      </div>
+    </div>
+  </section>
+
+  <!-- ─── SECTION 7: Feature flags ─────────────────────────────────── -->
+  <section class="mb-20">
+    <div class="text-purple-400 text-xs mono mb-1 tracking-widest uppercase">7. Feature Flags</div>
+    <h2 class="text-3xl font-bold mb-3">Ship code without launching it</h2>
+    <p class="text-gray-300 mb-8">A feature flag is an if-statement in code that the team can flip ON/OFF without redeploying. Used everywhere in modern systems.</p>
+
+    <div class="bg-gray-900/50 border border-gray-800 rounded-2xl p-6">
+      <div class="mono text-sm bg-black/50 rounded-lg p-4 mb-4 overflow-x-auto">
+<pre class="text-gray-300">if feature_flag("new_checkout_flow", user_id):
+    return render_new_checkout()    <span class="text-emerald-400"># ← new code, only some users see this</span>
+else:
+    return render_old_checkout()    <span class="text-gray-500"># ← safe fallback</span></pre>
+      </div>
+
+      <div class="grid md:grid-cols-3 gap-4">
+        <div class="bg-blue-950/30 border border-blue-700/40 rounded-lg p-4">
+          <div class="text-2xl mb-2">🧪</div>
+          <div class="font-bold text-sm mb-1">A/B test</div>
+          <div class="text-xs text-gray-400">50% see new feature, 50% see old. Measure which performs better.</div>
+        </div>
+        <div class="bg-purple-950/30 border border-purple-700/40 rounded-lg p-4">
+          <div class="text-2xl mb-2">🎯</div>
+          <div class="font-bold text-sm mb-1">Targeted launch</div>
+          <div class="text-xs text-gray-400">Enable for specific customer accounts first (beta). Roll out to all later.</div>
+        </div>
+        <div class="bg-red-950/30 border border-red-700/40 rounded-lg p-4">
+          <div class="text-2xl mb-2">🚨</div>
+          <div class="font-bold text-sm mb-1">Instant kill switch</div>
+          <div class="text-xs text-gray-400">Production bug? Flip flag to off. Code is still deployed but inactive. No redeploy needed.</div>
+        </div>
+      </div>
+
+      <div class="mt-4 text-xs text-gray-400 mono">
+        Common tools: LaunchDarkly, GrowthBook, Unleash, ConfigCat, or DIY with a config table.
+      </div>
+    </div>
+  </section>
+
+  <!-- ─── SECTION 8: Observability ─────────────────────────────────── -->
+  <section class="mb-20">
+    <div class="text-purple-400 text-xs mono mb-1 tracking-widest uppercase">8. Observability</div>
+    <h2 class="text-3xl font-bold mb-3">How you see what's happening inside the system</h2>
+    <p class="text-gray-300 mb-8">When something breaks at 3am, you need to know WHY without SSH-ing into a server. Observability is the eyes and ears of your production system.</p>
+
+    <div class="grid md:grid-cols-3 gap-4">
+      <div class="bg-blue-950/40 border-2 border-blue-700/60 rounded-2xl p-5">
+        <div class="text-3xl mb-2">📝</div>
+        <div class="font-bold mb-2">Logs</div>
+        <div class="text-xs text-gray-400 mb-3">Text records of what happened. "User 42 clicked button. Server processed in 230ms. Returned 200."</div>
+        <div class="mono text-[10px] text-gray-500">Tools: ELK, Datadog Logs, CloudWatch, Loki</div>
+      </div>
+      <div class="bg-purple-950/40 border-2 border-purple-700/60 rounded-2xl p-5">
+        <div class="text-3xl mb-2">📊</div>
+        <div class="font-bold mb-2">Metrics</div>
+        <div class="text-xs text-gray-400 mb-3">Numbers over time. Request count, error rate, response time, CPU usage, memory.</div>
+        <div class="mono text-[10px] text-gray-500">Tools: Prometheus, Grafana, Datadog, New Relic</div>
+      </div>
+      <div class="bg-emerald-950/40 border-2 border-emerald-700/60 rounded-2xl p-5">
+        <div class="text-3xl mb-2">🔬</div>
+        <div class="font-bold mb-2">Traces</div>
+        <div class="text-xs text-gray-400 mb-3">Follow one request through ALL the services it touched. "Request X spent 50ms in auth, 200ms in DB, 30ms in API call."</div>
+        <div class="mono text-[10px] text-gray-500">Tools: Jaeger, OpenTelemetry, Datadog APM</div>
+      </div>
+    </div>
+
+    <div class="mt-6 grid md:grid-cols-2 gap-4">
+      <div class="bg-red-950/30 border-2 border-red-700/60 rounded-2xl p-5">
+        <div class="font-bold text-red-300 mb-2">🔔 Alerting</div>
+        <div class="text-xs text-gray-300 leading-relaxed">When metrics cross a threshold (error rate > 1%, response time > 2s), the system pages someone via PagerDuty / Opsgenie / Slack. On-call engineer wakes up.</div>
+      </div>
+      <div class="bg-amber-950/30 border-2 border-amber-700/60 rounded-2xl p-5">
+        <div class="font-bold text-amber-300 mb-2">📋 Dashboards</div>
+        <div class="text-xs text-gray-300 leading-relaxed">Curated views of metrics. "Service health overview", "Database performance", "User signups". Looked at every morning during standup.</div>
+      </div>
+    </div>
+  </section>
+
+  <!-- ─── SECTION 9: Incident response ─────────────────────────────── -->
+  <section class="mb-20">
+    <div class="text-purple-400 text-xs mono mb-1 tracking-widest uppercase">9. Incident Response</div>
+    <h2 class="text-3xl font-bold mb-3">When prod breaks at 3am</h2>
+    <p class="text-gray-300 mb-8">Every team has incidents. The mature ones have a playbook. Here's roughly what happens.</p>
+
+    <div class="space-y-3">
+      <div class="bg-gray-900 border border-gray-800 rounded-xl p-4 flex items-start gap-4">
+        <div class="w-10 h-10 rounded-lg bg-red-500 flex items-center justify-center flex-shrink-0 text-white font-bold mono">1</div>
+        <div>
+          <div class="font-bold mb-1 text-red-300">Detection</div>
+          <div class="text-gray-400 text-sm">Monitoring alerts fire. Customer support sees angry tickets. Status page updated to "Investigating."</div>
+        </div>
+      </div>
+
+      <div class="bg-gray-900 border border-gray-800 rounded-xl p-4 flex items-start gap-4">
+        <div class="w-10 h-10 rounded-lg bg-orange-500 flex items-center justify-center flex-shrink-0 text-white font-bold mono">2</div>
+        <div>
+          <div class="font-bold mb-1 text-orange-300">Triage</div>
+          <div class="text-gray-400 text-sm">On-call engineer wakes up, checks dashboards. What's broken? How bad? Who's affected? Incident commander assigned.</div>
+        </div>
+      </div>
+
+      <div class="bg-gray-900 border border-gray-800 rounded-xl p-4 flex items-start gap-4">
+        <div class="w-10 h-10 rounded-lg bg-amber-500 flex items-center justify-center flex-shrink-0 text-white font-bold mono">3</div>
+        <div>
+          <div class="font-bold mb-1 text-amber-300">Mitigate</div>
+          <div class="text-gray-400 text-sm">Stop the bleeding first. Roll back the bad deploy. Flip the feature flag off. Scale up servers. The fix can come later.</div>
+        </div>
+      </div>
+
+      <div class="bg-gray-900 border border-gray-800 rounded-xl p-4 flex items-start gap-4">
+        <div class="w-10 h-10 rounded-lg bg-emerald-500 flex items-center justify-center flex-shrink-0 text-white font-bold mono">4</div>
+        <div>
+          <div class="font-bold mb-1 text-emerald-300">Resolve</div>
+          <div class="text-gray-400 text-sm">Once stable, find the actual root cause. Write a real fix. Deploy it. Status page updated to "Resolved."</div>
+        </div>
+      </div>
+
+      <div class="bg-gray-900 border border-gray-800 rounded-xl p-4 flex items-start gap-4">
+        <div class="w-10 h-10 rounded-lg bg-purple-500 flex items-center justify-center flex-shrink-0 text-white font-bold mono">5</div>
+        <div>
+          <div class="font-bold mb-1 text-purple-300">Postmortem (blameless)</div>
+          <div class="text-gray-400 text-sm">24-48 hours later, the team writes a doc: what happened, what failed, what we'll change. NOT "whose fault." Focus on the system, not the person.</div>
+        </div>
+      </div>
+    </div>
+  </section>
+
+  <!-- ─── SECTION 10: Mapping to your tracker ─────────────────────── -->
+  <section class="mb-20">
+    <div class="text-purple-400 text-xs mono mb-1 tracking-widest uppercase">10. Mapping to Your Tracker</div>
+    <h2 class="text-3xl font-bold mb-3">How this applies to job-tracker</h2>
+    <p class="text-gray-300 mb-8">You've been doing all 6 roles on the job-tracker. Here's where you are vs. where production-grade lives.</p>
+
+    <div class="bg-gray-900/50 border border-gray-800 rounded-2xl p-6 overflow-x-auto">
+      <table class="w-full text-sm">
+        <thead>
+          <tr class="bg-gray-800/60 text-gray-400">
+            <th class="p-3 text-left">Production-grade element</th>
+            <th class="p-3 text-left">Where you are today</th>
+            <th class="p-3 text-left">Next step</th>
+          </tr>
+        </thead>
+        <tbody class="text-gray-300">
+          <tr class="border-t border-gray-800">
+            <td class="p-3 font-semibold">Source control</td>
+            <td class="p-3 text-emerald-300">✓ GitHub</td>
+            <td class="p-3 text-xs">All good</td>
+          </tr>
+          <tr class="border-t border-gray-800">
+            <td class="p-3 font-semibold">CI tests</td>
+            <td class="p-3 text-red-300">✗ Almost none</td>
+            <td class="p-3 text-xs">Add GitHub Actions workflow to run pytest on every push</td>
+          </tr>
+          <tr class="border-t border-gray-800">
+            <td class="p-3 font-semibold">PR reviews</td>
+            <td class="p-3 text-amber-300">⚠ Solo (no reviewer)</td>
+            <td class="p-3 text-xs">Fine while you're the only dev. Add when 2nd dev joins.</td>
+          </tr>
+          <tr class="border-t border-gray-800">
+            <td class="p-3 font-semibold">Dev environment</td>
+            <td class="p-3 text-amber-300">⚠ Local laptop + Render prod</td>
+            <td class="p-3 text-xs">Spin up a separate Render dev service (already planned: Step B-D)</td>
+          </tr>
+          <tr class="border-t border-gray-800">
+            <td class="p-3 font-semibold">DB migrations</td>
+            <td class="p-3 text-amber-300">⚠ Manual ALTER TABLEs in tracker.init_db()</td>
+            <td class="p-3 text-xs">OK for solo. Add Alembic when schema gets complex.</td>
+          </tr>
+          <tr class="border-t border-gray-800">
+            <td class="p-3 font-semibold">Logging</td>
+            <td class="p-3 text-amber-300">⚠ Render captures stdout, that's it</td>
+            <td class="p-3 text-xs">Good enough for now. Sentry for error tracking is a 30-min add.</td>
+          </tr>
+          <tr class="border-t border-gray-800">
+            <td class="p-3 font-semibold">Monitoring</td>
+            <td class="p-3 text-red-300">✗ None</td>
+            <td class="p-3 text-xs">Add UptimeRobot free tier (pings /healthz, emails you if down)</td>
+          </tr>
+          <tr class="border-t border-gray-800">
+            <td class="p-3 font-semibold">Alerting</td>
+            <td class="p-3 text-red-300">✗ None</td>
+            <td class="p-3 text-xs">UptimeRobot + Sentry covers 90% of what you need solo.</td>
+          </tr>
+          <tr class="border-t border-gray-800">
+            <td class="p-3 font-semibold">Backups</td>
+            <td class="p-3 text-amber-300">⚠ Render auto-backups Postgres daily</td>
+            <td class="p-3 text-xs">Verify the backups actually restore. Test once.</td>
+          </tr>
+          <tr class="border-t border-gray-800">
+            <td class="p-3 font-semibold">Rollback</td>
+            <td class="p-3 text-emerald-300">✓ git revert + push</td>
+            <td class="p-3 text-xs">Render auto-deploys the revert. Already production-grade.</td>
+          </tr>
+        </tbody>
+      </table>
+    </div>
+
+    <div class="mt-8 bg-emerald-950/30 border-l-4 border-emerald-500 rounded-r-xl p-6">
+      <p class="text-gray-200 leading-relaxed">
+        <strong class="text-emerald-300">Good news:</strong> You're already at "production-grade enough for 1-10 users." The gap between you and a 500-eng company is mostly automation and scale, not concepts. When we set up dev + prod environments (Step B onwards), you'll be at "production-grade enough for 1,000 users."
+      </p>
+    </div>
+  </section>
+
+  <!-- ─── FOOTER ──────────────────────────────────────────────────── -->
+  <footer class="border-t border-gray-800 pt-8 mt-12 text-center text-gray-500 text-sm">
+    <p>DevOps and production-grade systems for the job-tracker project.</p>
+    <p class="mt-1">Pair this with the concepts guide and the architecture guide for the complete picture.</p>
+    <p class="mt-3 text-xs">Three guides total: visual concepts · real-world architecture · DevOps and production.</p>
+  </footer>
+
+</div>
+
+</body>
+</html>

@@ -1,0 +1,279 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8" />
+<meta name="viewport" content="width=device-width, initial-scale=1" />
+<title>Answer Pad · Quick Copy-Paste</title>
+<script src="https://cdn.tailwindcss.com"></script>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700;800&family=JetBrains+Mono:wght@400;500;600&display=swap" rel="stylesheet">
+<style>
+  body { font-family: 'Inter', system-ui, sans-serif; }
+  .mono { font-family: 'JetBrains Mono', monospace; }
+  .answer-box { white-space: pre-wrap; word-wrap: break-word; }
+  .copy-btn { transition: all 0.2s; }
+  .copy-btn.copied {
+    background-color: #10b981;
+    color: white;
+  }
+</style>
+</head>
+<body class="bg-gray-950 text-gray-100 min-h-screen">
+
+<div class="max-w-5xl mx-auto px-4 py-8">
+
+  <!-- HERO -->
+  <header class="mb-8 pb-6 border-b border-gray-800">
+    <div class="text-purple-400 text-xs mono mb-2 tracking-widest uppercase">Application Helper</div>
+    <h1 class="text-3xl sm:text-4xl font-extrabold mb-2">Answer Pad</h1>
+    <p class="text-gray-400 text-sm leading-relaxed">
+      Click the Copy button on any card. Paste directly into the application form. No selection needed, no formatting issues.
+    </p>
+  </header>
+
+  <!-- ─── FORM: Lexsi Labs — Vibe Coding Engineer ────────────────────── -->
+  <section class="mb-12">
+    <div class="mb-6">
+      <div class="text-xs mono text-emerald-400 mb-1 tracking-widest uppercase">Form #1 · Active</div>
+      <h2 class="text-2xl font-bold">Lexsi Labs — Vibe Coding Engineer</h2>
+      <p class="text-gray-500 text-sm mt-1">Bangalore · Remote · Full Time · Pound Sterling salary</p>
+    </div>
+
+    <div class="space-y-4">
+
+      <!-- Use case 1 -->
+      <div class="bg-gray-900 border border-gray-800 rounded-xl p-5">
+        <div class="flex items-start justify-between gap-4 mb-3">
+          <div class="flex-1">
+            <div class="text-xs mono text-purple-400 mb-1">USE CASE 1 (required)</div>
+            <h3 class="font-semibold text-sm">Problem statement you vibe coded for (and app link)</h3>
+          </div>
+          <button class="copy-btn px-3 py-1.5 rounded-md bg-purple-600 hover:bg-purple-500 text-white text-xs font-medium" data-target="ans-usecase-1">Copy</button>
+        </div>
+        <div id="ans-usecase-1" class="answer-box mono text-[12px] bg-black/40 rounded-lg p-4 text-gray-300 leading-relaxed">Problem statement:
+
+Job search is full of manual coordination. I was losing track of which contacts to follow up with, which resume to send for which role, which jobs needed a status update. Spreadsheets were not cutting it. So I built my own AI-powered job-search CRM.
+
+What I built:
+
+Full-stack AI-powered job tracker. FastAPI backend, PostgreSQL database, Gemini API for email classification, GitHub Actions cron for auto-sync, deployed on Render. Three weeks from blank repo to daily-used production app. Vibe coded entirely with Claude Code as the main dev environment.
+
+What it does:
+
+- Pulls LinkedIn job-alert emails from Gmail every 10 minutes
+- Classifies each email with Gemini to identify job leads
+- Surfaces them in a filtered leads inbox
+- Generates 15 role-tailored resumes per role family
+- Drafts personalised LinkedIn DMs to recruiters using LLMs
+- Auto-advances pipeline status based on Gmail signals (saved to applied to interview to offer or rejected)
+- Multi-stage Kanban pipeline with filter chips, stale-deal tracking, 1-click PDF download
+
+App link: https://job-tracker-bmhy.onrender.com
+Code: https://github.com/AjinkyaKate/job-tracker
+
+In daily use. 100+ leads ingested so far.</div>
+      </div>
+
+      <!-- Use case 2 (optional) -->
+      <div class="bg-gray-900 border border-gray-800 rounded-xl p-5">
+        <div class="flex items-start justify-between gap-4 mb-3">
+          <div class="flex-1">
+            <div class="text-xs mono text-gray-400 mb-1">USE CASE 2 (optional) — skip OR use this</div>
+            <h3 class="font-semibold text-sm">Second vibe-coded app (visual learning guides)</h3>
+          </div>
+          <button class="copy-btn px-3 py-1.5 rounded-md bg-purple-600 hover:bg-purple-500 text-white text-xs font-medium" data-target="ans-usecase-2">Copy</button>
+        </div>
+        <div id="ans-usecase-2" class="answer-box mono text-[12px] bg-black/40 rounded-lg p-4 text-gray-300 leading-relaxed">Problem statement:
+
+I needed to learn dev vs production environments, CI/CD pipelines, and DevOps team workflows to grow into senior product engineering. Reading was not sticking. I needed visual explanations I could refer back to. So I vibe coded three standalone HTML visual guides using Claude Code as the dev partner.
+
+What I built:
+
+Three single-page HTML guides with Tailwind and custom diagrams. Each one covers a different slice of production engineering.
+
+1. dev-vs-prod-visual.html: concepts (workshop vs storefront analogy, deploy pipeline, OAuth flow basics)
+2. dev-vs-prod-architecture.html: implementation (real services as boxes, sequence diagrams, database tree, multi-user isolation)
+3. devops-production-grade-visual.html: operations (team roles, CI/CD pipeline, region-based rollouts, incident response)
+
+Useful for anyone learning these concepts. Files live in the job-tracker repo under design/.
+
+Code: https://github.com/AjinkyaKate/job-tracker/tree/main/design</div>
+      </div>
+
+      <!-- Notice period -->
+      <div class="bg-gray-900 border border-gray-800 rounded-xl p-5">
+        <div class="flex items-start justify-between gap-4 mb-3">
+          <div class="flex-1">
+            <div class="text-xs mono text-purple-400 mb-1">NOTICE PERIOD (radio button)</div>
+            <h3 class="font-semibold text-sm">Select this option:</h3>
+          </div>
+          <button class="copy-btn px-3 py-1.5 rounded-md bg-purple-600 hover:bg-purple-500 text-white text-xs font-medium" data-target="ans-notice">Copy</button>
+        </div>
+        <div id="ans-notice" class="answer-box mono text-[12px] bg-black/40 rounded-lg p-4 text-gray-300">Can join immediately</div>
+      </div>
+
+      <!-- Which explains you -->
+      <div class="bg-gray-900 border border-gray-800 rounded-xl p-5">
+        <div class="flex items-start justify-between gap-4 mb-3">
+          <div class="flex-1">
+            <div class="text-xs mono text-purple-400 mb-1">WHICH AMONGST THESE EXPLAIN YOU?</div>
+            <h3 class="font-semibold text-sm">Select this option:</h3>
+          </div>
+          <button class="copy-btn px-3 py-1.5 rounded-md bg-purple-600 hover:bg-purple-500 text-white text-xs font-medium" data-target="ans-role">Copy</button>
+        </div>
+        <div id="ans-role" class="answer-box mono text-[12px] bg-black/40 rounded-lg p-4 text-gray-300">Full stack engineer</div>
+      </div>
+
+      <!-- AI agent frameworks -->
+      <div class="bg-gray-900 border border-gray-800 rounded-xl p-5">
+        <div class="flex items-start justify-between gap-4 mb-3">
+          <div class="flex-1">
+            <div class="text-xs mono text-purple-400 mb-1">AI AGENT FRAMEWORKS (checkbox)</div>
+            <h3 class="font-semibold text-sm">Select "Others" and type this in the free-text field:</h3>
+          </div>
+          <button class="copy-btn px-3 py-1.5 rounded-md bg-purple-600 hover:bg-purple-500 text-white text-xs font-medium" data-target="ans-frameworks">Copy</button>
+        </div>
+        <div id="ans-frameworks" class="answer-box mono text-[12px] bg-black/40 rounded-lg p-4 text-gray-300 leading-relaxed">Claude Code (Anthropic's agentic CLI for software engineering), Cursor (AI-assisted IDE), direct API integrations with Gemini and OpenAI for in-app LLM features.</div>
+      </div>
+
+      <!-- Current CTC -->
+      <div class="bg-gray-900 border border-gray-800 rounded-xl p-5">
+        <div class="flex items-start justify-between gap-4 mb-3">
+          <div class="flex-1">
+            <div class="text-xs mono text-purple-400 mb-1">CURRENT CTC</div>
+            <h3 class="font-semibold text-sm">Honest contract framing</h3>
+          </div>
+          <button class="copy-btn px-3 py-1.5 rounded-md bg-purple-600 hover:bg-purple-500 text-white text-xs font-medium" data-target="ans-ctc">Copy</button>
+        </div>
+        <div id="ans-ctc" class="answer-box mono text-[12px] bg-black/40 rounded-lg p-4 text-gray-300 leading-relaxed">Currently on a contract role: 37,000 INR fixed per month plus an occasional quarterly performance bonus of 45,000 to 47,000 INR. Equivalent annual: roughly 4.5 to 6 LPA depending on bonus quarters. This is a contract structure, not a market-rate full-time CTC.</div>
+      </div>
+
+      <!-- Expected salary - HIGH anchor -->
+      <div class="bg-gray-900 border-2 border-emerald-700/40 rounded-xl p-5">
+        <div class="flex items-start justify-between gap-4 mb-3">
+          <div class="flex-1">
+            <div class="text-xs mono text-emerald-400 mb-1">EXPECTED ANNUAL SALARY · RECOMMENDED (high anchor)</div>
+            <h3 class="font-semibold text-sm">Use this if Lexsi pays UK-rate to India remote hires</h3>
+          </div>
+          <button class="copy-btn px-3 py-1.5 rounded-md bg-purple-600 hover:bg-purple-500 text-white text-xs font-medium" data-target="ans-salary-high">Copy</button>
+        </div>
+        <div id="ans-salary-high" class="answer-box mono text-[12px] bg-black/40 rounded-lg p-4 text-gray-300 leading-relaxed">35,000 to 50,000 GBP, open to discuss based on role scope and total package (cash plus equity plus benefits).</div>
+      </div>
+
+      <!-- Expected salary - conservative -->
+      <div class="bg-gray-900 border border-gray-800 rounded-xl p-5">
+        <div class="flex items-start justify-between gap-4 mb-3">
+          <div class="flex-1">
+            <div class="text-xs mono text-amber-400 mb-1">EXPECTED ANNUAL SALARY · CONSERVATIVE</div>
+            <h3 class="font-semibold text-sm">Backup if you want lower anchor</h3>
+          </div>
+          <button class="copy-btn px-3 py-1.5 rounded-md bg-purple-600 hover:bg-purple-500 text-white text-xs font-medium" data-target="ans-salary-low">Copy</button>
+        </div>
+        <div id="ans-salary-low" class="answer-box mono text-[12px] bg-black/40 rounded-lg p-4 text-gray-300 leading-relaxed">20,000 to 28,000 GBP, open to discuss based on role scope and total package.</div>
+      </div>
+
+      <!-- Static fields -->
+      <div class="bg-gray-900 border border-gray-800 rounded-xl p-5">
+        <div class="flex items-start justify-between gap-4 mb-3">
+          <div class="flex-1">
+            <div class="text-xs mono text-gray-400 mb-1">PERSONAL INFO · STATIC</div>
+            <h3 class="font-semibold text-sm">Copy each field separately</h3>
+          </div>
+        </div>
+        <div class="space-y-3">
+
+          <div class="flex items-center justify-between gap-3 bg-black/30 rounded-lg p-3">
+            <div class="flex-1">
+              <div class="text-[10px] mono text-gray-500 mb-1">FIRST AND LAST NAME</div>
+              <div id="ans-name" class="mono text-[12px] text-gray-300">Ajinkya Kate</div>
+            </div>
+            <button class="copy-btn px-3 py-1.5 rounded-md bg-purple-600 hover:bg-purple-500 text-white text-xs font-medium" data-target="ans-name">Copy</button>
+          </div>
+
+          <div class="flex items-center justify-between gap-3 bg-black/30 rounded-lg p-3">
+            <div class="flex-1">
+              <div class="text-[10px] mono text-gray-500 mb-1">EMAIL</div>
+              <div id="ans-email" class="mono text-[12px] text-gray-300">ajinkyakate2001@gmail.com</div>
+            </div>
+            <button class="copy-btn px-3 py-1.5 rounded-md bg-purple-600 hover:bg-purple-500 text-white text-xs font-medium" data-target="ans-email">Copy</button>
+          </div>
+
+          <div class="flex items-center justify-between gap-3 bg-black/30 rounded-lg p-3">
+            <div class="flex-1">
+              <div class="text-[10px] mono text-gray-500 mb-1">PHONE</div>
+              <div id="ans-phone" class="mono text-[12px] text-gray-300">+91 77588 80580</div>
+            </div>
+            <button class="copy-btn px-3 py-1.5 rounded-md bg-purple-600 hover:bg-purple-500 text-white text-xs font-medium" data-target="ans-phone">Copy</button>
+          </div>
+
+          <div class="flex items-center justify-between gap-3 bg-black/30 rounded-lg p-3">
+            <div class="flex-1">
+              <div class="text-[10px] mono text-gray-500 mb-1">LOCATION</div>
+              <div id="ans-location" class="mono text-[12px] text-gray-300">Pune, Maharashtra, India</div>
+            </div>
+            <button class="copy-btn px-3 py-1.5 rounded-md bg-purple-600 hover:bg-purple-500 text-white text-xs font-medium" data-target="ans-location">Copy</button>
+          </div>
+
+          <div class="flex items-center justify-between gap-3 bg-black/30 rounded-lg p-3">
+            <div class="flex-1">
+              <div class="text-[10px] mono text-gray-500 mb-1">LINKEDIN</div>
+              <div id="ans-linkedin" class="mono text-[12px] text-gray-300">https://linkedin.com/in/ajinkya-kate</div>
+            </div>
+            <button class="copy-btn px-3 py-1.5 rounded-md bg-purple-600 hover:bg-purple-500 text-white text-xs font-medium" data-target="ans-linkedin">Copy</button>
+          </div>
+
+          <div class="flex items-center justify-between gap-3 bg-black/30 rounded-lg p-3">
+            <div class="flex-1">
+              <div class="text-[10px] mono text-gray-500 mb-1">PORTFOLIO / WEBSITE</div>
+              <div id="ans-portfolio" class="mono text-[12px] text-gray-300">https://github.com/AjinkyaKate</div>
+            </div>
+            <button class="copy-btn px-3 py-1.5 rounded-md bg-purple-600 hover:bg-purple-500 text-white text-xs font-medium" data-target="ans-portfolio">Copy</button>
+          </div>
+
+          <div class="flex items-center justify-between gap-3 bg-black/30 rounded-lg p-3">
+            <div class="flex-1">
+              <div class="text-[10px] mono text-gray-500 mb-1">TOTAL WORK EXPERIENCE</div>
+              <div id="ans-exp" class="mono text-[12px] text-gray-300">2</div>
+            </div>
+            <button class="copy-btn px-3 py-1.5 rounded-md bg-purple-600 hover:bg-purple-500 text-white text-xs font-medium" data-target="ans-exp">Copy</button>
+          </div>
+
+        </div>
+      </div>
+
+    </div>
+  </section>
+
+  <!-- ─── FOOTER ──────────────────────────────────────────────────── -->
+  <footer class="border-t border-gray-800 pt-6 mt-12 text-gray-500 text-sm">
+    <p>Click any "Copy" button to copy the answer to your clipboard. Then paste directly into the form field.</p>
+    <p class="mt-2 text-xs">Share new form questions and I will add them to this page as new cards.</p>
+  </footer>
+
+</div>
+
+<script>
+  document.querySelectorAll('.copy-btn').forEach(btn => {
+    btn.addEventListener('click', () => {
+      const targetId = btn.dataset.target;
+      const targetEl = document.getElementById(targetId);
+      if (!targetEl) return;
+      const text = targetEl.innerText;
+      navigator.clipboard.writeText(text).then(() => {
+        const originalText = btn.textContent;
+        btn.textContent = 'Copied!';
+        btn.classList.add('copied');
+        setTimeout(() => {
+          btn.textContent = originalText;
+          btn.classList.remove('copied');
+        }, 1800);
+      }).catch(() => {
+        btn.textContent = 'Failed';
+        setTimeout(() => { btn.textContent = 'Copy'; }, 1800);
+      });
+    });
+  });
+</script>
+
+</body>
+</html>

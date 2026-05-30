@@ -885,6 +885,459 @@ Why it matters here: this is exactly the Founder's Office shape. I saw an operat
 """
 
 
+# ─── Standalone resume: Hyland Associate Solution Consultant ────────────────
+# Tailored to Hyland's Associate Solution Consultant JD (Kolkata/Hyderabad,
+# Hybrid). Frames Ajinkya as customer-facing implementer + documentation +
+# AI-tool-fluent + eager-learner. Maps the D·engage integration-delivery work
+# onto Hyland's "configure / test / deploy / stabilize" loop, and explicitly
+# echoes the JD's "use of AI tools where applicable" line.
+
+HYLAND_CONSULTANT_RESUME = """# Ajinkya Kate
+
+[+91 77588 80580](tel:+917758880580) · [ajinkyakate2001@gmail.com](mailto:ajinkyakate2001@gmail.com) · [LinkedIn](https://linkedin.com/in/ajinkya-kate) · [GitHub](https://github.com/AjinkyaKate)
+
+Pune, India · Available immediately · Open to Kolkata / Hyderabad
+
+
+## Summary
+
+Customer-facing technical person with 2+ years on a B2B SaaS sitting between enterprise customers and engineering. I run integration delivery end to end, write the documentation other teams rely on, and use AI tools daily to convert technical work into structured, accurate docs. Comfortable reading APIs, SQL, and logs; built my own job-tracker on OAuth and Postgres to prove I can configure and ship real solutions, not just talk about them. Eager to grow into a Solution Consultant role on a real enterprise platform like Hyland.
+
+
+## Experience
+
+**Product Owner, D·engage** (Jan 2025 - May 2026, remote from Pune)
+
+London HQ B2B SaaS for customer engagement. Enterprise customers in banking, retail, telecom.
+
+- Gathered business and technical requirements from customers during integration scoping calls; documented them into clear specs engineering and QA could ship against.
+- Supported the configuration and rollout of the RCS messaging channel for new customers. Conducted UAT, resolved issues in collaboration with engineering, and walked customers through what was happening at each step.
+- Performed lightweight system observation across rollouts: tracked delivery, watched logs during integration tests, flagged issues early to keep customers stable through go-live.
+- Wrote high-quality solution and operational documentation: integration runbooks, release notes, internal enablement notes. Used Claude and ChatGPT to convert raw technical work into structured docs faster and more accurately.
+- Supported customer interactions through the lifecycle: onboarding walkthroughs, training-material prep, post-go-live stabilization, and ongoing relationship-building with customer stakeholders.
+
+**Product Analyst, Denner.in** (May 2024 - Dec 2024, hybrid in Pune)
+
+- Owned product analytics and reporting dashboards. A/B testing, funnel analysis, documented findings for the product team.
+
+
+## Project
+
+**Job Tracker** (May 2026, in daily use)
+
+[job-tracker-bmhy.onrender.com](https://job-tracker-bmhy.onrender.com) · [github.com/AjinkyaKate/job-tracker](https://github.com/AjinkyaKate/job-tracker)
+
+A working solution I configured, deployed, and now operate solo with Claude Code as my dev environment. Reads Gmail via OAuth, parses LinkedIn alert emails, integrates with third-party APIs, and writes to a PostgreSQL schema I designed and migrate. Scheduled background jobs, cloud-deployed on Render, monitored daily.
+
+Why it matters here: it is proof I can configure, deploy, and operate a real technical solution end to end, the same loop the Associate Solution Consultant role asks for. Real OAuth, real APIs, real database, real production deploy.
+
+
+## Skills
+
+**Customer-facing implementation:** Requirements gathering during integration scoping, solution walkthroughs, customer onboarding and training, post-go-live stabilization, stakeholder relationship building.
+
+**Configuration and systems:** Reading and debugging APIs (REST, JSON, webhooks), OAuth flows, basic SQL, Postman, log reading. Ship working software with AI-assisted development.
+
+**Documentation:** Runbooks, release notes, integration guides, PRDs. Use AI tools (Claude, ChatGPT) to convert raw technical work into structured, accurate documentation. The kind of writing that lets other people do the work without asking you again.
+
+**Technical aptitude:** Comfortable in a codebase even when I did not write every line. PostgreSQL schema design, scheduled jobs, REST integrations, basic Python with AI assistance.
+
+**Languages:** English, Hindi, Marathi.
+
+
+## Education
+
+**Pune University**, Bachelor of Business Administration (BBA), Pune
+
+
+## Certifications
+
+**Certified Scrum Product Owner (CSPO)**, Scrum Alliance, Nov 2025
+"""
+
+
+# ─── Standalone resume: WalkMe (SAP) Technical Support Engineer ─────────────
+# Tailored to WalkMe's TSE JD (Bengaluru, Hybrid, Tue-Sat). Customer-facing
+# diagnostic-engineer voice. Honest on the web-stack ask (HTML/CSS working via
+# Jinja+Tailwind, JS working, jQuery foundational) rather than overclaiming.
+# Anchors on D·engage support-style work + the Job Tracker as full-stack proof.
+
+WALKME_TSE_RESUME = """# Ajinkya Kate
+
+[+91 77588 80580](tel:+917758880580) · [ajinkyakate2001@gmail.com](mailto:ajinkyakate2001@gmail.com) · [LinkedIn](https://linkedin.com/in/ajinkya-kate) · [GitHub](https://github.com/AjinkyaKate)
+
+Pune, India · Available immediately · Open to Bengaluru · Tuesday-Saturday workable
+
+
+## Summary
+
+Customer-facing technical person with 2+ years on a B2B SaaS, comfortable across email, live calls, and screen-shares with enterprise customers. I run integration troubleshooting daily: read application logs, use browser dev tools, validate APIs with Postman, and translate technical fixes into language non-technical customers can act on. Built my own full-stack web app on the Claude API, so I've worked across HTML, CSS, and JavaScript in production code I deployed and maintain. Eager to grow into a Technical Support Engineer role on a real digital adoption platform like WalkMe.
+
+
+## Experience
+
+**Product Owner, D·engage** (Jan 2025 - May 2026, remote from Pune)
+
+London HQ B2B SaaS for customer engagement. Enterprise customers in banking, retail, telecom.
+
+- Acted as the trusted point of contact for enterprise customers through integration rollouts and post-go-live stabilization. Email, live calls, and screen-share debugging sessions were daily work.
+- Diagnosed customer issues using application logs, browser dev tools (network panel, console), Postman, and direct API inspection. Translated findings into plain-language explanations customers could act on without needing a developer in the room.
+- Wrote runbooks, release notes, and how-to guides the customer success team used to brief their own clients. Contributed to the internal knowledge base.
+- Walked customers through best practices for our messaging channel, helping them get to self-sufficiency rather than dependency on support.
+- Used Claude and ChatGPT daily to convert technical investigation into structured documentation faster.
+
+**Product Analyst, Denner.in** (May 2024 - Dec 2024, hybrid in Pune)
+
+- Owned product analytics, A/B tests, and reporting dashboards. Built and maintained the docs the product team relied on.
+
+
+## Project
+
+**Job Tracker** (May 2026, in daily use)
+
+[job-tracker-bmhy.onrender.com](https://job-tracker-bmhy.onrender.com) · [github.com/AjinkyaKate/job-tracker](https://github.com/AjinkyaKate/job-tracker)
+
+A full-stack web application I built solo using Claude Code, deployed on Render. FastAPI + PostgreSQL backend, Jinja2 server-rendered templates with Tailwind CSS for the UI, vanilla JavaScript for client-side interactions (copy-to-clipboard, theme toggle, char counters). Real OAuth flows, REST API integration with third-party services, scheduled background jobs.
+
+Why it matters here: building it taught me the full web stack from the browser down to the database, the same surface a TSE inspects when debugging customer-side issues with WalkMe's DAP overlay.
+
+
+## Skills
+
+**Customer-facing technical support:** Email, live chat, screen-share debugging, customer training, best-practice consulting. Comfortable with enterprise customers and challenging conversations.
+
+**Diagnostic tools:** Browser dev tools (network, console, elements), application logs, Postman, REST API inspection. Read logs to find the actual cause, not the symptom.
+
+**Web stack:** HTML and CSS at a working level, used in production via Jinja2 and Tailwind on my own deployed app. Vanilla JavaScript at a working level for client-side interactions. jQuery: foundational only, not my daily tool but readable and learnable quickly.
+
+**Documentation:** Runbooks, release notes, how-to guides, knowledge-base entries. Use AI tools (Claude, ChatGPT) to structure technical investigation into clear customer-ready docs.
+
+**AI in daily work:** Claude, ChatGPT, Gemini for analysis, drafting, debugging, and as a thinking partner.
+
+**Languages:** English (fluent), Hindi, Marathi.
+
+
+## Education
+
+**Pune University**, Bachelor of Business Administration (BBA), Pune
+
+
+## Certifications
+
+**Certified Scrum Product Owner (CSPO)**, Scrum Alliance, Nov 2025
+"""
+
+
+# ─── Standalone resume: ASAPP Demo Engineer (Claude Code + Anthropic + MCP) ──
+# Tailored to ASAPP's Demo Engineer JD which explicitly asks for Claude Code,
+# Anthropic API, and MCP-server experience. Ajinkya happens to have all three:
+# Claude Code is his daily driver, his Job Tracker calls the Anthropic API
+# in production, AND he wrote his own MCP server (mcp_jobtracker.py) which is
+# in active use. This resume leans HARD into that combo + frames the
+# 2+yr PM background honestly as "PM who codes with AI" rather than overclaiming
+# 3-yr engineer status.
+
+ASAPP_DEMO_ENGINEER_RESUME = """# Ajinkya Kate
+
+[+91 77588 80580](tel:+917758880580) · [ajinkyakate2001@gmail.com](mailto:ajinkyakate2001@gmail.com) · [LinkedIn](https://linkedin.com/in/ajinkya-kate) · [GitHub](https://github.com/AjinkyaKate)
+
+Pune, India · Available immediately · Open to Bengaluru / Chennai · Hybrid workable
+
+
+## Summary
+
+PM who codes with AI hands-on. 2+ years as Product Owner on a B2B SaaS (telecom, banking, and retail enterprise customers), and I ship full-stack prototypes solo using Claude Code, the Anthropic API, and MCP servers I write myself. Built and deployed a web app that reads Gmail via OAuth, integrates with multiple third-party APIs, and exposes its own MCP server to Claude. Comfort across the stack (FastAPI + Postgres backend, Jinja + Tailwind + vanilla JS frontend), with the product instinct to know when "good enough to demo" is the right bar.
+
+
+## Experience
+
+**Product Owner, D·engage** (Jan 2025 - May 2026, remote from Pune)
+
+London HQ B2B SaaS for customer engagement (CPaaS). Enterprise customers in **telecom**, banking, and retail.
+
+- Owned the RCS messaging channel end to end on a customer-experience platform. Requirements, integration delivery with carrier partners, customer onboarding, production releases. Same shape of platform ASAPP's CXP customers operate.
+- Sat between customers and engineering. Heard pain in onboarding calls, translated it into clear requirements, and often shipped the small fixes on the ground myself.
+- Used Claude Code, the Anthropic API, ChatGPT, and Gemini in daily work for analysis, automation, and code generation.
+
+**Product Analyst, Denner.in** (May 2024 - Dec 2024, hybrid in Pune)
+
+- Owned product analytics, A/B testing, and reporting dashboards.
+
+
+## What I've built solo (with AI)
+
+**Job Tracker + MCP server** (May 2026, in daily use)
+
+[job-tracker-bmhy.onrender.com](https://job-tracker-bmhy.onrender.com) · [github.com/AjinkyaKate/job-tracker](https://github.com/AjinkyaKate/job-tracker)
+
+Full-stack web application I designed, built, and deployed solo in three weeks with Claude Code:
+
+- **Backend:** FastAPI + PostgreSQL schema I designed and migrate. OAuth flows (Google), scheduled background jobs, REST integrations (Apify, third-party job-board APIs).
+- **Frontend:** Server-rendered Jinja templates with Tailwind CSS, vanilla JavaScript for client-side interactions (copy-to-clipboard, sort toggles, live char counters).
+- **MCP server:** wrote my own MCP server (mcp_jobtracker.py) using FastMCP. Exposes 14 tools (list_leads, pipeline_stats, set_status, draft outreach, add_lead, etc.) so Claude can query and mutate the tracker directly. In production use every day.
+- **Anthropic API:** for outreach drafting, JD scoring, and tailored resume generation. Tool-use patterns + cache-controlled prompts for batch workflows.
+
+Why it matters for this role: it is the Demo Engineer shape, done on my own. I saw the surface (job-search ops), built the demo (working app), wired the agentic layer (MCP + Anthropic API), and shipped it end to end. Prototype-grade where it had to be, real where it matters.
+
+
+## Skills
+
+**Anthropic + agentic dev:** Claude Code (daily driver), Anthropic API (production usage, tool-use patterns, prompt caching), MCP servers (written and deployed my own with FastMCP).
+
+**Full-stack:** Python + FastAPI, PostgreSQL (schema design + migrations), Jinja2 templates, Tailwind CSS, vanilla JavaScript. OAuth, REST integrations, webhooks, scheduled jobs, cloud deploy on Render.
+
+**Enterprise + customer:** Worked with telecom, banking, and retail enterprise customers at D·engage. Integration delivery, onboarding, customer-facing scoping. CPaaS / messaging adjacent to CXP and contact-center.
+
+**Product instincts:** 2+ years as Product Owner. Know when "good enough to demo" is the right bar vs when to harden. Strong written communication: PRDs, runbooks, release notes.
+
+**Diagnostic + tools:** Browser dev tools, application logs, Postman, GitHub, JIRA, Confluence.
+
+**Languages:** English (fluent), Hindi, Marathi.
+
+
+## Education
+
+**Pune University**, Bachelor of Business Administration (BBA), Pune
+
+
+## Certifications
+
+**Certified Scrum Product Owner (CSPO)**, Scrum Alliance, Nov 2025
+"""
+
+
+# ─── Standalone resume: Semrush Channel Partner Success Manager (APAC) ──────
+# Tailored to Semrush's Channel Partner CSM JD: agency-partner enablement,
+# renewals + retention, success plans, performance reporting, cross-functional
+# collab with Channel AEs. Reframes the D·engage trusted-advisor + integration
+# delivery work as CSM-style "enable customer to extract value." Honest about
+# the SEO-domain gap (does not claim SEO experience that doesn't exist).
+
+SEMRUSH_CSM_RESUME = """# Ajinkya Kate
+
+[+91 77588 80580](tel:+917758880580) · [ajinkyakate2001@gmail.com](mailto:ajinkyakate2001@gmail.com) · [LinkedIn](https://linkedin.com/in/ajinkya-kate) · [GitHub](https://github.com/AjinkyaKate)
+
+Pune, India · Available immediately · Open to Bengaluru · Hybrid workable
+
+
+## Summary
+
+Customer-success-leaning Product Owner with 2+ years building trusted-advisor relationships with enterprise customers on a B2B SaaS. I enable customers to extract real value from a platform: walk their teams through workflows, create success plans, present performance against the metrics they care about, and stay close through renewal cycles. Data-driven in everyday work, with a recent analyst background. Drawn to channel-partner roles where the work is making someone else's agency win with the tool, not just keeping the platform running.
+
+
+## Experience
+
+**Product Owner, D·engage** (Jan 2025 - May 2026, remote from Pune)
+
+London HQ B2B SaaS for customer engagement (CPaaS). Enterprise customers in banking, retail, and telecom.
+
+- Acted as the trusted point of contact for enterprise customer teams through onboarding, integration rollout, and ongoing optimization. Built strong relationships with technical and business stakeholders on both sides.
+- Created customer-specific enablement plans: gathered the customer's actual business objectives, mapped the platform features that drove those objectives, and walked their teams through workflows in plain language. Same shape as a success plan for a channel partner.
+- Collaborated with cross-functional teams (engineering, customer success, sales) to unblock customers and coordinate timely delivery. Worked the renewal-adjacent conversations by staying close to whether customers were seeing ongoing value.
+- Translated platform performance into reports the customer's stakeholders could act on. Wrote release notes and how-to guides the customer success team used to brief their own clients.
+- Acted as the voice of the customer inside the company: surfaced feature requests, market signals, and competitive intel to product and engineering.
+- Used Claude, ChatGPT, and Gemini in daily work to draft customer comms, analyze usage data, and automate repeat reporting.
+
+**Product Analyst, Denner.in** (May 2024 - Dec 2024, hybrid in Pune)
+
+- Owned product analytics and reporting dashboards. A/B testing, funnel deep-dives, performance reporting, and turning data into actionable insights for product and business teams.
+
+
+## Project
+
+**Job Tracker** (May 2026, in daily use)
+
+[job-tracker-bmhy.onrender.com](https://job-tracker-bmhy.onrender.com) · [github.com/AjinkyaKate/job-tracker](https://github.com/AjinkyaKate/job-tracker)
+
+A working analytics-and-engagement system I built solo to manage my own job search. Reads Gmail via OAuth, parses lead emails into structured data, scores roles by fit, scrapes decision-makers, drafts outreach, and tracks every conversation through to outcome. Why it matters here: it is proof I think about customer-facing workflows as systems, with data, reporting, and structured engagement baked in.
+
+
+## Skills
+
+**Customer success and trusted advisor:** Enabling enterprise customers on a B2B SaaS, strategic stakeholder relationships, success-plan creation, time-to-value coordination, customer advocacy inside the company.
+
+**Cross-functional collaboration:** Working with product, engineering, sales, and customer-success teams to unblock and grow accounts. Written communication that other teams rely on.
+
+**Data and reporting:** A/B testing, funnel analysis, performance dashboards, presenting insights to stakeholders. Comfortable using data to back recommendations.
+
+**AI in daily work:** Claude, ChatGPT, Gemini for analysis, drafting, and automation. Build with the Claude API hands-on.
+
+**Tools:** Jira, Confluence, Notion, Postman, basic SQL, Google Workspace, Slack.
+
+**Languages:** English (fluent), Hindi, Marathi.
+
+
+## Education
+
+**Pune University**, Bachelor of Business Administration (BBA), Pune
+
+
+## Certifications
+
+**Certified Scrum Product Owner (CSPO)**, Scrum Alliance, Nov 2025
+"""
+
+
+# ─── Standalone resume: Omnibound Martech Product Manager ───────────────────
+# Tailored to Omnibound's Martech PM JD (B2B SaaS martech + LLMs + RAG +
+# agentic AI + co-pilots). All four of those AI sub-areas Ajinkya genuinely
+# does hands-on, so this resume leans HARD into that combo while honestly
+# reframing D·engage as the B2B martech SaaS it actually is (customer
+# engagement + RCS = marketing-team product).
+
+OMNIBOUND_MARTECH_PM_RESUME = """# Ajinkya Kate
+
+[+91 77588 80580](tel:+917758880580) · [ajinkyakate2001@gmail.com](mailto:ajinkyakate2001@gmail.com) · [LinkedIn](https://linkedin.com/in/ajinkya-kate) · [GitHub](https://github.com/AjinkyaKate)
+
+Pune, India · Available immediately · Remote workable
+
+
+## Summary
+
+Product Owner at a B2B martech SaaS for 2+ years, shipping customer-engagement features to enterprise clients in banking, retail, and telecom. Hands-on builder with LLMs (Anthropic Claude), agentic AI (MCP servers I've written and deployed), RAG patterns (retrieval-and-rank scoring), and co-pilot tools (Claude Code is my daily dev environment). Recently shipped a full-stack app that scores roles via retrieval-augmented matching, drafts outreach with the Claude API, and exposes its own MCP server. The PM-of-AI-marketing-product lane is exactly the work I want to do.
+
+
+## Experience
+
+**Product Owner, D·engage** (Jan 2025 - May 2026, remote from Pune)
+
+London HQ B2B martech SaaS for customer engagement (CPaaS). Enterprise customers in banking, retail, and telecom.
+
+- Owned the RCS messaging channel end to end (a customer-engagement product that marketing teams at enterprise customers use to run campaigns). Requirements, roadmap, production releases, adoption tracking.
+- Translated marketing-team use cases into clear PRDs, user stories, and acceptance criteria. Same loop the Omnibound role calls for.
+- Worked async-first with cross-functional teams (engineering, design, customer success) across timezones, including engagements that overlapped with US daytime hours.
+- Defined and tracked KPIs (delivery success, customer adoption, time-to-value) and used data to drive roadmap decisions.
+- Presented product walkthroughs and feature demos internally and to enterprise customer stakeholders.
+- Used Claude Code, the Anthropic API, ChatGPT, and Gemini in daily work for analysis, automation, and code generation.
+
+**Product Analyst, Denner.in** (May 2024 - Dec 2024, hybrid in Pune)
+
+- Owned product analytics, A/B testing, and reporting dashboards for product and marketing teams. Funnel deep-dives, conversion analysis, performance reporting.
+
+
+## What I've built solo (with agentic AI)
+
+**Job Tracker + MCP server** (May 2026, in daily use)
+
+[job-tracker-bmhy.onrender.com](https://job-tracker-bmhy.onrender.com) · [github.com/AjinkyaKate/job-tracker](https://github.com/AjinkyaKate/job-tracker)
+
+End-to-end agentic-AI product I designed, built, and shipped solo in three weeks with Claude Code:
+
+- **LLM integration**: Anthropic API in production for outreach drafting, JD scoring, and tailored resume generation. Tool-use patterns plus prompt caching.
+- **RAG-style scoring**: retrieves jobs by fit against a stored profile, ranks STRONG / MAYBE / SKIP using context plus rules.
+- **MCP server**: wrote my own (mcp_jobtracker.py with FastMCP) exposing 14 tools so Claude can query and mutate the tracker directly. The agentic layer.
+- **Full stack**: FastAPI + PostgreSQL, OAuth, scheduled jobs, deployed on Render.
+
+Why it matters for Omnibound: this is exactly the LLM + RAG + agentic + co-pilot loop your platform sits on. I haven't just used these tools, I've built with them in production.
+
+
+## Skills
+
+**Martech and B2B SaaS Product:** Owning a customer-engagement product end to end, working with marketing teams on use cases, PRDs and user stories, KPI definition and tracking, product demos to enterprise stakeholders.
+
+**AI-driven products:** LLMs (Anthropic Claude in production), agentic AI (MCP servers I've written), RAG patterns (retrieval + ranking), co-pilot tools (Claude Code daily). Hands-on, not just familiar.
+
+**Cross-functional collaboration:** Async-first work with engineering, design, and customer success across timezones. Strong written communication for product specs and customer-facing materials.
+
+**Data and analytics:** A/B testing, funnel analysis, reporting dashboards, basic SQL. Drove decisions with data at both D·engage and Denner.in.
+
+**Tools:** Jira, Confluence, Notion, Postman, GitHub, Tailwind, FastAPI.
+
+**Languages:** English (fluent, professional written and verbal), Hindi, Marathi.
+
+
+## Education
+
+**Pune University**, Bachelor of Business Administration (BBA), Pune
+
+
+## Certifications
+
+**Certified Scrum Product Owner (CSPO)**, Scrum Alliance, Nov 2025
+"""
+
+
+# ─── Standalone resume: Alter Domus Business Analyst (alternatives industry) ─
+# Tailored to Alter Domus's Product-team BA JD. The day-to-day (requirements,
+# user stories with AC + edge cases + non-goals, sprint/JIRA, UAT, data-quality
+# investigation, stakeholder docs) is Ajinkya's exact D·engage work. The big
+# gate is "3+ years in alternatives industry" which he doesn't have - the
+# resume acknowledges this honestly in the summary ("Drawn to the alternatives-
+# industry depth as the next domain to learn") rather than overclaiming.
+
+ALTERDOMUS_BA_RESUME = """# Ajinkya Kate
+
+[+91 77588 80580](tel:+917758880580) · [ajinkyakate2001@gmail.com](mailto:ajinkyakate2001@gmail.com) · [LinkedIn](https://linkedin.com/in/ajinkya-kate) · [GitHub](https://github.com/AjinkyaKate)
+
+Pune, India · Available immediately · Open to Hyderabad · Hybrid workable
+
+
+## Summary
+
+Product Owner with 2+ years on a B2B SaaS, doing the exact BA loop your role describes: capture customer requirements during scoping calls, translate them into user stories and PRDs engineering can ship, and stay close through UAT and post-go-live. Comfortable with the technical surface (REST APIs, OAuth, data pipelines, basic SQL), strong in stakeholder communication and documentation, and adaptable to new domains. Drawn to the alternatives-industry depth at Alter Domus as the next domain to learn.
+
+
+## Experience
+
+**Product Owner, D·engage** (Jan 2025 - May 2026, remote from Pune)
+
+London HQ B2B SaaS for customer engagement. Enterprise customers in banking, retail, and telecom.
+
+- Captured customer and business requirements through onboarding and integration scoping calls. Translated them into clear user stories with acceptance criteria, edge cases, and non-goals that engineering and QA could ship against.
+- Documented system flows and data mappings for the RCS messaging channel: how the customer's CRM hooked into our platform, what data moved at each step, how delivery and engagement signals returned.
+- Defined business rules around message-template logic, deliverability constraints, and customer-side compliance to ensure consistency across rollouts.
+- Partnered closely with engineering and QA through every sprint. Supported Agile ceremonies (sprint planning, refinement, retros) and contributed to JIRA backlog grooming.
+- Tested new features against user stories and acceptance criteria during UAT. Investigated and resolved data and delivery issues in collaboration with engineering.
+- Served as the primary liaison between customers, engineering, and customer success on the RCS channel.
+- Authored client-facing documentation: integration runbooks, release notes, training materials, and dashboards the customer success team used to brief enterprise stakeholders.
+- Defined and tracked KPIs on adoption, delivery success, and time-to-value to drive ongoing improvement.
+
+**Product Analyst, Denner.in** (May 2024 - Dec 2024, hybrid in Pune)
+
+- Owned product analytics: A/B testing, funnel deep-dives, KPI dashboards, and presentations to product leadership. Built the reporting layer that drove product decisions.
+
+
+## Project
+
+**Job Tracker** (May 2026, in daily use)
+
+[job-tracker-bmhy.onrender.com](https://job-tracker-bmhy.onrender.com) · [github.com/AjinkyaKate/job-tracker](https://github.com/AjinkyaKate/job-tracker)
+
+A working data-driven system I built solo with Claude Code. Reads Gmail via OAuth, parses structured data into a PostgreSQL schema I designed, integrates with multiple REST APIs, and presents the data in dashboards I use daily. Real OAuth, REST integrations, scheduled jobs, cloud-deployed on Render.
+
+Why it matters here: it is proof I can take a domain I'm new to, model the data, define the business rules, and ship a working system end to end. The same shape as a BA picking up a new platform or vertical.
+
+
+## Skills
+
+**Business analysis:** Requirements gathering, user stories with acceptance criteria, edge cases and non-goals, business-rule definition, system-flow and data-mapping documentation. Tested against UAT criteria, investigated data-quality issues.
+
+**Cross-functional and Agile:** Sprint planning, refinement, retros, JIRA backlog management. Worked daily with engineering and QA across the lifecycle.
+
+**Stakeholder communication:** Client-facing docs, training materials, release notes, presentations, dashboards. Both internal teams and external customers.
+
+**Technical fluency:** REST APIs, OAuth flows, webhooks, basic SQL, data pipelines (read, integrate, transform). Comfortable reading logs and dev tools.
+
+**Data and reporting:** A/B testing, funnel analysis, performance reporting, dashboard design.
+
+**Tools:** JIRA, Confluence, Notion, Postman, Excel, Google Sheets, PowerPoint, GitHub.
+
+**AI in daily work:** Claude, ChatGPT, Gemini for analysis, drafting, automation, and as a thinking partner.
+
+**Languages:** English (fluent), Hindi, Marathi.
+
+
+## Education
+
+**Pune University**, Bachelor of Business Administration (BBA), Pune
+
+
+## Certifications
+
+**Certified Scrum Product Owner (CSPO)**, Scrum Alliance, Nov 2025
+"""
+
+
 def render_role_resume(family: str) -> str:
     """Compose the full markdown resume for the given role family.
 
@@ -911,6 +1364,18 @@ def render_role_resume(family: str) -> str:
         return SALESHANDY_PM_RESUME
     if family == "founders-office":
         return FOUNDERS_OFFICE_RESUME
+    if family == "hyland-consultant":
+        return HYLAND_CONSULTANT_RESUME
+    if family == "walkme-tse":
+        return WALKME_TSE_RESUME
+    if family == "asapp-demo-engineer":
+        return ASAPP_DEMO_ENGINEER_RESUME
+    if family == "semrush-csm":
+        return SEMRUSH_CSM_RESUME
+    if family == "omnibound-martech-pm":
+        return OMNIBOUND_MARTECH_PM_RESUME
+    if family == "alterdomus-ba":
+        return ALTERDOMUS_BA_RESUME
 
     config = ROLE_RESUMES.get(family)
     if not config:
@@ -1080,4 +1545,26 @@ FAMILY_LABELS = {
     # operator roles at early-stage startups (Kropbook and similar). Voice
     # leans operator-builder, not PM-corporate.
     "founders-office":           "Founder's Office Operator",
+    # Standalone resume tailored to the Hyland Associate Solution Consultant
+    # JD (customer-facing implementation, configuration, docs + AI tools).
+    "hyland-consultant":         "Solution Consultant - Hyland",
+    # Standalone resume tailored to the WalkMe (SAP) Technical Support Engineer
+    # JD. Customer-facing diagnostic-engineer voice with honest web-stack
+    # framing (HTML/CSS/JS working level, jQuery foundational only).
+    "walkme-tse":                "Technical Support Engineer - WalkMe",
+    # Standalone resume tailored to ASAPP's Demo Engineer JD (Claude Code +
+    # Anthropic API + MCP servers as core asks). Leans into Ajinkya's actual
+    # MCP-server build + Anthropic-API production use as the differentiator.
+    "asapp-demo-engineer":       "Demo Engineer - ASAPP",
+    # Standalone resume tailored to Semrush's Channel Partner Success Manager
+    # (APAC) JD. Reframes D·engage trusted-advisor work as CSM-style enablement.
+    # Honest about the SEO-domain gap.
+    "semrush-csm":               "Channel Partner Success Manager - Semrush",
+    # Standalone resume tailored to Omnibound's Martech PM JD (B2B SaaS martech
+    # + LLMs + RAG + agentic AI + co-pilots, all of which Ajinkya does hands-on).
+    "omnibound-martech-pm":      "Martech PM - Omnibound",
+    # Standalone resume tailored to Alter Domus Business Analyst JD (Product
+    # team, alternatives investment industry). Maximally positions BA-shape
+    # while honestly acknowledging the alternatives-domain gap.
+    "alterdomus-ba":             "Business Analyst - Alter Domus",
 }
