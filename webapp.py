@@ -610,68 +610,6 @@ def extension_capture(request: Request, payload: dict = Body(...)):
     }
 
 
-@app.get("/debug/gmail-probe")
-def gmail_probe():
-    """Diagnostic: bypass our fetch wrapper and call Gmail directly.
-
-    Returns what Gmail's messages.list actually returns from inside Render.
-    Compare against the local result to localize where the bug is.
-    """
-    from datetime import datetime, timedelta, timezone
-    from google.auth.transport.requests import Request
-    from googleapiclient.discovery import build
-    out = {"steps": []}
-    try:
-        tracker.init_db()
-        with get_connection() as conn:
-            creds = gmail_integration.load_credentials(conn)
-        if not creds:
-            out["error"] = "no_credentials"
-            return out
-        out["steps"].append("loaded_credentials")
-        out["creds_expired_initial"] = creds.expired
-        out["creds_has_refresh"] = bool(creds.refresh_token)
-        out["creds_expiry"] = str(creds.expiry) if creds.expiry else None
-        # Force a fresh refresh
-        creds.refresh(Request())
-        out["steps"].append("refreshed_token")
-        out["creds_expired_after_refresh"] = creds.expired
-        out["new_expiry"] = str(creds.expiry)
-        # Build service
-        service = build("gmail", "v1", credentials=creds, cache_discovery=False)
-        out["steps"].append("built_service")
-        # Try same query as deployed sync
-        ts_7d = int((datetime.now(timezone.utc) - timedelta(days=7)).timestamp())
-        for q in [
-            f"in:inbox after:{ts_7d}",
-            f"after:{ts_7d}",
-            "newer_than:7d",
-            "in:inbox",
-        ]:
-            r = service.users().messages().list(
-                userId="me", q=q, maxResults=5,
-            ).execute()
-            out.setdefault("queries", []).append({
-                "q": q,
-                "resultSizeEstimate": r.get("resultSizeEstimate"),
-                "msg_count": len(r.get("messages", [])),
-                "first_id": r.get("messages", [{}])[0].get("id") if r.get("messages") else None,
-            })
-        out["steps"].append("ran_queries")
-        # Also pull profile to verify creds-> account binding
-        prof = service.users().getProfile(userId="me").execute()
-        out["profile"] = {
-            "emailAddress": prof.get("emailAddress"),
-            "messagesTotal": prof.get("messagesTotal"),
-            "historyId": prof.get("historyId"),
-        }
-        out["ok"] = True
-    except Exception as exc:
-        out["error"] = f"{type(exc).__name__}: {exc}"
-        out["ok"] = False
-    return out
-
-
 def _rows_to_dicts(rows):
     return [dict(r) for r in rows]
 
@@ -967,23 +905,6 @@ def homepage(request: Request):
 
     any_filter_active = bool(active_statuses or active_flags)
 
-    # Gmail integration status for top-bar Sync button
-    gmail_state = {
-        "configured": gmail_integration.is_configured(),
-        "authorized": False,
-        "last_sync": None,
-        "last_sync_rel": "",
-        "last_sync_summary": None,
-    }
-    if gmail_state["configured"]:
-        with get_connection() as conn:
-            creds = gmail_integration.load_credentials(conn, user_id=uid)
-            gmail_state["authorized"] = creds is not None
-            last_sync = gmail_integration.get_last_sync(conn, user_id=uid)
-            gmail_state["last_sync"] = last_sync
-            gmail_state["last_sync_rel"] = _format_relative_time(last_sync)
-            gmail_state["last_sync_summary"] = gmail_integration.get_last_sync_summary(conn, user_id=uid)
-
     return TEMPLATES.TemplateResponse(
         "index.html",
         {
@@ -1005,7 +926,6 @@ def homepage(request: Request):
             "flag_chips": flag_chips,
             "any_filter_active": any_filter_active,
             "filtered_total": len(filtered_jobs),
-            "gmail": gmail_state,
             "leads_waiting": leads_waiting,
         },
     )
@@ -1341,16 +1261,6 @@ def gmail_oauth_callback(request: Request, code: str = "", state: str = "", erro
         request.session["email"] = email
         request.session["name"] = name
 
-        # Best-effort: kick off an initial sync so the user lands on the
-        # leads inbox with their Gmail-derived jobs already populated.
-        # Swallow errors — the login itself succeeded, sync failures
-        # shouldn't bounce the user back to the OAuth screen.
-        try:
-            with get_connection() as conn:
-                gmail_integration.sync_to_tracker(conn, user_id=user_id)
-        except Exception as sync_exc:
-            print(f"[oauth_callback] initial sync failed (non-fatal): {sync_exc}")
-
         # Send the user to the Leads inbox — that's the actionable view of
         # "jobs you can apply to" derived from your Gmail. The Pipeline is
         # the secondary view (everything you've already started pursuing).
@@ -1360,51 +1270,6 @@ def gmail_oauth_callback(request: Request, code: str = "", state: str = "", erro
             status_code=500,
             content={"error": "exchange_failed", "message": str(exc)},
         )
-
-
-@app.post("/gmail/sync")
-def gmail_sync_now(request: Request):
-    """Manually trigger a Gmail → tracker sync of LinkedIn notification emails
-    for the currently-signed-in user.
-    """
-    if not gmail_integration.is_configured():
-        return _gmail_not_configured_response()
-    try:
-        tracker.init_db()
-        uid = current_user_id(request)
-        with get_connection() as conn:
-            result = gmail_integration.sync_to_tracker(conn, user_id=uid)
-        if not result.get("ok"):
-            return JSONResponse(status_code=400, content=result)
-        return result
-    except Exception as exc:
-        return JSONResponse(
-            status_code=500,
-            content={"error": "sync_failed", "message": str(exc)},
-        )
-
-
-@app.get("/gmail/status")
-def gmail_status(request: Request):
-    """Reports Gmail integration state — used by the dashboard's Sync widget."""
-    configured = gmail_integration.is_configured()
-    authorized = False
-    last_sync = None
-    if configured:
-        tracker.init_db()
-        uid = current_user_id(request)
-        with get_connection() as conn:
-            creds = gmail_integration.load_credentials(conn, user_id=uid)
-            authorized = creds is not None
-            last_sync = gmail_integration.get_last_sync(conn, user_id=uid)
-    return {
-        "configured": configured,
-        "authorized": authorized,
-        "last_sync": last_sync,
-    }
-
-
-
 
 
 # ─────────────────────────────────────────────────────────────────────────────

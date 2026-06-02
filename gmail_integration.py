@@ -35,9 +35,10 @@ except ImportError:
 
 
 SCOPES = [
-    "https://www.googleapis.com/auth/gmail.readonly",
-    # Identity scopes — added so the OAuth callback can identify WHO
+    # Identity scopes only — used so the OAuth callback can identify WHO
     # the user is (email, name) for session creation + user upsert.
+    # Gmail read access was removed when the in-app Gmail sync feature was
+    # retired; Google sign-in no longer requests access to your mailbox.
     "openid",
     "https://www.googleapis.com/auth/userinfo.email",
     "https://www.googleapis.com/auth/userinfo.profile",

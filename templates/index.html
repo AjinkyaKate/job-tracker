@@ -108,8 +108,7 @@
   </div>
 
   {# ─── New-leads banner ───────────────────────────────────────────────────
-     Shows whenever there are leads waiting in the inbox. Surfaces the result
-     of post-login Gmail sync (and ongoing cron syncs) so the user lands here
+     Shows whenever there are leads waiting in the inbox so the user lands here
      and immediately knows there's something to triage — vs. discovering the
      /leads page on their own. #}
   {% if leads_waiting and leads_waiting > 0 %}
@@ -118,12 +117,7 @@
       <div class="w-10 h-10 rounded-md bg-accent-500/20 flex items-center justify-center text-[20px] flex-shrink-0">🆕</div>
       <div class="flex-1 min-w-0">
         <div class="text-ink text-[14px] font-medium">
-          {{ leads_waiting }} new lead{% if leads_waiting != 1 %}s{% endif %} from your Gmail ready to triage
-          {% if gmail.last_sync_summary and gmail.last_sync_summary.leads %}
-            <span class="text-ink2 text-[12px] font-normal ml-1">
-              · {{ gmail.last_sync_summary.leads }} just arrived in the last sync
-            </span>
-          {% endif %}
+          {{ leads_waiting }} new lead{% if leads_waiting != 1 %}s{% endif %} ready to triage
         </div>
         <div class="text-ink3 text-[12px] mt-0.5">
           Open the Leads inbox to pursue or dismiss them — they don't appear in your pipeline columns until you pursue.
@@ -134,130 +128,6 @@
       </div>
     </div>
   </a>
-  {% endif %}
-
-  {# ─── Gmail sync widget ───────────────────────────────────────────────── #}
-  {% if gmail.configured %}
-  <div id="sync-card" class="mb-5 p-3 rounded-lg bg-raised border border-line flex flex-col sm:flex-row items-stretch sm:items-center gap-3">
-    <div class="w-10 h-10 rounded-md bg-sunken flex items-center justify-center text-accent-400 text-[18px] flex-shrink-0">📧</div>
-    <div class="flex-1 min-w-0">
-      <div class="flex items-center gap-2 flex-wrap">
-        <div class="text-ink text-[14px] font-medium">Gmail sync</div>
-        {% if gmail.authorized %}
-        <span class="st-pill px-2 h-5 rounded text-[10.5px] font-mono uppercase tracking-wider inline-flex items-center" style="--st:#22c55e">Connected</span>
-        {% else %}
-        <span class="st-pill px-2 h-5 rounded text-[10.5px] font-mono uppercase tracking-wider inline-flex items-center" style="--st:#f5a524">Not connected</span>
-        {% endif %}
-      </div>
-      <div id="sync-status" class="text-ink2 text-[12.5px] mt-0.5">
-        {% if gmail.last_sync_rel %}
-          Last synced <span class="text-ink">{{ gmail.last_sync_rel }}</span>
-          {% if gmail.last_sync_summary %}
-            {% set s = gmail.last_sync_summary %}
-            · {{ s.fetched or 0 }} email{% if (s.fetched or 0) != 1 %}s{% endif %} scanned
-            {% if s.leads %}<span class="text-accent-400"> · +{{ s.leads }} new lead{% if s.leads > 1 %}s{% endif %}</span>{% endif %}
-            {% if s.events %}<span class="text-interview"> · +{{ s.events }} event{% if s.events > 1 %}s{% endif %}</span>{% endif %}
-            {% if s.status_changes %}<span class="text-replied"> · {{ s.status_changes }} status update{% if s.status_changes > 1 %}s{% endif %}</span>{% endif %}
-          {% endif %}
-        {% else %}
-          No sync yet · Auto-runs every 10 min via GitHub Actions
-        {% endif %}
-      </div>
-    </div>
-    {% if not gmail.authorized %}
-    <a href="/auth/gmail/start" class="h-9 px-3.5 rounded-md bg-accent-500 hover:bg-accent-400 text-white text-[13px] font-medium flex items-center transition">
-      Connect Gmail
-    </a>
-    {% else %}
-    <button id="sync-btn" type="button" class="h-9 px-3.5 rounded-md border border-line bg-sunken hover:border-accent-500/50 text-ink2 hover:text-ink text-[13px] flex items-center gap-2 transition disabled:opacity-60 disabled:cursor-wait">
-      <svg id="sync-icon" class="w-3.5 h-3.5" viewBox="0 0 16 16" fill="none" stroke="currentColor" stroke-width="2">
-        <path d="M13.5 7.5a5.5 5.5 0 1 1-1.6-3.9M13.5 2v4h-4"/>
-      </svg>
-      <span id="sync-btn-label">Sync now</span>
-    </button>
-    {% endif %}
-  </div>
-
-  {# Toast for sync result — fixed bottom-right, auto-dismisses after 8s. #}
-  <div id="sync-toast" class="hidden fixed bottom-4 left-3 right-3 sm:bottom-6 sm:right-6 sm:left-auto z-50 sm:max-w-sm p-4 rounded-lg bg-raised border border-line shadow-pop">
-    <div class="flex items-start gap-3">
-      <div id="sync-toast-icon" class="w-5 h-5 rounded-full flex items-center justify-center text-[11px] flex-shrink-0 mt-0.5"></div>
-      <div class="flex-1 min-w-0">
-        <div id="sync-toast-title" class="text-ink text-[13px] font-medium"></div>
-        <div id="sync-toast-body" class="text-ink2 text-[12px] mt-0.5"></div>
-      </div>
-      <button onclick="document.getElementById('sync-toast').classList.add('hidden')" class="text-ink3 hover:text-ink text-[14px] leading-none">×</button>
-    </div>
-  </div>
-
-  <script>
-  (function() {
-    const btn = document.getElementById('sync-btn');
-    if (!btn) return;
-    const icon = document.getElementById('sync-icon');
-    const label = document.getElementById('sync-btn-label');
-    const statusLine = document.getElementById('sync-status');
-    const toast = document.getElementById('sync-toast');
-    const toastTitle = document.getElementById('sync-toast-title');
-    const toastBody = document.getElementById('sync-toast-body');
-    const toastIcon = document.getElementById('sync-toast-icon');
-
-    function showToast(kind, title, body) {
-      toastTitle.textContent = title;
-      toastBody.textContent = body;
-      toastIcon.className = 'w-5 h-5 rounded-full flex items-center justify-center text-[11px] flex-shrink-0 mt-0.5 ' +
-        (kind === 'ok'   ? 'bg-interview/15 text-interview' :
-         kind === 'warn' ? 'bg-replied/15 text-replied' :
-                           'bg-rejected/15 text-rejected');
-      toastIcon.textContent = kind === 'ok' ? '✓' : (kind === 'warn' ? '!' : '✕');
-      toast.classList.remove('hidden');
-      clearTimeout(toast._timer);
-      toast._timer = setTimeout(() => toast.classList.add('hidden'), 8000);
-    }
-
-    btn.addEventListener('click', async () => {
-      btn.disabled = true;
-      label.textContent = 'Syncing…';
-      icon.classList.add('animate-spin');
-      const t0 = Date.now();
-      try {
-        const res = await fetch('/gmail/sync', { method: 'POST', headers: { 'Accept': 'application/json' } });
-        const data = await res.json();
-        const dur = ((Date.now() - t0) / 1000).toFixed(1);
-
-        if (data.ok) {
-          const leads = data.leads_ingested || 0;
-          const events = data.logged || 0;
-          const fetched = data.fetched || 0;
-          const statusChanges = (data.status_changes || []).length;
-
-          // Update the inline status line so the user sees the new numbers
-          // without a page refresh.
-          let parts = [`Last synced <span class="text-ink">just now</span>`,
-                       `${fetched} email${fetched === 1 ? '' : 's'} scanned`];
-          if (leads) parts.push(`<span class="text-accent-400">+${leads} new lead${leads > 1 ? 's' : ''}</span>`);
-          if (events) parts.push(`<span class="text-interview">+${events} event${events > 1 ? 's' : ''}</span>`);
-          if (statusChanges) parts.push(`<span class="text-replied">${statusChanges} status update${statusChanges > 1 ? 's' : ''}</span>`);
-          statusLine.innerHTML = parts.join(' · ');
-
-          if (leads || events || statusChanges) {
-            showToast('ok', 'Sync complete', `${leads} new lead${leads === 1 ? '' : 's'}, ${events} event${events === 1 ? '' : 's'} · ${dur}s. Refresh to see them in the pipeline.`);
-          } else {
-            showToast('ok', 'Sync complete', `No new activity. ${fetched} email${fetched === 1 ? '' : 's'} scanned in ${dur}s.`);
-          }
-        } else {
-          showToast('err', 'Sync failed', data.message || data.error || 'Unknown error. Try again or check Gmail auth.');
-        }
-      } catch (e) {
-        showToast('err', 'Sync failed', 'Network error: ' + e.message);
-      } finally {
-        btn.disabled = false;
-        label.textContent = 'Sync now';
-        icon.classList.remove('animate-spin');
-      }
-    });
-  })();
-  </script>
   {% endif %}
 
   {# ─── Filter chips ───────────────────────────────────────────────────── #}
