@@ -20,7 +20,7 @@ from starlette.middleware.sessions import SessionMiddleware
 
 import gmail_integration
 import tracker
-from db import get_connection
+from db import get_connection, IS_POSTGRES
 from db import insert_returning_id
 
 ADMIN_USERNAME = os.environ.get("ADMIN_USERNAME")
@@ -1344,6 +1344,194 @@ def _build_chip_clause(chips_def, selected_keys, column):
     fragments = [f"LOWER({column}) LIKE ?"] * len(keywords)
     params = [f"%{k}%" for k in keywords]
     return f"({' OR '.join(fragments)})", params
+
+
+# Backend-aware id column: Postgres uses BIGSERIAL, SQLite uses AUTOINCREMENT.
+_SIGNALS_ID = "BIGSERIAL PRIMARY KEY" if IS_POSTGRES else "INTEGER PRIMARY KEY AUTOINCREMENT"
+_SIGNALS_DDL = (
+    "CREATE TABLE IF NOT EXISTS hiring_signals (id " + _SIGNALS_ID + ", "
+    "user_id INTEGER NOT NULL, company TEXT NOT NULL, location TEXT, domain TEXT, "
+    "funding_signal TEXT, why_relevant TEXT, role_target TEXT, role_level TEXT, "
+    "who_to_reach TEXT, search_url TEXT, source_url TEXT, fit_tier TEXT, "
+    "signal_date TEXT, added_at TEXT, status TEXT DEFAULT 'open')"
+)
+
+
+@app.get("/signals", response_class=HTMLResponse)
+def signals(request: Request, loc: str = "all", tier: str = "all"):
+    """Hiring Signals — research-surfaced (PUBLIC sources, NOT LinkedIn-scraped)
+    hiring intent at funded/growing startups, Pune/Mumbai-leaning, for entry-mid
+    PM/APM roles. Each card links a verify/apply search + a LinkedIn people-search
+    to find the hiring manager (user browses logged-in as themselves)."""
+    uid = current_user_id(request)
+    import urllib.parse as _url
+    with get_connection() as conn:
+        conn.execute(_SIGNALS_DDL)
+        rows = conn.execute(
+            "SELECT company, location, domain, funding_signal, why_relevant, "
+            "role_target, role_level, who_to_reach, search_url, source_url, "
+            "fit_tier, signal_date FROM hiring_signals WHERE user_id = ? AND "
+            "status = 'open' ORDER BY CASE fit_tier WHEN 'STRONG' THEN 0 "
+            "WHEN 'MAYBE' THEN 1 ELSE 2 END, signal_date DESC", (uid,)
+        ).fetchall()
+
+    signals_list = []
+    for r in rows:
+        d = dict(r)
+        loc_lc = (d.get("location") or "").lower()
+        d["is_pune"] = "pune" in loc_lc
+        d["is_mumbai"] = "mumbai" in loc_lc
+        # One-click "find the hiring manager" — a LinkedIn people SEARCH (the user
+        # browses logged in; nothing is scraped server-side).
+        q = f"{d['company']} {d.get('who_to_reach') or 'product'}"
+        d["people_search_url"] = (
+            "https://www.linkedin.com/search/results/people/?keywords="
+            + _url.quote(q)
+        )
+        signals_list.append(d)
+
+    if loc != "all":
+        signals_list = [s for s in signals_list
+                        if (loc == "pune" and s["is_pune"])
+                        or (loc == "mumbai" and s["is_mumbai"])
+                        or (loc == "other" and not s["is_pune"] and not s["is_mumbai"])]
+    if tier != "all":
+        signals_list = [s for s in signals_list if (s.get("fit_tier") or "").lower() == tier]
+
+    strong = sum(1 for s in signals_list if s.get("fit_tier") == "STRONG")
+    return TEMPLATES.TemplateResponse("signals.html", {
+        "request": request, "signals": signals_list,
+        "total": len(signals_list), "strong": strong,
+        "loc": loc, "tier": tier,
+    })
+
+
+_SRC_LABELS = {
+    "apify-linkedin": "LinkedIn Job", "linkedin-post": "LinkedIn Post",
+    "linkedin": "LinkedIn", "naukri": "Naukri", "indeed": "Indeed",
+    "glassdoor": "Glassdoor",
+}
+
+
+def _board_rows(uid):
+    """Unify LinkedIn job postings + hiring posts + research signals into one
+    flat, deduped, company-correlated row list for the Targeting Board.
+
+    Correlation: a company that shows up as BOTH a Job and a Post is the gold
+    target (open req + a human actively posting) -> row['multi'] = True.
+    """
+    from collections import defaultdict
+    rows = []
+    with get_connection() as conn:
+        conn.execute(_SIGNALS_DDL)
+        jobs = conn.execute(
+            "SELECT id, title, company, location, source, ai_score, posted_at, "
+            "added_at, link FROM jobs WHERE user_id = ? AND status = 'discovered'",
+            (uid,)).fetchall()
+        contacts = conn.execute(
+            "SELECT job_id, name FROM contacts WHERE user_id = ? "
+            "ORDER BY COALESCE(priority, 1), id", (uid,)).fetchall()
+        sigs = conn.execute(
+            "SELECT company, location, role_target, fit_tier, signal_date, "
+            "who_to_reach, source_url FROM hiring_signals WHERE user_id = ? "
+            "AND status = 'open'", (uid,)).fetchall()
+
+    contact_by_job = {}
+    for c in contacts:
+        contact_by_job.setdefault(c["job_id"], c["name"])
+
+    for j in jobs:
+        d = dict(j)
+        src = d.get("source") or ""
+        stype = "Post" if src == "linkedin-post" else "Job"
+        rows.append({
+            "company": d.get("company") or "", "role": d.get("title") or "",
+            "location": d.get("location") or "", "stype": stype,
+            "source": _SRC_LABELS.get(src, (src or "Job").title()),
+            "fit": d.get("ai_score") or "",
+            "posted": (d.get("posted_at") or d.get("added_at") or "")[:10],
+            "contact": contact_by_job.get(d["id"], "") or "",
+            "link": d.get("link") or "",
+        })
+    for s in sigs:
+        d = dict(s)
+        url = d.get("source_url") or ""
+        is_post = "/posts/" in url
+        rows.append({
+            "company": d.get("company") or "", "role": d.get("role_target") or "",
+            "location": d.get("location") or "",
+            "stype": "Post" if is_post else "Research",
+            "source": "LinkedIn Post" if is_post else "Research",
+            "fit": d.get("fit_tier") or "",
+            "posted": (d.get("signal_date") or "")[:10],
+            "contact": d.get("who_to_reach") or "", "link": url,
+        })
+
+    # Dedup by link (keep first)
+    seen, deduped = set(), []
+    for r in rows:
+        k = r["link"]
+        if k and k in seen:
+            continue
+        if k:
+            seen.add(k)
+        deduped.append(r)
+    rows = deduped
+
+    # Correlate by company
+    def norm(c):
+        return (c or "").strip().lower()
+    types = defaultdict(set)
+    count = defaultdict(int)
+    for r in rows:
+        types[norm(r["company"])].add(r["stype"])
+        count[norm(r["company"])] += 1
+    for r in rows:
+        ct = types[norm(r["company"])]
+        r["multi"] = ("Job" in ct and "Post" in ct)
+        r["comp_count"] = count[norm(r["company"])]
+
+    fitrank = {"STRONG": 0, "MAYBE": 1, "SKIP": 2, "": 3}
+    rows.sort(key=lambda r: (0 if r["multi"] else 1, norm(r["company"]),
+                             fitrank.get(r["fit"], 3), r["posted"] or "",))
+    return rows
+
+
+@app.get("/board", response_class=HTMLResponse)
+def board(request: Request, source: str = "all", fit: str = "all"):
+    """Targeting Board — one spreadsheet-style table fusing job postings, hiring
+    posts, and research signals, correlated by company. Click straight through."""
+    uid = current_user_id(request)
+    rows = _board_rows(uid)
+    multi_companies = sorted({r["company"] for r in rows if r["multi"]})
+    if source != "all":
+        rows = [r for r in rows if r["stype"].lower() == source]
+    if fit != "all":
+        rows = [r for r in rows if (r["fit"] or "").lower() == fit]
+    return TEMPLATES.TemplateResponse("board.html", {
+        "request": request, "rows": rows, "total": len(rows),
+        "multi_companies": multi_companies, "source": source, "fit": fit,
+    })
+
+
+@app.get("/board.csv")
+def board_csv(request: Request):
+    """Download the full Targeting Board as a CSV."""
+    import io
+    import csv
+    from fastapi import Response
+    uid = current_user_id(request)
+    rows = _board_rows(uid)
+    buf = io.StringIO()
+    w = csv.writer(buf)
+    w.writerow(["Company", "Role", "Location", "Source", "Type", "Fit",
+                "Posted", "Reach", "Link", "MultiSignal"])
+    for r in rows:
+        w.writerow([r["company"], r["role"], r["location"], r["source"],
+                    r["stype"], r["fit"], r["posted"], r["contact"],
+                    r["link"], "YES" if r["multi"] else ""])
+    return Response(buf.getvalue(), media_type="text/csv", headers={
+        "Content-Disposition": "attachment; filename=targeting-board.csv"})
 
 
 @app.get("/discover", response_class=HTMLResponse)

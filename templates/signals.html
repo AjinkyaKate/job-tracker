@@ -1,0 +1,121 @@
+{% extends "base.html" %}
+{% block title %}Hiring Signals · Job Tracker{% endblock %}
+
+{% block content %}
+<div class="mb-5">
+  <div class="flex items-center justify-between gap-3 flex-wrap">
+    <div>
+      <h1 class="text-[20px] sm:text-[22px] font-semibold tracking-tight">Hiring Signals</h1>
+      <p class="text-[13px] text-ink2-light dark:text-ink2 mt-0.5">
+        Funded / growing startups showing hiring intent — Pune &amp; Mumbai-leaning,
+        entry–mid PM &amp; APM, logistics + B2B SaaS.
+      </p>
+    </div>
+    <div class="flex items-center gap-2 text-[12px]">
+      <span class="px-2 py-1 rounded-md bg-raised-light dark:bg-raised border border-line-light dark:border-line tabular">
+        {{ total }} signal{{ '' if total == 1 else 's' }}
+      </span>
+      <span class="px-2 py-1 rounded-md bg-interview/15 text-interview border border-interview/30 tabular">
+        {{ strong }} strong
+      </span>
+    </div>
+  </div>
+
+  <!-- Honest provenance banner -->
+  <div class="mt-3 flex items-start gap-2 rounded-lg border border-replied/40 bg-replied/10 px-3 py-2 text-[12px] text-ink2-light dark:text-ink2">
+    <span class="text-replied flex-shrink-0">ⓘ</span>
+    <span>
+      <b class="text-ink-light dark:text-ink">Research-surfaced from public sources</b>
+      (funding trackers, startup lists, job boards) on <b>2026-06-06</b> — <b>not</b>
+      LinkedIn-scraped. Treat funding &amp; level as leads to <b>verify before applying</b>.
+      Each card links the source and a one-click LinkedIn people-search to find the hiring manager.
+    </span>
+  </div>
+
+  <!-- Filters -->
+  <div class="mt-4 flex flex-wrap gap-1.5 text-[12px]">
+    {% set locs = [('all','All'),('pune','Pune'),('mumbai','Mumbai'),('other','Other / Remote')] %}
+    {% for key,label in locs %}
+      <a href="/signals?loc={{ key }}&tier={{ tier }}"
+         class="px-2.5 py-1 rounded-md border transition
+         {% if loc == key %}bg-accent-500 text-white border-accent-500{% else %}bg-raised-light dark:bg-raised border-line-light dark:border-line hover:bg-sunken-light dark:hover:bg-sunken{% endif %}">{{ label }}</a>
+    {% endfor %}
+    <span class="w-px bg-line-light dark:bg-line mx-1"></span>
+    {% set tiers = [('all','All fit'),('strong','Strong'),('maybe','Maybe')] %}
+    {% for key,label in tiers %}
+      <a href="/signals?loc={{ loc }}&tier={{ key }}"
+         class="px-2.5 py-1 rounded-md border transition
+         {% if tier == key %}bg-accent-500 text-white border-accent-500{% else %}bg-raised-light dark:bg-raised border-line-light dark:border-line hover:bg-sunken-light dark:hover:bg-sunken{% endif %}">{{ label }}</a>
+    {% endfor %}
+  </div>
+</div>
+
+{% if signals %}
+<div class="grid grid-cols-1 md:grid-cols-2 gap-3">
+  {% for s in signals %}
+  <div class="rounded-xl border border-line-light dark:border-line bg-raised-light dark:bg-raised shadow-pop-light dark:shadow-pop p-4 flex flex-col gap-2.5">
+    <!-- Header -->
+    <div class="flex items-start justify-between gap-2">
+      <div class="min-w-0">
+        <div class="flex items-center gap-2 flex-wrap">
+          <h2 class="text-[15px] font-semibold tracking-tight truncate">{{ s.company }}</h2>
+          {% if s.fit_tier == 'STRONG' %}
+            <span class="px-1.5 py-0.5 rounded text-[10px] font-semibold bg-interview/15 text-interview border border-interview/30">STRONG</span>
+          {% else %}
+            <span class="px-1.5 py-0.5 rounded text-[10px] font-semibold bg-replied/15 text-replied border border-replied/30">MAYBE</span>
+          {% endif %}
+        </div>
+        <div class="flex items-center gap-1.5 mt-1 text-[12px] text-ink2-light dark:text-ink2 flex-wrap">
+          <span>📍 {{ s.location }}</span>
+          <span class="text-ink3-light dark:text-ink3">·</span>
+          <span>{{ s.domain }}</span>
+        </div>
+      </div>
+      <span class="text-[11px] text-ink3-light dark:text-ink3 tabular flex-shrink-0">{{ s.signal_date }}</span>
+    </div>
+
+    <!-- Role -->
+    <div class="text-[13px]">
+      <span class="font-medium">{{ s.role_target }}</span>
+      <span class="text-ink3-light dark:text-ink3"> · {{ s.role_level }}</span>
+    </div>
+
+    <!-- Funding / signal -->
+    <div class="text-[12px] text-ink2-light dark:text-ink2 leading-snug">
+      <span class="font-semibold text-ink-light dark:text-ink">Signal:</span> {{ s.funding_signal }}
+    </div>
+
+    <!-- Why relevant -->
+    <div class="text-[12px] text-ink2-light dark:text-ink2 leading-snug rounded-md bg-sunken-light dark:bg-sunken px-2.5 py-2">
+      <span class="font-semibold text-ink-light dark:text-ink">Why you:</span> {{ s.why_relevant }}
+    </div>
+
+    <!-- Who to reach -->
+    <div class="text-[12px] text-ink2-light dark:text-ink2">
+      <span class="font-semibold text-ink-light dark:text-ink">Reach:</span> {{ s.who_to_reach }}
+    </div>
+
+    <!-- Actions -->
+    <div class="flex items-center gap-1.5 mt-1 flex-wrap text-[12px]">
+      <a href="{{ s.search_url }}" target="_blank" rel="noopener"
+         class="px-2.5 py-1.5 rounded-md bg-accent-500 text-white font-medium hover:bg-accent-600 transition">
+        Verify / Apply →
+      </a>
+      <a href="{{ s.people_search_url }}" target="_blank" rel="noopener"
+         class="px-2.5 py-1.5 rounded-md border border-line-light dark:border-line bg-raised-light dark:bg-raised hover:bg-sunken-light dark:hover:bg-sunken transition">
+        🔗 Find hiring manager
+      </a>
+      <a href="{{ s.source_url }}" target="_blank" rel="noopener"
+         class="px-2.5 py-1.5 rounded-md border border-line-light dark:border-line text-ink2-light dark:text-ink2 hover:bg-sunken-light dark:hover:bg-sunken transition">
+        Source
+      </a>
+    </div>
+  </div>
+  {% endfor %}
+</div>
+{% else %}
+<div class="rounded-xl border border-line-light dark:border-line bg-raised-light dark:bg-raised p-8 text-center text-ink2-light dark:text-ink2 text-[13px]">
+  No signals match this filter. <a href="/signals" class="text-accent-400 hover:underline">Clear filters</a>.
+</div>
+{% endif %}
+{% endblock %}

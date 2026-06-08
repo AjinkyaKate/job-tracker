@@ -74,6 +74,14 @@
     </div>
     <div class="flex items-center gap-1 sm:gap-2 flex-shrink-0">
       {% block topbar_actions %}{% endblock %}
+      <a href="/board" title="One table: jobs + hiring posts + signals, correlated by company"
+         class="h-8 px-2 sm:px-3 rounded-md border border-line-light dark:border-line bg-raised-light dark:bg-raised text-[12px] font-medium hover:bg-sunken-light dark:hover:bg-sunken transition flex items-center">
+        <span class="sm:hidden">🎯</span><span class="hidden sm:inline">Board</span>
+      </a>
+      <a href="/signals" title="Funded/growing startups showing hiring intent — Pune/Mumbai, entry-mid PM"
+         class="h-8 px-2 sm:px-3 rounded-md border border-line-light dark:border-line bg-raised-light dark:bg-raised text-[12px] font-medium hover:bg-sunken-light dark:hover:bg-sunken transition flex items-center">
+        <span class="sm:hidden">📡</span><span class="hidden sm:inline">Signals</span>
+      </a>
       <a href="/discover" title="Jobs sourced via search, ranked by fit"
          class="h-8 px-2 sm:px-3 rounded-md border border-line-light dark:border-line bg-raised-light dark:bg-raised text-[12px] font-medium hover:bg-sunken-light dark:hover:bg-sunken transition flex items-center">
         <span class="sm:hidden">🔎</span><span class="hidden sm:inline">Discover</span>
